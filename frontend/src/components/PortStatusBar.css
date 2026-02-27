@@ -1,0 +1,25 @@
+/* frontend/src/components/PortStatusBar.css */
+.port-status-bar {
+  height: 60px; display: flex; align-items: center; gap: 20px;
+  padding: 0 20px;
+  background: rgba(6,11,24,0.9);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  position: sticky; top: 0; z-index: 50;
+}
+
+.bar-left { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.app-logo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: #2563EB; letter-spacing: 0.05em; }
+.app-sub { font-size: 11px; color: #475569; }
+
+.ports-row { display: flex; gap: 14px; overflow-x: auto; flex: 1; align-items: center; }
+
+.port-indicator { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.port-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.port-name { font-size: 10px; color: #64748b; white-space: nowrap; }
+
+.bar-right { display: flex; gap: 8px; flex-shrink: 0; }
+.bar-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; border-radius: 8px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.bar-btn:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
+.bar-btn.primary { background: rgba(37,99,235,0.2); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
+.bar-btn.primary:hover { background: rgba(37,99,235,0.35); }

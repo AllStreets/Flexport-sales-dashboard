@@ -1,206 +1,123 @@
-import { useState, useEffect } from 'react';
-import SearchBar from './components/SearchBar';
-import ResultCard from './components/ResultCard';
-import FavoritesTab from './components/FavoritesTab';
-import CompareModal from './components/CompareModal';
-import EmailGeneratorModal from './components/EmailGeneratorModal';
-import DecisionMakersSection from './components/DecisionMakersSection';
-import ROICalculator from './components/ROICalculator';
-import IndustryInsights from './components/IndustryInsights';
-import SDRScoreCard from './components/SDRScoreCard';
-import EmailTemplatesSection from './components/EmailTemplatesSection';
+import { useState } from 'react';
+import PortStatusBar from './components/PortStatusBar';
+import GlobeView from './components/GlobeView';
+import ProspectSearch from './components/ProspectSearch';
+import AnalysisPanel from './components/AnalysisPanel';
+import SignalFeed from './components/SignalFeed';
+import TradeDataCharts from './components/TradeDataCharts';
+import TariffCalculator from './components/TariffCalculator';
+import PipelineKanban from './components/PipelineKanban';
+import OutreachSequenceModal from './components/OutreachSequenceModal';
+import BattleCardsModal from './components/BattleCardsModal';
 import './App.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-function App() {
-  const [companies, setCompanies] = useState([]);
-  const [results, setResults] = useState(null);
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [selectedAnalyses, setSelectedAnalyses] = useState(null);
-  const [showCompare, setShowCompare] = useState(false);
-  const [compareIds, setCompareIds] = useState([]);
-  const [showEmailGenerator, setShowEmailGenerator] = useState(false);
-  const [emailIds, setEmailIds] = useState([]);
-
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  const fetchCompanies = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/companies`);
-      const data = await response.json();
-      setCompanies(data);
-    } catch (err) {
-      setError('Failed to load companies');
-      console.error(err);
-    }
-  };
-
-  const handleSearch = async (companyName) => {
-    setLoading(true);
-    setError('');
-    setResults(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName })
-      });
-
-      if (!response.ok) throw new Error('Analysis failed');
-      const data = await response.json();
-      setResults(data);
-
-      // Find and set the selected company from the companies list
-      const company = companies.find(c => c.name === companyName);
-      setSelectedCompany(company || { name: companyName, fleetSize: null, companyType: null });
-    } catch (err) {
-      setError('Failed to analyze company');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaved = (saveData) => {
-    console.log('Analysis saved:', saveData);
-  };
-
-  const handleAnalysisAction = (action) => {
-    if (action.type === 'compare') {
-      setCompareIds(action.ids);
-      setShowCompare(true);
-    } else if (action.type === 'email') {
-      setEmailIds(action.ids);
-      setShowEmailGenerator(true);
-    }
-    setShowFavorites(false);
-  };
-
-  const handleGenerateEmails = (ids) => {
-    setCompareIds([]);
-    setShowCompare(false);
-    setEmailIds(ids);
-    setShowEmailGenerator(true);
-  };
-
+// Generate particle field
+function Particles() {
+  const particles = Array.from({ length: 80 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    size: Math.random() * 3 + 1,
+    dur: `${Math.random() * 30 + 20}s`,
+    delay: `${Math.random() * -30}s`,
+    tx: `${(Math.random() - 0.5) * 80}px`,
+    ty: `${(Math.random() - 0.5) * 80}px`,
+  }));
   return (
-    <div className="app-container">
-      <div className="header">
-        <div className="header-top">
-          <h1>Prospect Intelligence</h1>
-          <button
-            className="favorites-tab-btn"
-            onClick={() => setShowFavorites(!showFavorites)}
-          >
-            📋 Saved ({showFavorites ? '✓' : ''})
-          </button>
-        </div>
-        <p>AI-powered logistics company analysis for HappyRobot SDR outreach</p>
-      </div>
-
-      <div className="main-content">
-        <SearchBar
-          companies={companies}
-          onSearch={handleSearch}
-          loading={loading}
-        />
-
-        {error && (
-          <div className="error-message" style={{ color: '#ef4444', marginBottom: '20px' }}>
-            {error}
-          </div>
-        )}
-
-        {results && selectedCompany && (
-          <div className="results-container">
-            <ResultCard
-              title="Company Profile"
-              content={results.profile}
-              icon="🏢"
-              index={0}
-              showSaveButton={true}
-              companyName={results.company}
-              analysisData={results}
-              onSaved={handleSaved}
-            />
-            <ResultCard
-              title="Pain Points"
-              content={results.painPoints}
-              icon="⚠️"
-              index={1}
-              showSaveButton={true}
-              companyName={results.company}
-              analysisData={results}
-              onSaved={handleSaved}
-            />
-            <ResultCard
-              title="Tech Stack"
-              content={results.techStack}
-              icon="💻"
-              index={2}
-              showSaveButton={true}
-              companyName={results.company}
-              analysisData={results}
-              onSaved={handleSaved}
-            />
-            <ResultCard
-              title="Outreach Angle"
-              content={results.outreachAngle}
-              icon="🎯"
-              index={3}
-              showSaveButton={true}
-              companyName={results.company}
-              analysisData={results}
-              onSaved={handleSaved}
-            />
-            <DecisionMakersSection
-              decisionMakers={results.decisionMakers}
-            />
-            <ROICalculator
-              companyFleetSize={selectedCompany.fleetSize}
-            />
-            <IndustryInsights
-              companyType={selectedCompany.companyType}
-            />
-            <SDRScoreCard
-              company={selectedCompany}
-              painPoints={results.painPoints}
-            />
-            <EmailTemplatesSection
-              companyName={selectedCompany.name}
-              painPoints={results.painPoints}
-            />
-          </div>
-        )}
-      </div>
-
-      <FavoritesTab
-        isOpen={showFavorites}
-        onClose={() => setShowFavorites(false)}
-        onAnalysisSelect={handleAnalysisAction}
-      />
-
-      <CompareModal
-        analysisIds={compareIds}
-        isOpen={showCompare}
-        onClose={() => setShowCompare(false)}
-        onGenerateEmails={handleGenerateEmails}
-      />
-
-      <EmailGeneratorModal
-        emailIds={emailIds}
-        isOpen={showEmailGenerator}
-        onClose={() => setShowEmailGenerator(false)}
-      />
+    <div className="particle-field" aria-hidden>
+      {particles.map(p => (
+        <div key={p.id} className="particle" style={{
+          left: p.left, top: p.top,
+          width: p.size, height: p.size,
+          '--dur': p.dur, '--delay': p.delay,
+          '--tx': p.tx, '--ty': p.ty
+        }} />
+      ))}
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  const [selectedProspect, setSelectedProspect] = useState(null);
+  const [showPipeline, setShowPipeline] = useState(false);
+  const [showBattleCards, setShowBattleCards] = useState(false);
+  const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
+  const [portDetail, setPortDetail] = useState(null);
+
+  const handlePortClick = (port) => setPortDetail(port);
+  const closePortDetail = () => setPortDetail(null);
+
+  return (
+    <div className="app-root">
+      <Particles />
+
+      <PortStatusBar
+        onPipelineClick={() => setShowPipeline(true)}
+        onBattleCardsClick={() => setShowBattleCards(true)}
+      />
+
+      <main className="app-main">
+        {/* Globe hero */}
+        <section className="globe-section">
+          <GlobeView
+            selectedProspect={selectedProspect}
+            onPortClick={handlePortClick}
+          />
+          {portDetail && (
+            <div className="port-detail-popup glass-card" onClick={closePortDetail}>
+              <strong>{portDetail.name}</strong>
+              <span>Status: {portDetail.status} · Congestion {portDetail.congestion}/10</span>
+              <span className="popup-close">✕</span>
+            </div>
+          )}
+        </section>
+
+        {/* Two-column below globe */}
+        <div className="content-columns">
+          {/* Left column — Prospect Intelligence */}
+          <div className="left-column">
+            <div className="glass-card col-section">
+              <h2 className="section-title">Prospect Intelligence</h2>
+              <ProspectSearch onSelect={setSelectedProspect} />
+            </div>
+
+            {selectedProspect && (
+              <div className="glass-card col-section">
+                <AnalysisPanel
+                  prospect={selectedProspect}
+                  onOpenOutreach={(prospect, analysis) =>
+                    setOutreachState({ open: true, prospect, analysis })
+                  }
+                />
+              </div>
+            )}
+
+            {selectedProspect && (
+              <TariffCalculator prospectSector={selectedProspect.sector} />
+            )}
+          </div>
+
+          {/* Right column — Signals + Trade Data */}
+          <div className="right-column">
+            <div className="glass-card col-section">
+              <SignalFeed />
+            </div>
+            <TradeDataCharts />
+          </div>
+        </div>
+      </main>
+
+      {/* Pipeline Kanban */}
+      <PipelineKanban isOpen={showPipeline} onClose={() => setShowPipeline(false)} />
+
+      {/* Modals */}
+      <OutreachSequenceModal
+        isOpen={outreachState.open}
+        prospect={outreachState.prospect}
+        analysis={outreachState.analysis}
+        onClose={() => setOutreachState({ open: false, prospect: null, analysis: null })}
+      />
+      <BattleCardsModal isOpen={showBattleCards} onClose={() => setShowBattleCards(false)} />
+    </div>
+  );
+}
