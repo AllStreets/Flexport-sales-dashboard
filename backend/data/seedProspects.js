@@ -2,7 +2,9 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db');
-const db = new sqlite3.Database(dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) { console.error('Could not open DB:', err.message); process.exit(1); }
+});
 
 const prospects = [
   // E-commerce / DTC
@@ -58,19 +60,27 @@ const prospects = [
   { name: 'Medley', sector: 'furniture', hq_location: 'Los Angeles, CA', estimated_revenue: '$10M-$50M', employee_count: '10-50', shipping_volume_estimate: 'Low', import_origins: JSON.stringify(['China','Vietnam']), primary_lanes: JSON.stringify(['Asia-US West Coast']), icp_score: 80, likely_forwarder: 'Freightos', website: 'medleyhome.com', description: 'Custom furniture startup growing rapidly with Asia sourcing and need for shipment milestone visibility.' }
 ];
 
-const stmt = db.prepare(`INSERT INTO prospects
-  (name, sector, hq_location, estimated_revenue, employee_count, shipping_volume_estimate,
-   import_origins, primary_lanes, icp_score, likely_forwarder, website, description)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-db.serialize(() => {
-  prospects.forEach(p => {
-    stmt.run(p.name, p.sector, p.hq_location, p.estimated_revenue, p.employee_count,
-      p.shipping_volume_estimate, p.import_origins, p.primary_lanes, p.icp_score,
-      p.likely_forwarder, p.website, p.description);
-  });
-  stmt.finalize(() => {
-    console.log(`Seeded ${prospects.length} prospects`);
+db.get('SELECT COUNT(*) as count FROM prospects', (err, row) => {
+  if (err) { console.error(err); db.close(); return; }
+  if (row.count > 0) {
+    console.log(`Skipping seed: ${row.count} prospects already exist.`);
     db.close();
+    return;
+  }
+  db.serialize(() => {
+    const stmt = db.prepare(`INSERT INTO prospects
+      (name, sector, hq_location, estimated_revenue, employee_count, shipping_volume_estimate,
+       import_origins, primary_lanes, icp_score, likely_forwarder, website, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    prospects.forEach(p => {
+      stmt.run(p.name, p.sector, p.hq_location, p.estimated_revenue, p.employee_count,
+        p.shipping_volume_estimate, p.import_origins, p.primary_lanes, p.icp_score,
+        p.likely_forwarder, p.website, p.description,
+        (err) => { if (err) console.error(`Failed to insert ${p.name}:`, err.message); });
+    });
+    stmt.finalize(() => {
+      console.log(`Seeded ${prospects.length} prospects`);
+      db.close();
+    });
   });
 });
