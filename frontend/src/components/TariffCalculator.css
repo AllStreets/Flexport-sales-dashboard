@@ -1,0 +1,15 @@
+/* frontend/src/components/TariffCalculator.css */
+.tariff-calc { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.tariff-calc h3 { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+.calc-inputs { display: flex; flex-direction: column; gap: 10px; }
+.calc-inputs label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #64748b; }
+.calc-inputs input[type=range] { accent-color: #2563EB; width: 100%; }
+.calc-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #f1f5f9; }
+.calc-results { display: flex; flex-direction: column; gap: 8px; }
+.calc-stat { display: flex; justify-content: space-between; align-items: center; }
+.stat-label { font-size: 11px; color: #64748b; }
+.stat-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #f1f5f9; }
+.stat-value.red { color: #ef4444; }
+.stat-value.green { color: #10b981; }
+.calc-stat.highlight { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; padding: 8px 12px; }
+.calc-pitch { font-size: 12px; color: #64748b; line-height: 1.6; font-style: italic; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }

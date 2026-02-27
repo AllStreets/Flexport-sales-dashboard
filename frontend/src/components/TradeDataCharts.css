@@ -1,0 +1,20 @@
+/* frontend/src/components/TradeDataCharts.css */
+.trade-charts {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px; padding: 16px;
+}
+
+.chart-header { margin-bottom: 12px; }
+.chart-header h3 { font-size: 13px; font-weight: 600; color: #f1f5f9; margin-bottom: 8px; }
+.chart-source { font-size: 9px; background: rgba(37,99,235,0.2); color: #60a5fa; border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+
+.chart-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.chart-tab { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #64748b; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+.chart-tab.active, .chart-tab:hover { background: rgba(37,99,235,0.2); color: #60a5fa; border-color: rgba(37,99,235,0.4); }
+
+.chart-loading { color: #475569; font-size: 13px; height: 160px; display: flex; align-items: center; justify-content: center; }
+
+.chart-tooltip { background: rgba(6,11,24,0.95); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 12px; }
+.tooltip-date { font-size: 11px; color: #64748b; }
+.tooltip-value { font-size: 14px; color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-weight: 700; }

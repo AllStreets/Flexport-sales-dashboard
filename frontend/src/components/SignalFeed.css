@@ -1,0 +1,38 @@
+/* frontend/src/components/SignalFeed.css */
+.signal-feed { display: flex; flex-direction: column; gap: 12px; }
+
+.feed-header { display: flex; align-items: center; gap: 10px; }
+.feed-header h3 { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; color: #f1f5f9; }
+
+.live-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  color: #10b981; border: 1px solid #10b981;
+  border-radius: 4px; padding: 2px 6px;
+  animation: pulse-badge 2s infinite;
+}
+@keyframes pulse-badge { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.feed-loading { color: #475569; font-size: 13px; }
+
+.signal-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+
+.signal-card {
+  display: block; text-decoration: none;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 12px;
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  animation: fadeSlideIn 0.4s both;
+  cursor: pointer;
+}
+.signal-card:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); }
+
+@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+.signal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.urgency-badge { font-size: 10px; font-weight: 700; border: 1px solid; border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; }
+.signal-source { font-size: 10px; color: #475569; }
+.signal-headline { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 4px; }
+.signal-reason { font-size: 11px; color: #64748b; line-height: 1.4; margin-bottom: 6px; }
+.signal-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.signal-tag { font-size: 10px; background: rgba(37,99,235,0.15); color: #60a5fa; border-radius: 4px; padding: 2px 6px; }
