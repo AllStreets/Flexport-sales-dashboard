@@ -8,8 +8,8 @@ function getDb() {
 }
 
 const FRED_SERIES = {
-  electronics: 'IMPE',        // Imports: Capital Goods except Automotive
-  apparel: 'IMPCNS',          // Imports: Consumer Goods
+  electronics: 'AITGICS',     // Advance Imports: Capital Goods (monthly, $B)
+  apparel: 'AITGIGS',         // Advance Imports: Consumer Goods (monthly, $B)
   trade_balance: 'BOPGSTB',   // Trade Balance: Goods
   total_imports: 'IMPGS'      // Imports of Goods and Services
 };
