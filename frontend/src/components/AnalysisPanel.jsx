@@ -5,7 +5,7 @@ import './AnalysisPanel.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function AnalysisPanel({ prospect, onOpenOutreach }) {
+export default function AnalysisPanel({ prospect, onOpenOutreach, onAddToPipeline }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -42,6 +42,7 @@ export default function AnalysisPanel({ prospect, onOpenOutreach }) {
       body: JSON.stringify({ prospect_id: prospect.id, company_name: prospect.name, stage: 'researched' })
     });
     setPipelined(true);
+    onAddToPipeline?.();
   };
 
   if (!prospect) return (

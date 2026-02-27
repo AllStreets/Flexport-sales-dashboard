@@ -44,8 +44,10 @@ export default function App() {
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
   const [portDetail, setPortDetail] = useState(null);
   const [globeFullscreen, setGlobeFullscreen] = useState(false);
+  const [pipelineRefresh, setPipelineRefresh] = useState(0);
 
   const handlePortClick = (port) => setPortDetail(port);
+  const handleAddToPipeline = () => { setPipelineRefresh(r => r + 1); setShowPipeline(true); };
   const closePortDetail = () => setPortDetail(null);
 
   return (
@@ -91,6 +93,7 @@ export default function App() {
                   onOpenOutreach={(prospect, analysis) =>
                     setOutreachState({ open: true, prospect, analysis })
                   }
+                  onAddToPipeline={handleAddToPipeline}
                 />
               </div>
             )}
@@ -111,7 +114,7 @@ export default function App() {
       </main>
 
       {/* Pipeline Kanban */}
-      <PipelineKanban isOpen={showPipeline} onClose={() => setShowPipeline(false)} />
+      <PipelineKanban isOpen={showPipeline} onClose={() => setShowPipeline(false)} refreshTrigger={pipelineRefresh} />
 
       {/* Modals */}
       <OutreachSequenceModal

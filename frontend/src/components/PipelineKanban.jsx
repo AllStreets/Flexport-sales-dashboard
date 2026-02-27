@@ -55,7 +55,7 @@ function DroppableColumn({ stage, items, activeId }) {
   );
 }
 
-export default function PipelineKanban({ isOpen, onClose }) {
+export default function PipelineKanban({ isOpen, onClose, refreshTrigger }) {
   const [pipeline, setPipeline] = useState({});
   const [activeId, setActiveId] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -64,7 +64,7 @@ export default function PipelineKanban({ isOpen, onClose }) {
     if (isOpen) {
       fetch(`${API}/api/pipeline`).then(r => r.json()).then(setPipeline).catch(console.error);
     }
-  }, [isOpen]);
+  }, [isOpen, refreshTrigger]);
 
   const findStageOfItem = (id) => {
     for (const [stage, items] of Object.entries(pipeline)) {
