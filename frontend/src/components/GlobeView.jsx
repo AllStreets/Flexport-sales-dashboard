@@ -4,20 +4,29 @@ import './GlobeView.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function GlobeView({ selectedProspect, onPortClick }) {
+export default function GlobeView({ selectedProspect, onPortClick, fullscreen = false, onEnterFullscreen }) {
   const globeRef = useRef(null);
   const [globeData, setGlobeData] = useState({ shippingLanes: [], ports: [] });
-  const [dimensions, setDimensions] = useState({ w: window.innerWidth, h: Math.floor(window.innerHeight * 0.55) });
+
+  const getDimensions = (fs) => ({
+    w: window.innerWidth,
+    h: fs ? window.innerHeight : Math.floor(window.innerHeight * 0.55)
+  });
+  const [dimensions, setDimensions] = useState(() => getDimensions(false));
 
   useEffect(() => {
     fetch(`${API}/api/globe-data`).then(r => r.json()).then(setGlobeData).catch(console.error);
   }, []);
 
   useEffect(() => {
-    const handle = () => setDimensions({ w: window.innerWidth, h: Math.floor(window.innerHeight * 0.55) });
+    setDimensions(getDimensions(fullscreen));
+  }, [fullscreen]);
+
+  useEffect(() => {
+    const handle = () => setDimensions(getDimensions(fullscreen));
     window.addEventListener('resize', handle);
     return () => window.removeEventListener('resize', handle);
-  }, []);
+  }, [fullscreen]);
 
   // Auto-rotate unless a prospect is selected
   useEffect(() => {
@@ -90,7 +99,10 @@ export default function GlobeView({ selectedProspect, onPortClick }) {
   }, []);
 
   return (
-    <div className="globe-wrapper">
+    <div
+      className={`globe-wrapper${fullscreen ? ' fullscreen' : ''}`}
+      onClick={() => { if (!fullscreen) onEnterFullscreen?.(); }}
+    >
       <Globe
         ref={globeRef}
         width={dimensions.w}

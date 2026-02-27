@@ -43,6 +43,7 @@ export default function App() {
   const [showBattleCards, setShowBattleCards] = useState(false);
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
   const [portDetail, setPortDetail] = useState(null);
+  const [globeFullscreen, setGlobeFullscreen] = useState(false);
 
   const handlePortClick = (port) => setPortDetail(port);
   const closePortDetail = () => setPortDetail(null);
@@ -62,6 +63,8 @@ export default function App() {
           <GlobeView
             selectedProspect={selectedProspect}
             onPortClick={handlePortClick}
+            fullscreen={globeFullscreen}
+            onEnterFullscreen={() => setGlobeFullscreen(true)}
           />
           {portDetail && (
             <div className="port-detail-popup glass-card" onClick={closePortDetail}>
@@ -118,6 +121,10 @@ export default function App() {
         onClose={() => setOutreachState({ open: false, prospect: null, analysis: null })}
       />
       <BattleCardsModal isOpen={showBattleCards} onClose={() => setShowBattleCards(false)} />
+
+      {globeFullscreen && (
+        <button className="globe-close-btn" onClick={() => setGlobeFullscreen(false)} aria-label="Exit fullscreen">✕</button>
+      )}
     </div>
   );
 }
