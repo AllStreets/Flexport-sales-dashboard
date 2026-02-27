@@ -9,3 +9,4 @@ dist/
 .idea/
 frontend/dist/
 backend/node_modules/
+*.db
