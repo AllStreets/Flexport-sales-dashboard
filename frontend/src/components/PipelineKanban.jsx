@@ -1,6 +1,6 @@
 // frontend/src/components/PipelineKanban.jsx
 import { useState, useEffect } from 'react';
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { DndContext, useDroppable, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import './PipelineKanban.css';
@@ -16,6 +16,8 @@ const STAGES = [
   { key: 'closed_lost',  label: 'Closed Lost',  color: '#f87171' }
 ];
 
+const STAGE_KEYS = STAGES.map(s => s.key);
+
 function PipelineCard({ item, isDragging }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
@@ -28,6 +30,27 @@ function PipelineCard({ item, isDragging }) {
         {item.sector && <span className="card-sector">{item.sector}</span>}
       </div>
       {item.next_action && <div className="card-action">→ {item.next_action}</div>}
+    </div>
+  );
+}
+
+function DroppableColumn({ stage, items, activeId }) {
+  const { setNodeRef, isOver } = useDroppable({ id: stage.key });
+
+  return (
+    <div className={`kanban-column${isOver ? ' column-over' : ''}`}>
+      <div className="column-header">
+        <span className="column-dot" style={{ background: stage.color }} />
+        <span className="column-label">{stage.label}</span>
+        <span className="column-count">{items.length}</span>
+      </div>
+      <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+        <div className="column-body" ref={setNodeRef}>
+          {items.map(item => (
+            <PipelineCard key={item.id} item={item} isDragging={activeId === item.id} />
+          ))}
+        </div>
+      </SortableContext>
     </div>
   );
 }
@@ -53,14 +76,19 @@ export default function PipelineKanban({ isOpen, onClose }) {
   const handleDragEnd = async ({ active, over }) => {
     setActiveId(null);
     if (!over) return;
+
     const fromStage = findStageOfItem(active.id);
-    const toStage = over.id; // column drop target
+    // over.id is either a stage key (dropped on column) or a card id (dropped on card)
+    const toStage = STAGE_KEYS.includes(over.id)
+      ? over.id
+      : findStageOfItem(over.id);
 
-    if (!fromStage || fromStage === toStage) return;
+    if (!fromStage || !toStage || fromStage === toStage) return;
 
-    // Optimistic update
     const item = pipeline[fromStage]?.find(i => i.id === active.id);
     if (!item) return;
+
+    // Optimistic update
     setPipeline(prev => ({
       ...prev,
       [fromStage]: prev[fromStage].filter(i => i.id !== active.id),
@@ -87,27 +115,16 @@ export default function PipelineKanban({ isOpen, onClose }) {
           <button className="kanban-close" onClick={onClose}>✕</button>
         </div>
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={({ active }) => setActiveId(active.id)} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={({ active }) => setActiveId(active.id)} onDragEnd={handleDragEnd}>
           <div className="kanban-board">
-            {STAGES.map(stage => {
-              const items = pipeline[stage.key] || [];
-              return (
-                <div key={stage.key} id={stage.key} className="kanban-column">
-                  <div className="column-header">
-                    <span className="column-dot" style={{ background: stage.color }} />
-                    <span className="column-label">{stage.label}</span>
-                    <span className="column-count">{items.length}</span>
-                  </div>
-                  <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                    <div className="column-body">
-                      {items.map(item => (
-                        <PipelineCard key={item.id} item={item} isDragging={activeId === item.id} />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </div>
-              );
-            })}
+            {STAGES.map(stage => (
+              <DroppableColumn
+                key={stage.key}
+                stage={stage}
+                items={pipeline[stage.key] || []}
+                activeId={activeId}
+              />
+            ))}
           </div>
         </DndContext>
       </div>

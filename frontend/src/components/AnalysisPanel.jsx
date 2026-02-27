@@ -9,6 +9,7 @@ export default function AnalysisPanel({ prospect, onOpenOutreach }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pipelined, setPipelined] = useState(false);
 
   const runAnalysis = async () => {
     setLoading(true);
@@ -40,6 +41,7 @@ export default function AnalysisPanel({ prospect, onOpenOutreach }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prospect_id: prospect.id, company_name: prospect.name, stage: 'researched' })
     });
+    setPipelined(true);
   };
 
   if (!prospect) return (
@@ -83,7 +85,7 @@ export default function AnalysisPanel({ prospect, onOpenOutreach }) {
         </button>
         {analysis && <>
           <button className="btn-secondary" onClick={saveAnalysis} disabled={saved}>{saved ? '✓ Saved' : 'Save'}</button>
-          <button className="btn-secondary" onClick={addToPipeline}>+ Pipeline</button>
+          <button className="btn-secondary" onClick={addToPipeline} disabled={pipelined}>{pipelined ? '✓ In Pipeline' : '+ Pipeline'}</button>
           <button className="btn-secondary" onClick={() => onOpenOutreach?.(prospect, analysis)}>✉ Outreach Sequence</button>
         </>}
       </div>
