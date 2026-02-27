@@ -5,7 +5,13 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors({
-  origin: process.env.FRONTEND_URL || /^http:\/\/localhost:\d+$/
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // non-browser / server-to-server
+    if (/localhost/.test(origin)) return cb(null, true);
+    if (/vercel\.app$/.test(origin)) return cb(null, true);
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) return cb(null, true);
+    cb(new Error('CORS: origin not allowed'));
+  }
 }));
 app.use(express.json());
 
