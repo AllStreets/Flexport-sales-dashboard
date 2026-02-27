@@ -1,0 +1,33 @@
+/* frontend/src/components/GlobeView.css */
+.globe-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #060b18;
+}
+
+.globe-legend {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.legend-item.green  { color: #10b981; }
+.legend-item.amber  { color: #f59e0b; }
+.legend-item.red    { color: #ef4444; }
+
+.globe-tooltip {
+  background: rgba(6, 11, 24, 0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #f1f5f9;
+  pointer-events: none;
+}
