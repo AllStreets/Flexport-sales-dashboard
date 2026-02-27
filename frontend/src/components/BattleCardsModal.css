@@ -1,0 +1,26 @@
+/* frontend/src/components/BattleCardsModal.css */
+.battle-panel { max-width: 720px; }
+
+.battle-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.battle-tab { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #64748b; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.battle-tab.active, .battle-tab:hover { background: rgba(37,99,235,0.2); color: #60a5fa; border-color: rgba(37,99,235,0.4); }
+
+.battle-card { display: flex; flex-direction: column; gap: 14px; }
+
+.battle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.battle-col { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.battle-col ul { padding-left: 16px; }
+.battle-col li { font-size: 12px; color: #cbd5e1; line-height: 1.6; }
+
+.col-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 8px; }
+.col-label.weakness { color: #ef4444; }
+.col-label.strength { color: #f59e0b; }
+.col-label.win { color: #10b981; }
+.col-label.trigger { color: #a78bfa; }
+
+.battle-win, .battle-triggers, .battle-talktack { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.battle-win p, .battle-talktack p { font-size: 13px; color: #cbd5e1; line-height: 1.6; }
+
+.trigger-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.trigger-pill { font-size: 11px; background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); border-radius: 6px; padding: 3px 10px; }
