@@ -1,0 +1,42 @@
+/* frontend/src/components/ProspectSearch.css */
+.prospect-search { display: flex; flex-direction: column; gap: 12px; }
+
+.search-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.search-input, .filter-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: #f1f5f9;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input { flex: 1; min-width: 200px; }
+.search-input:focus, .filter-select:focus { border-color: rgba(37, 99, 235, 0.6); }
+.filter-select option { background: #0f172a; }
+
+.prospect-list { display: flex; flex-direction: column; gap: 4px; max-height: 400px; overflow-y: auto; }
+
+.prospect-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4,0,0.2,1);
+  animation: fadeSlideIn 0.3s both;
+}
+.prospect-row:hover { background: rgba(37,99,235,0.12); border-color: rgba(37,99,235,0.3); transform: translateX(4px); }
+
+@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.prospect-row-left { display: flex; flex-direction: column; gap: 2px; }
+.prospect-name { font-size: 14px; font-weight: 500; color: #f1f5f9; }
+.prospect-meta { font-size: 11px; color: #64748b; }
+.prospect-row-right { display: flex; align-items: center; gap: 12px; }
+.prospect-volume { font-size: 11px; color: #475569; }
+.loading-row { color: #475569; font-size: 13px; padding: 8px 0; }
