@@ -153,12 +153,12 @@ function NodeGraph({ sector, onProspectClick }) {
   const R1 = 155;
   const R2 = 88;
 
-  // Assign prospects to sub-segments round-robin
+  // Assign prospects to sub-segments round-robin, up to 5 per sub (= 20 max visible)
   const subGroups = subs.map((sub, si) => ({
     sub,
     si,
     angle: (si / subs.length) * Math.PI * 2 - Math.PI / 2,
-    prospects: allProspects.filter((_, pi) => pi % subs.length === si).slice(0, 3),
+    prospects: allProspects.filter((_, pi) => pi % subs.length === si).slice(0, 5),
   }));
 
   return (
@@ -199,7 +199,8 @@ function NodeGraph({ sector, onProspectClick }) {
 
             {/* Prospect nodes */}
             {pGroup.map((p, pi) => {
-              const spread = pGroup.length > 1 ? 0.55 : 0;
+              // Tighten spread as group grows to keep adjacent sub-groups from overlapping
+              const spread = pGroup.length <= 1 ? 0 : pGroup.length <= 3 ? 0.52 : 0.40;
               const pAngle = angle + (pi - (pGroup.length - 1) / 2) * spread;
               const px = sx + R2 * Math.cos(pAngle);
               const py = sy + R2 * Math.sin(pAngle);
@@ -277,7 +278,7 @@ export default function MarketMapPage() {
   }
 
   const meta = selected ? (SECTOR_META[selected.sector?.toLowerCase()] || DEFAULT_META) : null;
-  const top3 = selected?.prospects?.slice(0, 3) || [];
+  const sectorProspects = selected?.prospects || [];
 
   return (
     <div className="mm-page">
@@ -364,24 +365,34 @@ export default function MarketMapPage() {
               </div>
             )}
 
-            <div className="mm-section-card">
-              <div className="mm-section-label">Top Prospects by ICP</div>
-              {top3.length === 0 && <div className="mm-empty-hint">No prospects in this sector yet.</div>}
-              {top3.map(p => (
-                <button
-                  key={p.id}
-                  className="mm-prospect-row"
-                  onClick={() => navigate(`/account/${p.id}`)}
-                >
-                  <span className="mm-prospect-name">{p.name}</span>
-                  <span className="mm-prospect-right">
-                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: ICP_COLOR(p.icp_score) }}>
-                      {p.icp_score}
+            <div className="mm-section-card mm-prospects-card">
+              <div className="mm-section-label">
+                All Prospects
+                <span className="mm-prospect-count">{sectorProspects.length}</span>
+              </div>
+              {sectorProspects.length === 0 && (
+                <div className="mm-empty-hint">No prospects in this sector yet.</div>
+              )}
+              <div className="mm-prospects-scroll">
+                {sectorProspects.map(p => (
+                  <button
+                    key={p.id}
+                    className="mm-prospect-row"
+                    onClick={() => navigate(`/account/${p.id}`)}
+                  >
+                    <span className="mm-prospect-stage-dot"
+                      style={{ background: STAGE_COLORS[p.pipeline_stage] || STAGE_COLORS.new }}
+                    />
+                    <span className="mm-prospect-name">{p.name}</span>
+                    <span className="mm-prospect-right">
+                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: ICP_COLOR(p.icp_score) }}>
+                        {p.icp_score}
+                      </span>
+                      <RiArrowRightLine size={12} color="#475569" />
                     </span>
-                    <RiArrowRightLine size={12} color="#475569" />
-                  </span>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
           </>
         ) : (
