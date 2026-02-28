@@ -8,11 +8,12 @@ function getDb() {
 }
 
 const FRED_SERIES = {
-  trade_balance:  'BOPGSTB',  // Trade Balance: Goods & Services (monthly, $B)
-  total_imports:  'IMPGS',    // Imports of Goods and Services (quarterly, $B annualized)
-  capital_goods:  'AITGICS',  // Advance Imports: Capital Goods (monthly, $B)
-  consumer_goods: 'AITGIGS',  // Advance Imports: Consumer Goods (monthly, $B)
-  freight_index:  'DCOILBRENTEU', // Brent Crude Oil ($/bbl) — freight cost leading indicator
+  trade_balance:  'BOPGSTB',      // Trade Balance: Goods & Services (monthly, $M → ÷1000 for $B)
+  total_imports:  'IMPGS',        // Imports of Goods and Services (quarterly, $B SAAR → ÷4 per quarter)
+  capital_goods:  'AITGICS',      // Advance Imports: Capital Goods (monthly, $M → ÷1000 for $B)
+  consumer_goods: 'AITGIGS',      // Advance Imports: Consumer Goods (monthly, $M → ÷1000 for $B)
+  freight_index:  'DCOILBRENTEU', // Brent Crude Oil (daily, $/bbl) — freight cost leading indicator
+  diesel_price:   'GASDESW',      // US Diesel Retail Prices (weekly, $/gal) — direct trucking cost indicator
 };
 
 async function getTradeData(commodity) {
@@ -22,8 +23,8 @@ async function getTradeData(commodity) {
   const cached = await getCached(seriesId);
   if (cached) return cached;
 
-  // Daily series (like Brent Crude) need more observations for year-ago comparison
-  const isDailyLike = ['DCOILBRENTEU'].includes(seriesId);
+  // Daily/weekly series need more observations for year-ago comparison
+  const isDailyLike = ['DCOILBRENTEU', 'GASDESW'].includes(seriesId);
   const limit = isDailyLike ? 400 : 24;
 
   const res = await axios.get('https://api.stlouisfed.org/fred/series/observations', {

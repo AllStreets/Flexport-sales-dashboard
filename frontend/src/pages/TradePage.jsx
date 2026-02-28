@@ -21,6 +21,7 @@ const fmtDelta = (n, pct) => {
   return `${sign}${pct}% (${sign}${formatted}B)`;
 };
 const fmtBbl = n => (!n && n !== 0) ? '—' : `$${n.toFixed(2)}/bbl`;
+const fmtGal = n => (!n && n !== 0) ? '—' : `$${n.toFixed(3)}/gal`;
 
 // ── Static fallback signals (shown when NewsAPI is unavailable) ────────────────
 const FALLBACK_SIGNALS = [
@@ -244,6 +245,7 @@ export default function TradePage() {
         <MacroTile label="CAPITAL GOODS"              data={tradeData?.capital_goods}  color="#00c176" />
         <MacroTile label="CONSUMER GOODS"             data={tradeData?.consumer_goods} color="#ff9f0a" />
         <MacroTile label="BRENT CRUDE · FREIGHT PROXY" data={tradeData?.freight_index} color="#a78bfa" formatter={fmtBbl} />
+        <MacroTile label="US DIESEL RETAIL"           data={tradeData?.diesel_price}  color="#f59e0b" formatter={fmtGal} />
       </div>
 
       {/* ── Row 1: Chart · Commodity table · Live signals ── */}

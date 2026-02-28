@@ -2,12 +2,13 @@
 const { getTradeData } = require('./fredService');
 
 async function getTradeIntelligence() {
-  const [tb, ti, cg, cons, fi] = await Promise.allSettled([
+  const [tb, ti, cg, cons, fi, ds] = await Promise.allSettled([
     getTradeData('trade_balance'),
     getTradeData('total_imports'),
     getTradeData('capital_goods'),
     getTradeData('consumer_goods'),
     getTradeData('freight_index'),
+    getTradeData('diesel_price'),
   ]);
 
   // Process $B series (trade/import data)
@@ -31,21 +32,24 @@ async function getTradeIntelligence() {
     };
   };
 
-  // Process $/unit series (oil/freight index — daily, last 90 obs covers ~3 months)
-  const processRaw = (result, label, unit) => {
+  // Process $/unit series (daily or weekly price data)
+  // prevIdx: obs index for ~1 month ago (21 trading days for daily, 4 for weekly)
+  // yearIdx: obs index for ~1 year ago (252 trading days for daily, 52 for weekly)
+  // sparkCount: how many obs to include in sparkline
+  const processRaw = (result, label, unit, { prevIdx = 21, yearIdx = 252, sparkCount = 60 } = {}) => {
     if (result.status === 'rejected') return { label, unit, current: 0, momDelta: 0, momPct: '0.0', yoyDelta: 0, yoyPct: '0.0', sparkline: [] };
-    const obs = (result.value.observations || []).filter(o => o.value !== '.').slice(0, 365);
+    const obs = (result.value.observations || []).filter(o => o.value !== '.').slice(0, 400);
     const val = i => parseFloat(obs[i]?.value) || 0;
     const current = val(0);
-    const prev = val(21);    // ~1 month ago (trading days)
-    const prevYear = val(252); // ~1 year ago (trading days)
+    const prev = val(prevIdx);
+    const prevYear = val(yearIdx);
     return {
-      label, unit, current: +current.toFixed(2),
-      momDelta: +(current - prev).toFixed(2),
+      label, unit, current: +current.toFixed(3),
+      momDelta: +(current - prev).toFixed(3),
       momPct: prev ? ((current - prev) / Math.abs(prev) * 100).toFixed(1) : '0.0',
-      yoyDelta: +(current - prevYear).toFixed(2),
+      yoyDelta: +(current - prevYear).toFixed(3),
       yoyPct: prevYear ? ((current - prevYear) / Math.abs(prevYear) * 100).toFixed(1) : '0.0',
-      sparkline: obs.slice(0, 60).reverse().map(o => ({ v: parseFloat(o.value) || 0, d: o.date }))
+      sparkline: obs.slice(0, sparkCount).reverse().map(o => ({ v: parseFloat(o.value) || 0, d: o.date }))
     };
   };
 
@@ -56,7 +60,9 @@ async function getTradeIntelligence() {
     consumer_goods: process(cons, 'Consumer Goods',   '$B', { divisor: 1000 }),
     // IMPGS → Billions SAAR Quarterly → ÷4 for single-quarter value, prevYearIdx=4 (4 quarters back)
     total_imports:  process(ti,   'Total Imports',    '$B', { divisor: 4, prevYearIdx: 4, period: 'QoQ' }),
-    freight_index:  processRaw(fi, 'Brent Crude',     '$/bbl'),
+    freight_index:  processRaw(fi, 'Brent Crude',      '$/bbl'),
+    // GASDESW = weekly retail diesel — prevIdx:4 (~4 weeks), yearIdx:52 (52 weeks = 1yr)
+    diesel_price:   processRaw(ds, 'US Diesel Retail', '$/gal', { prevIdx: 4, yearIdx: 52, sparkCount: 52 }),
     timestamp: new Date().toISOString()
   };
 }
