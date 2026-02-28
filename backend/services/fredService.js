@@ -49,4 +49,28 @@ function cacheData(seriesId, data) {
   });
 }
 
-module.exports = { getTradeData, FRED_SERIES };
+function clearCache(seriesId) {
+  return new Promise((resolve) => {
+    const db = getDb();
+    db.run(`DELETE FROM trade_data_cache WHERE series_id = ?`, [seriesId], () => { db.close(); resolve(); });
+  });
+}
+
+async function refreshAllTradeCache() {
+  const series = Object.values(FRED_SERIES);
+  for (const id of series) {
+    await clearCache(id);
+  }
+  // Re-fetch all series sequentially to avoid hammering FRED
+  for (const key of Object.keys(FRED_SERIES)) {
+    try {
+      await getTradeData(key);
+      console.log(`[FRED] Refreshed ${FRED_SERIES[key]}`);
+    } catch (e) {
+      console.error(`[FRED] Failed to refresh ${FRED_SERIES[key]}:`, e.message);
+    }
+  }
+  console.log(`[FRED] Cache refresh complete at ${new Date().toISOString()}`);
+}
+
+module.exports = { getTradeData, FRED_SERIES, refreshAllTradeCache };

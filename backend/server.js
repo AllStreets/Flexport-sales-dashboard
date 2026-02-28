@@ -19,7 +19,7 @@ const { getProspects, getProspectById, getSectors } = require('./services/prospe
 const { saveAnalysis, getAllAnalyses, toggleFavorite, deleteAnalysis } = require('./services/database');
 const { analyzeForFlexport } = require('./services/flexportAnalyzer');
 const { fetchAndScoreSignals } = require('./services/signalsService');
-const { getTradeData } = require('./services/fredService');
+const { getTradeData, refreshAllTradeCache } = require('./services/fredService');
 const { getPipeline, addToPipeline, updatePipeline, removeFromPipeline } = require('./services/pipelineService');
 const { aggregateCompanyData } = require('./services/dataAggregator');
 const { getTradeIntelligence } = require('./services/tradeIntelligenceService');
@@ -359,6 +359,16 @@ Return JSON: { "first_line": "..." }`;
     res.json(m ? JSON.parse(m[0]) : { first_line: '' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ── Scheduled Jobs ─────────────────────────────────
+const cron = require('node-cron');
+
+// Refresh FRED trade data cache every night at midnight EST
+// '0 0 * * *' in America/New_York = 05:00 UTC in winter, 04:00 UTC in summer
+cron.schedule('0 0 * * *', () => {
+  console.log('[CRON] Midnight EST — refreshing FRED trade data cache...');
+  refreshAllTradeCache().catch(e => console.error('[CRON] Refresh failed:', e.message));
+}, { timezone: 'America/New_York' });
 
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
