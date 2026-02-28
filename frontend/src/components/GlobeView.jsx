@@ -77,14 +77,29 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   };
 
   const mode = OVERLAY_MODES[overlayMode];
+
+  // Find the closest port to a lane's source coords (within 1.5° tolerance)
+  const srcPortStatus = (lane) => {
+    const p = globeData.ports.find(
+      pt => Math.abs(pt.lat - lane.src_lat) < 1.5 && Math.abs(pt.lng - lane.src_lng) < 1.5
+    );
+    return p?.status || 'clear';
+  };
+
+  // High-tariff origin prefixes for tariff overlay
+  const HIGH_TARIFF_PREFIXES = ['China', 'SE Asia', 'Vietnam', 'Taiwan', 'Korea'];
+
   const laneColor = (lane) => {
     if (mode === 'tariff') {
-      const highTariff = ['Asia-US West Coast', 'China-Rotterdam', 'SE Asia-US East', 'Vietnam-US West'];
-      return highTariff.some(l => lane.label?.includes(l.split('-')[0]))
+      return HIGH_TARIFF_PREFIXES.some(p => lane.label?.startsWith(p))
         ? ['rgba(239,68,68,0.7)', 'rgba(239,68,68,0.7)']
         : ['rgba(16,185,129,0.6)', 'rgba(16,185,129,0.6)'];
     }
     if (mode === 'disruption') return ['rgba(251,191,36,0.7)', 'rgba(251,191,36,0.7)'];
+    // Standard mode: color by source port status
+    const status = srcPortStatus(lane);
+    if (status === 'disruption') return ['rgba(239,68,68,0.75)', 'rgba(239,68,68,0.75)'];
+    if (status === 'congestion') return ['rgba(245,158,11,0.75)', 'rgba(245,158,11,0.75)'];
     return ['rgba(0, 212, 255, 0.6)', 'rgba(0, 212, 255, 0.6)'];
   };
 
