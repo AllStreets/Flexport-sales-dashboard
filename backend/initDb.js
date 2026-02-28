@@ -69,9 +69,30 @@ db.serialize(() => {
     data_json TEXT NOT NULL,
     expires_at DATETIME,
     cached_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS sdr_activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    prospect_id INTEGER,
+    company_name TEXT,
+    date TEXT NOT NULL,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS win_loss (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_name TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    stage_reached TEXT,
+    competitor TEXT,
+    reason TEXT,
+    deal_value INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, (err) => {
     if (err) { console.error(err); process.exit(1); }
-    console.log('All 5 tables created');
+    console.log('All 7 tables created');
     db.close();
   });
 });

@@ -22,6 +22,8 @@ const { fetchAndScoreSignals } = require('./services/signalsService');
 const { getTradeData } = require('./services/fredService');
 const { getPipeline, addToPipeline, updatePipeline, removeFromPipeline } = require('./services/pipelineService');
 const { aggregateCompanyData } = require('./services/dataAggregator');
+const { getTradeIntelligence } = require('./services/tradeIntelligenceService');
+const { getPerformanceSummary, logActivity, getWinLoss, addWinLoss } = require('./services/performanceService');
 
 // ── Prospects ──────────────────────────────────────
 app.get('/api/prospects', async (req, res) => {
@@ -160,6 +162,202 @@ app.get('/api/battle-cards', (req, res) => {
     { competitor: 'DHL Global Forwarding', strengths: ['Massive network', 'Air freight strength', 'Brand trust'], weaknesses: ['Enterprise-only focus', 'Poor mid-market service', 'Complex pricing'], flexport_wins: 'Flexport is built for companies at your growth stage — dedicated support, transparent pricing, no minimum volume requirements.', trigger_phrases: ['We use DHL', 'Our 3PL handles all of it'], talk_track: 'Ask: "When you have a question about your shipment, who do you call and how fast do they respond?" DHL SMB customers are often routing to call centers.' },
     { competitor: 'Convoy (Flexe/freight brokers)', strengths: ['Domestic trucking focus', 'Spot market pricing'], weaknesses: ['No international capability', 'No customs', 'No visibility platform'], flexport_wins: 'End-to-end: Flexport handles ocean, customs, and final mile. Convoy stops at the US border.', trigger_phrases: ['We just need domestic', 'We handle imports separately'], talk_track: 'Surface the coordination cost: "How many vendors do you work with to get a product from China to your warehouse? What does the handoff between international and domestic cost you in time?"' }
   ]);
+});
+
+// ── Trade Intelligence ─────────────────────────────
+app.get('/api/trade-intelligence', async (req, res) => {
+  try { res.json(await getTradeIntelligence()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Account 360 ────────────────────────────────────
+app.get('/api/account360/:id', async (req, res) => {
+  try {
+    const prospect = await getProspectById(req.params.id);
+    const aggregated = await aggregateCompanyData(prospect.name);
+    res.json({ prospect, news: aggregated.news || [], searchResults: aggregated.searchResults || [] });
+  } catch (e) { res.status(e.message === 'Prospect not found' ? 404 : 500).json({ error: e.message }); }
+});
+
+// ── Performance ────────────────────────────────────
+app.get('/api/performance', async (req, res) => {
+  try { res.json(await getPerformanceSummary()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/performance/activity', async (req, res) => {
+  try { res.status(201).json(await logActivity(req.body)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Win / Loss ─────────────────────────────────────
+app.get('/api/win-loss', async (req, res) => {
+  try { res.json(await getWinLoss()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/win-loss', async (req, res) => {
+  try { res.status(201).json(await addWinLoss(req.body)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Market Map ─────────────────────────────────────
+app.get('/api/market-map', async (req, res) => {
+  try {
+    const all = await getProspects({});
+    const bySecter = {};
+    all.forEach(p => {
+      const s = p.sector || 'Other';
+      if (!bySecter[s]) bySecter[s] = [];
+      bySecter[s].push(p);
+    });
+    const sectors = Object.entries(bySecter).map(([sector, prospects]) => ({
+      sector,
+      count: prospects.length,
+      avgIcp: Math.round(prospects.reduce((s, p) => s + (p.icp_score || 0), 0) / prospects.length),
+      prospects: prospects.sort((a, b) => (b.icp_score || 0) - (a.icp_score || 0))
+    })).sort((a, b) => b.avgIcp - a.avgIcp);
+    res.json(sectors);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── HS Code Lookup ─────────────────────────────────
+const HS_CODES = {
+  '8471': { desc: 'Computers & peripherals', rate: 0.00, section301: 0.25 },
+  '8517': { desc: 'Smartphones & telecom equipment', rate: 0.00, section301: 0.25 },
+  '6110': { desc: 'Knitted sweaters & pullovers', rate: 0.12, section301: 0 },
+  '9403': { desc: 'Furniture (other)', rate: 0.05, section301: 0.25 },
+  '8415': { desc: 'Air conditioning machines', rate: 0.01, section301: 0.25 },
+  '9504': { desc: 'Video game consoles & equipment', rate: 0.00, section301: 0.25 },
+  '3304': { desc: 'Beauty & skincare preparations', rate: 0.00, section301: 0 },
+  '6204': { desc: "Women's apparel", rate: 0.12, section301: 0 },
+  '8703': { desc: 'Passenger automobiles', rate: 0.025, section301: 0 },
+  '8708': { desc: 'Auto parts & accessories', rate: 0.025, section301: 0.075 },
+  '3926': { desc: 'Plastic articles (misc.)', rate: 0.053, section301: 0.25 },
+  '7318': { desc: 'Screws, bolts, nuts (iron/steel)', rate: 0.062, section301: 0.25 },
+  '8544': { desc: 'Insulated wire & cable', rate: 0.026, section301: 0.25 },
+  '3005': { desc: 'Medical dressings & bandages', rate: 0.00, section301: 0 },
+  '9506': { desc: 'Sports equipment & apparatus', rate: 0.04, section301: 0 },
+  '4202': { desc: 'Luggage & handbags', rate: 0.158, section301: 0 },
+  '6403': { desc: 'Footwear with leather uppers', rate: 0.085, section301: 0 },
+  '2106': { desc: 'Food preparations (misc.)', rate: 0.086, section301: 0 },
+  '8501': { desc: 'Electric motors & generators', rate: 0.025, section301: 0.25 },
+  '9401': { desc: 'Seating furniture', rate: 0.00, section301: 0.25 },
+  '6109': { desc: 'T-shirts & tank tops', rate: 0.165, section301: 0 },
+  '8528': { desc: 'Monitors, TVs & displays', rate: 0.00, section301: 0.25 },
+};
+
+app.get('/api/hs-lookup', (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json([]);
+  const results = Object.entries(HS_CODES)
+    .filter(([code, info]) => code.startsWith(q) || info.desc.toLowerCase().includes(q.toLowerCase()))
+    .map(([code, info]) => ({ code, ...info }));
+  res.json(results.slice(0, 5));
+});
+
+// ── Route Optimizer ────────────────────────────────
+app.post('/api/route-optimize', (req, res) => {
+  const { origin, destination } = req.body;
+  const ROUTES = {
+    'China-US West Coast':    { flexport: 14, industry: 18, costSave: 12, risk: 'medium' },
+    'China-US East Coast':    { flexport: 28, industry: 33, costSave: 9,  risk: 'medium' },
+    'SE Asia-US West Coast':  { flexport: 17, industry: 22, costSave: 15, risk: 'low' },
+    'India-US':               { flexport: 21, industry: 27, costSave: 11, risk: 'low' },
+    'Europe-US East Coast':   { flexport: 10, industry: 14, costSave: 8,  risk: 'low' },
+    'Vietnam-US West Coast':  { flexport: 16, industry: 21, costSave: 14, risk: 'low' },
+  };
+  const key = `${origin}-${destination}`;
+  const route = ROUTES[key] || ROUTES['China-US West Coast'];
+  res.json({ origin, destination, ...route, timestamp: new Date().toISOString() });
+});
+
+// ── AI Utilities ───────────────────────────────────
+app.post('/api/call-prep', async (req, res) => {
+  const { companyName, prospectData, analysisData } = req.body;
+  if (!companyName) return res.status(400).json({ error: 'companyName required' });
+  try {
+    const axios = require('axios');
+    const prompt = `Generate a concise pre-call prep sheet for a Flexport SDR calling ${companyName}.
+Context: ${JSON.stringify({ prospectData, analysisData })}
+Return JSON: {
+  "opening_hook": "30-second opener referencing their specific supply chain",
+  "discovery_questions": ["Question 1", "Question 2", "Question 3"],
+  "pain_points_to_surface": ["Pain 1", "Pain 2"],
+  "flexport_value_props": ["Value prop 1", "Value prop 2"],
+  "objection_responses": [{"objection": "We have a forwarder", "response": "..."}],
+  "call_to_action": "Specific next step to propose"
+}`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4-turbo', max_tokens: 800,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : {});
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/objection', async (req, res) => {
+  const { objection, companyName, context } = req.body;
+  if (!objection) return res.status(400).json({ error: 'objection required' });
+  try {
+    const axios = require('axios');
+    const prompt = `You are a Flexport SDR coach. Provide a concise, confident response to this sales objection.
+Company: ${companyName || 'unknown'}
+Context: ${JSON.stringify(context || {})}
+Objection: "${objection}"
+Return JSON: { "response": "2-3 sentence counter", "follow_up_question": "Question to keep conversation going" }`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4-turbo', max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : {});
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/map-plan', async (req, res) => {
+  const { companyName, prospectData } = req.body;
+  if (!companyName) return res.status(400).json({ error: 'companyName required' });
+  try {
+    const axios = require('axios');
+    const prompt = `Create a Mutual Action Plan (MAP) for a Flexport SDR closing a deal with ${companyName}.
+Context: ${JSON.stringify(prospectData || {})}
+Return JSON: {
+  "milestones": [
+    {"day": 1, "owner": "SDR", "action": "..."},
+    {"day": 3, "owner": "Prospect", "action": "..."},
+    {"day": 7, "owner": "Both", "action": "..."},
+    {"day": 14, "owner": "Flexport", "action": "..."},
+    {"day": 21, "owner": "Both", "action": "..."}
+  ],
+  "success_criteria": "What does success look like at 90 days"
+}`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4-turbo', max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : {});
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/first-line', async (req, res) => {
+  const { companyName, prospectData, signal } = req.body;
+  if (!companyName) return res.status(400).json({ error: 'companyName required' });
+  try {
+    const axios = require('axios');
+    const prompt = `Write a single hyper-personalized cold email opening line for a Flexport SDR reaching out to ${companyName}.
+Context: ${JSON.stringify({ prospectData, signal })}
+Rules: Under 25 words. Reference something specific (a lane, a recent event, their imports). No generic phrases.
+Return JSON: { "first_line": "..." }`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4-turbo', max_tokens: 100,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    res.json(m ? JSON.parse(m[0]) : { first_line: '' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 const PORT = process.env.PORT || 5000;
