@@ -1,0 +1,135 @@
+/* frontend/src/pages/TradePage.css — Bloomberg terminal aesthetic */
+.trade-page { background: #060b18; }
+
+.trade-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 4px; border-bottom: 1px solid #1a2744;
+}
+.bb-clock {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: #ff9f0a; letter-spacing: 0.04em;
+}
+
+/* Macro tiles */
+.macro-tiles {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+
+.macro-tile {
+  background: #0a0e1a;
+  border: 1px solid #1a2744;
+  border-radius: 8px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.tile-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 0.1em;
+  color: #475569; font-weight: 700;
+}
+.tile-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px; font-weight: 700; line-height: 1;
+}
+.tile-delta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 600;
+}
+.tile-spark { margin-top: 6px; }
+.sparkline-empty { height: 36px; }
+
+/* Main row */
+.trade-main-row {
+  display: grid; grid-template-columns: 1fr 260px 240px; gap: 12px;
+}
+
+/* Bottom row */
+.trade-bottom-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+
+/* Panel base */
+.bb-panel {
+  background: #0a0e1a;
+  border: 1px solid #1a2744;
+  border-radius: 8px; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.bb-panel-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  color: #00d4ff; border-bottom: 1px solid #1a2744;
+  padding-bottom: 8px;
+}
+
+.bb-loading { color: #475569; font-size: 12px; padding: 20px 0; text-align: center; }
+
+/* Chart legend */
+.chart-legend {
+  display: flex; gap: 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+}
+
+/* Commodity table */
+.commodity-table { width: 100%; border-collapse: collapse; }
+.commodity-table th {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  color: #475569; font-weight: 700; letter-spacing: 0.06em;
+  text-align: right; padding: 4px 6px;
+  border-bottom: 1px solid #1a2744;
+}
+.commodity-table th:first-child { text-align: left; }
+.commodity-table td { padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.c-label { font-size: 11px; color: #94a3b8; }
+.c-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f1f5f9; text-align: right; }
+.c-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; text-align: right; }
+.fred-note { font-size: 9px; color: #334155; font-family: 'JetBrains Mono', monospace; }
+
+/* Bloomberg signal list */
+.bb-signals { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 240px; }
+.bb-signal-row { display: flex; align-items: flex-start; gap: 6px; }
+.bb-sig-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.bb-sig-score {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  font-weight: 700; flex-shrink: 0; width: 16px;
+}
+.bb-sig-text { font-size: 11px; color: #64748b; line-height: 1.4; }
+
+/* Route optimizer */
+.route-controls { display: flex; gap: 8px; }
+.route-select {
+  flex: 1; background: #060b18; border: 1px solid #1a2744;
+  color: #94a3b8; border-radius: 6px; padding: 6px 10px;
+  font-size: 12px; font-family: 'JetBrains Mono', monospace;
+}
+.bb-btn {
+  background: rgba(37, 99, 235, 0.2); border: 1px solid rgba(37,99,235,0.4);
+  color: #60a5fa; border-radius: 6px; padding: 6px 14px;
+  font-size: 11px; cursor: pointer; white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.03em;
+  transition: all 0.15s;
+}
+.bb-btn:hover { background: rgba(37,99,235,0.35); }
+.bb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.route-result { display: flex; flex-direction: column; gap: 6px; }
+.route-metric { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.rm-label { font-size: 11px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
+.rm-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
+.rm-val.green { color: #00c176; }
+.rm-val.red { color: #ff3b3b; }
+.rm-val.accent { color: #00d4ff; }
+
+/* Tariff table */
+.tariff-table { display: flex; flex-direction: column; gap: 4px; }
+.tariff-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.t-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #00d4ff; flex-shrink: 0; width: 36px; }
+.t-desc { font-size: 11px; color: #64748b; flex: 1; }
+.t-rate { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ff9f0a; flex-shrink: 0; }
+
+@media (max-width: 1100px) {
+  .macro-tiles { grid-template-columns: repeat(2, 1fr); }
+  .trade-main-row { grid-template-columns: 1fr; }
+  .trade-bottom-row { grid-template-columns: 1fr; }
+}
