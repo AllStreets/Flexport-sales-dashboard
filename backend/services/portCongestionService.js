@@ -12,52 +12,63 @@ function getDb() {
 
 // Static port registry — coordinates + baseline congestion (used when no signal data exists)
 const PORT_REGISTRY = [
-  // ── US Ports (Top 10 by container volume) ──────────────────────────────────
-  { name: 'LA/Long Beach',      lat: 33.74,  lng: -118.26, baseline: 5, keywords: ['los angeles', 'long beach', 'la/lb', 'lalb', 'san pedro'] },
-  { name: 'New York/New Jersey', lat: 40.68,  lng: -74.05,  baseline: 4, keywords: ['new york', 'new jersey', 'port newark', 'elizabeth', 'bayonne'] },
-  { name: 'Savannah',            lat: 32.08,  lng: -81.09,  baseline: 3, keywords: ['savannah', 'georgia ports', 'garden city'] },
-  { name: 'Seattle/Tacoma',      lat: 47.27,  lng: -122.42, baseline: 2, keywords: ['seattle', 'tacoma', 'nwsa', 'northwest seaport'] },
-  { name: 'Houston',             lat: 29.73,  lng: -95.02,  baseline: 3, keywords: ['houston', 'port of houston', 'bayport', 'barbours cut'] },
-  { name: 'Charleston',          lat: 32.78,  lng: -79.93,  baseline: 2, keywords: ['charleston', 'south carolina ports', 'wando welch'] },
-  { name: 'Norfolk/Hampton Roads', lat: 36.97, lng: -76.33, baseline: 2, keywords: ['norfolk', 'hampton roads', 'virginia port', 'portsmouth'] },
-  { name: 'Oakland',             lat: 37.80,  lng: -122.28, baseline: 3, keywords: ['oakland', 'port of oakland', 'alameda'] },
-  { name: 'Baltimore',           lat: 39.27,  lng: -76.58,  baseline: 2, keywords: ['baltimore', 'maryland port', 'seagirt', 'dundalk'] },
-  { name: 'Miami',               lat: 25.77,  lng: -80.18,  baseline: 3, keywords: ['miami', 'portmiami', 'port everglades', 'south florida'] },
+  // ── US Ports ────────────────────────────────────────────────────────────────
+  // LA/LB: chronic pre-stocking surges; NY/NJ: volume pressure from Red Sea reroutes
+  // Baltimore: recovering from Francis Scott Key Bridge collapse (March 2024)
+  { name: 'LA/Long Beach',        lat: 33.74,  lng: -118.26, baseline: 6, keywords: ['los angeles', 'long beach', 'la/lb', 'lalb', 'san pedro'] },
+  { name: 'New York/New Jersey',  lat: 40.68,  lng: -74.05,  baseline: 5, keywords: ['new york', 'new jersey', 'port newark', 'elizabeth', 'bayonne'] },
+  { name: 'Savannah',             lat: 32.08,  lng: -81.09,  baseline: 3, keywords: ['savannah', 'georgia ports', 'garden city'] },
+  { name: 'Seattle/Tacoma',       lat: 47.27,  lng: -122.42, baseline: 2, keywords: ['seattle', 'tacoma', 'nwsa', 'northwest seaport'] },
+  { name: 'Houston',              lat: 29.73,  lng: -95.02,  baseline: 4, keywords: ['houston', 'port of houston', 'bayport', 'barbours cut'] },
+  { name: 'Charleston',           lat: 32.78,  lng: -79.93,  baseline: 2, keywords: ['charleston', 'south carolina ports', 'wando welch'] },
+  { name: 'Norfolk/Hampton Roads', lat: 36.97, lng: -76.33,  baseline: 2, keywords: ['norfolk', 'hampton roads', 'virginia port', 'portsmouth'] },
+  { name: 'Oakland',              lat: 37.80,  lng: -122.28, baseline: 4, keywords: ['oakland', 'port of oakland', 'alameda'] },
+  { name: 'Baltimore',            lat: 39.27,  lng: -76.58,  baseline: 5, keywords: ['baltimore', 'maryland port', 'seagirt', 'dundalk'] },
+  { name: 'Miami',                lat: 25.77,  lng: -80.18,  baseline: 3, keywords: ['miami', 'portmiami', 'port everglades', 'south florida'] },
 
-  // ── International Ports ────────────────────────────────────────────────────
-  { name: 'Shanghai',            lat: 31.22,  lng: 121.47,  baseline: 3, keywords: ['shanghai', 'yangshan'] },
-  { name: 'Ningbo-Zhoushan',     lat: 29.87,  lng: 121.55,  baseline: 3, keywords: ['ningbo', 'zhoushan', 'ningbo-zhoushan'] },
-  { name: 'Yantian/Shenzhen',    lat: 22.57,  lng: 114.27,  baseline: 3, keywords: ['yantian', 'shenzhen port', 'shekou', 'chiwan'] },
-  { name: 'Guangzhou/Nansha',    lat: 22.74,  lng: 113.62,  baseline: 3, keywords: ['guangzhou', 'nansha', 'guangzhou port', 'nansha port'] },
-  { name: 'Tianjin',             lat: 39.00,  lng: 117.73,  baseline: 3, keywords: ['tianjin', 'xingang', 'tianjin port'] },
-  { name: 'Busan',               lat: 35.10,  lng: 129.04,  baseline: 2, keywords: ['busan', 'pusan'] },
-  { name: 'Singapore',           lat: 1.26,   lng: 103.82,  baseline: 2, keywords: ['singapore', 'psa', 'jurong'] },
-  { name: 'Port Klang',          lat: 3.00,   lng: 101.40,  baseline: 2, keywords: ['port klang', 'klang', 'westports', 'northport'] },
-  { name: 'Tanjung Pelepas',     lat: 1.37,   lng: 103.55,  baseline: 2, keywords: ['tanjung pelepas', 'ptp', 'johor'] },
-  { name: 'Ho Chi Minh City',    lat: 10.77,  lng: 106.72,  baseline: 3, keywords: ['ho chi minh', 'saigon', 'cat lai', 'hcmc'] },
-  { name: 'Hong Kong',           lat: 22.29,  lng: 114.17,  baseline: 3, keywords: ['hong kong', 'kwai tsing', 'stonecutters'] },
-  { name: 'Jebel Ali',           lat: 25.01,  lng: 55.06,   baseline: 2, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza'] },
-  { name: 'Colombo',             lat: 6.94,   lng: 79.84,   baseline: 2, keywords: ['colombo', 'sri lanka port', 'jict', 'cict'] },
-  { name: 'Rotterdam',           lat: 51.95,  lng: 4.13,    baseline: 2, keywords: ['rotterdam', 'maasvlakte', 'europoort'] },
-  { name: 'Antwerp',             lat: 51.26,  lng: 4.40,    baseline: 2, keywords: ['antwerp', 'port of antwerp', 'antwerp-bruges'] },
-  { name: 'Hamburg',             lat: 53.54,  lng: 9.97,    baseline: 2, keywords: ['hamburg', 'burchardkai', 'tollerort'] },
-  { name: 'Felixstowe',          lat: 51.96,  lng: 1.35,    baseline: 5, keywords: ['felixstowe', 'harwich'] },
-  { name: 'Piraeus',             lat: 37.94,  lng: 23.63,   baseline: 3, keywords: ['piraeus', 'greece port', 'cosco piraeus', 'pct'] },
+  // ── Asia-Pacific ───────────────────────────────────────────────────────────
+  // Shanghai/Ningbo: consistent volume pressure; Ho Chi Minh: dwell time elevation
+  // Felixstowe: chronic labour and infrastructure constraints
+  { name: 'Shanghai',             lat: 31.22,  lng: 121.47,  baseline: 4, keywords: ['shanghai', 'yangshan'] },
+  { name: 'Ningbo-Zhoushan',      lat: 29.87,  lng: 121.55,  baseline: 4, keywords: ['ningbo', 'zhoushan', 'ningbo-zhoushan'] },
+  { name: 'Yantian/Shenzhen',     lat: 22.57,  lng: 114.27,  baseline: 4, keywords: ['yantian', 'shenzhen port', 'shekou', 'chiwan'] },
+  { name: 'Guangzhou/Nansha',     lat: 22.74,  lng: 113.62,  baseline: 3, keywords: ['guangzhou', 'nansha', 'guangzhou port', 'nansha port'] },
+  { name: 'Tianjin',              lat: 39.00,  lng: 117.73,  baseline: 3, keywords: ['tianjin', 'xingang', 'tianjin port'] },
+  { name: 'Busan',                lat: 35.10,  lng: 129.04,  baseline: 2, keywords: ['busan', 'pusan'] },
+  { name: 'Singapore',            lat: 1.26,   lng: 103.82,  baseline: 3, keywords: ['singapore', 'psa', 'jurong'] },
+  { name: 'Port Klang',           lat: 3.00,   lng: 101.40,  baseline: 2, keywords: ['port klang', 'klang', 'westports', 'northport'] },
+  { name: 'Tanjung Pelepas',      lat: 1.37,   lng: 103.55,  baseline: 2, keywords: ['tanjung pelepas', 'ptp', 'johor'] },
+  { name: 'Ho Chi Minh City',     lat: 10.77,  lng: 106.72,  baseline: 5, keywords: ['ho chi minh', 'saigon', 'cat lai', 'hcmc'] },
+  { name: 'Hong Kong',            lat: 22.29,  lng: 114.17,  baseline: 3, keywords: ['hong kong', 'kwai tsing', 'stonecutters'] },
+
+  // ── Middle East / Europe ───────────────────────────────────────────────────
+  // Jebel Ali: overflow from Red Sea rerouting via Cape; Piraeus: COSCO-driven growth pressure
+  // Hamburg: labour disputes + low-water Elbe constraints; Felixstowe: chronic UK port congestion
+  { name: 'Jebel Ali',            lat: 25.01,  lng: 55.06,   baseline: 4, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza'] },
+  { name: 'Colombo',              lat: 6.94,   lng: 79.84,   baseline: 2, keywords: ['colombo', 'sri lanka port', 'jict', 'cict'] },
+  { name: 'Rotterdam',            lat: 51.95,  lng: 4.13,    baseline: 3, keywords: ['rotterdam', 'maasvlakte', 'europoort'] },
+  { name: 'Antwerp',              lat: 51.26,  lng: 4.40,    baseline: 3, keywords: ['antwerp', 'port of antwerp', 'antwerp-bruges'] },
+  { name: 'Hamburg',              lat: 53.54,  lng: 9.97,    baseline: 5, keywords: ['hamburg', 'burchardkai', 'tollerort'] },
+  { name: 'Felixstowe',           lat: 51.96,  lng: 1.35,    baseline: 6, keywords: ['felixstowe', 'harwich'] },
+  { name: 'Piraeus',              lat: 37.94,  lng: 23.63,   baseline: 4, keywords: ['piraeus', 'greece port', 'cosco piraeus', 'pct'] },
 
   // ── Africa ─────────────────────────────────────────────────────────────────
-  { name: 'Durban',              lat: -29.87, lng: 31.03,   baseline: 3, keywords: ['durban', 'south africa port', 'transnet', 'pier 1'] },
-  { name: 'Tangier Med',         lat: 35.88,  lng: -5.50,   baseline: 2, keywords: ['tangier', 'tanger med', 'morocco port'] },
-  { name: 'Port Said',           lat: 31.26,  lng: 32.30,   baseline: 3, keywords: ['port said', 'suez canal', 'egypt port', 'sczone'] },
+  // Durban: Transnet infrastructure failures + labour strikes = persistent disruption
+  // Port Said: severe traffic spike from Red Sea diversions adding ~2M TEU/yr of rerouted volume
+  { name: 'Durban',               lat: -29.87, lng: 31.03,   baseline: 8, keywords: ['durban', 'south africa port', 'transnet', 'pier 1'] },
+  { name: 'Tangier Med',          lat: 35.88,  lng: -5.50,   baseline: 2, keywords: ['tangier', 'tanger med', 'morocco port'] },
+  { name: 'Port Said',            lat: 31.26,  lng: 32.30,   baseline: 6, keywords: ['port said', 'suez canal', 'egypt port', 'sczone'] },
 
   // ── South America ──────────────────────────────────────────────────────────
-  { name: 'Santos',              lat: -23.95, lng: -46.33,  baseline: 3, keywords: ['santos', 'brazil port', 'porto de santos'] },
-  { name: 'Callao',              lat: -12.04, lng: -77.14,  baseline: 3, keywords: ['callao', 'peru port', 'lima port', 'dpp'] },
-  { name: 'Buenos Aires',        lat: -34.59, lng: -58.37,  baseline: 3, keywords: ['buenos aires', 'argentina port', 'exolgan', 'tec plata'] },
+  // Santos: chronic dwell times 7–12 days, Brazil customs complexity
+  { name: 'Santos',               lat: -23.95, lng: -46.33,  baseline: 6, keywords: ['santos', 'brazil port', 'porto de santos'] },
+  { name: 'Callao',               lat: -12.04, lng: -77.14,  baseline: 4, keywords: ['callao', 'peru port', 'lima port', 'dpp'] },
+  { name: 'Buenos Aires',         lat: -34.59, lng: -58.37,  baseline: 4, keywords: ['buenos aires', 'argentina port', 'exolgan', 'tec plata'] },
 
   // ── Australia ──────────────────────────────────────────────────────────────
-  { name: 'Melbourne',           lat: -37.83, lng: 144.93,  baseline: 2, keywords: ['melbourne', 'port of melbourne', 'victoria port'] },
-  { name: 'Sydney/Port Botany',  lat: -33.97, lng: 151.22,  baseline: 2, keywords: ['sydney', 'port botany', 'new south wales port'] },
-  { name: 'Brisbane',            lat: -27.38, lng: 153.17,  baseline: 2, keywords: ['brisbane', 'port of brisbane', 'queensland port'] },
+  { name: 'Melbourne',            lat: -37.83, lng: 144.93,  baseline: 3, keywords: ['melbourne', 'port of melbourne', 'victoria port'] },
+  { name: 'Sydney/Port Botany',   lat: -33.97, lng: 151.22,  baseline: 2, keywords: ['sydney', 'port botany', 'new south wales port'] },
+  { name: 'Brisbane',             lat: -27.38, lng: 153.17,  baseline: 2, keywords: ['brisbane', 'port of brisbane', 'queensland port'] },
 ];
 
 /**
@@ -147,7 +158,7 @@ async function getPortCongestion() {
     }
 
     congestion = Math.max(1, Math.min(10, congestion));
-    const status = congestion >= 6 ? 'congestion' : congestion >= 4 ? 'moderate' : 'clear';
+    const status = congestion >= 8 ? 'disruption' : congestion >= 5 ? 'congestion' : 'clear';
 
     return {
       name:       port.name,
