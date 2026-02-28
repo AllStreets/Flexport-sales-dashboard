@@ -10,84 +10,70 @@
   color: #ff9f0a; letter-spacing: 0.04em;
 }
 
-/* Macro tiles */
+/* ── Macro tiles ─────────────────────────────────────────────────────────────── */
 .macro-tiles {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
 }
-
 .macro-tile {
-  background: #0a0e1a;
-  border: 1px solid #1a2744;
+  background: #0a0e1a; border: 1px solid #1a2744;
   border-radius: 8px; padding: 14px 16px;
   display: flex; flex-direction: column; gap: 4px;
 }
-
 .tile-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px; letter-spacing: 0.1em;
-  color: #475569; font-weight: 700;
+  font-size: 9px; letter-spacing: 0.1em; color: #475569; font-weight: 700;
 }
 .tile-value {
   font-family: 'JetBrains Mono', monospace;
   font-size: 26px; font-weight: 700; line-height: 1;
 }
 .tile-delta {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; font-weight: 600;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
 }
 .tile-spark { margin-top: 6px; }
 .sparkline-empty { height: 36px; }
 
-/* Main row */
-.trade-main-row {
-  display: grid; grid-template-columns: 1fr 260px 240px; gap: 12px;
-}
-
-/* Bottom row */
-.trade-bottom-row {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-}
-
-/* Panel base */
+/* ── Panel base ──────────────────────────────────────────────────────────────── */
 .bb-panel {
-  background: #0a0e1a;
-  border: 1px solid #1a2744;
+  background: #0a0e1a; border: 1px solid #1a2744;
   border-radius: 8px; padding: 14px;
   display: flex; flex-direction: column; gap: 10px;
 }
-
 .bb-panel-header {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
-  color: #00d4ff; border-bottom: 1px solid #1a2744;
-  padding-bottom: 8px;
+  color: #00d4ff; border-bottom: 1px solid #1a2744; padding-bottom: 8px;
 }
-
 .bb-loading { color: #475569; font-size: 12px; padding: 20px 0; text-align: center; }
 
-/* Chart legend */
+/* ── Row layouts ─────────────────────────────────────────────────────────────── */
+.trade-main-row  { display: grid; grid-template-columns: 1fr 260px 240px; gap: 12px; }
+.trade-mid-row   { display: grid; grid-template-columns: repeat(4, 1fr);  gap: 12px; }
+.trade-bottom-row { display: grid; grid-template-columns: 1fr 1fr;        gap: 12px; }
+.trade-extra-row  { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* ── Chart ───────────────────────────────────────────────────────────────────── */
 .chart-legend {
   display: flex; gap: 16px;
   font-family: 'JetBrains Mono', monospace; font-size: 10px;
 }
 
-/* Commodity table */
+/* ── Commodity table ─────────────────────────────────────────────────────────── */
 .commodity-table { width: 100%; border-collapse: collapse; }
 .commodity-table th {
   font-family: 'JetBrains Mono', monospace; font-size: 9px;
   color: #475569; font-weight: 700; letter-spacing: 0.06em;
-  text-align: right; padding: 4px 6px;
-  border-bottom: 1px solid #1a2744;
+  text-align: right; padding: 4px 6px; border-bottom: 1px solid #1a2744;
 }
 .commodity-table th:first-child { text-align: left; }
 .commodity-table td { padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .c-label { font-size: 11px; color: #94a3b8; }
-.c-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f1f5f9; text-align: right; }
+.c-val   { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f1f5f9; text-align: right; }
 .c-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; text-align: right; }
 .fred-note { font-size: 9px; color: #334155; font-family: 'JetBrains Mono', monospace; }
 
-/* Bloomberg signal list */
-.bb-signals { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 240px; }
+/* ── Live signals ────────────────────────────────────────────────────────────── */
+.bb-signals { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 260px; }
 .bb-signal-row { display: flex; align-items: flex-start; gap: 6px; }
 .bb-sig-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
 .bb-sig-score {
@@ -96,7 +82,59 @@
 }
 .bb-sig-text { font-size: 11px; color: #64748b; line-height: 1.4; }
 
-/* Route optimizer */
+/* ── Port status ─────────────────────────────────────────────────────────────── */
+.port-status-list { display: flex; flex-direction: column; gap: 7px; }
+.port-status-row { display: flex; align-items: center; gap: 7px; }
+.port-status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.port-status-name { font-size: 11px; color: #94a3b8; width: 110px; flex-shrink: 0; }
+.port-cong-bar-wrap {
+  flex: 1; height: 5px; background: rgba(255,255,255,0.05);
+  border-radius: 3px; overflow: hidden;
+}
+.port-cong-bar { height: 100%; border-radius: 3px; min-width: 3px; }
+.port-cong-val {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  font-weight: 700; width: 32px; text-align: right; flex-shrink: 0;
+}
+
+/* ── Container rates ─────────────────────────────────────────────────────────── */
+.container-rate-list { display: flex; flex-direction: column; gap: 6px; }
+.cr-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.cr-lane   { font-size: 11px; color: #64748b; flex: 1; }
+.cr-rate   { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f1f5f9; flex-shrink: 0; }
+.cr-change { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; width: 46px; text-align: right; flex-shrink: 0; }
+
+/* ── FX rates ────────────────────────────────────────────────────────────────── */
+.fx-list { display: flex; flex-direction: column; gap: 6px; }
+.fx-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.fx-left  { display: flex; flex-direction: column; gap: 1px; }
+.fx-pair  { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: #f1f5f9; }
+.fx-note  { font-size: 9px; color: #475569; }
+.fx-right { display: flex; align-items: center; gap: 8px; }
+.fx-rate  { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f1f5f9; }
+.fx-pct   { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; width: 52px; text-align: right; }
+
+/* ── Import origins ──────────────────────────────────────────────────────────── */
+.origins-list { display: flex; flex-direction: column; gap: 7px; }
+.origin-row { display: flex; align-items: center; gap: 8px; }
+.origin-country { font-size: 11px; color: #94a3b8; width: 82px; flex-shrink: 0; }
+.origin-bar-wrap {
+  flex: 1; height: 5px; background: rgba(255,255,255,0.05);
+  border-radius: 3px; overflow: hidden;
+}
+.origin-bar { height: 100%; border-radius: 3px; min-width: 3px; }
+.origin-pct {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  font-weight: 700; width: 36px; text-align: right; flex-shrink: 0;
+}
+
+/* ── Route optimizer ─────────────────────────────────────────────────────────── */
 .route-controls { display: flex; gap: 8px; }
 .route-select {
   flex: 1; background: #060b18; border: 1px solid #1a2744;
@@ -104,7 +142,7 @@
   font-size: 12px; font-family: 'JetBrains Mono', monospace;
 }
 .bb-btn {
-  background: rgba(37, 99, 235, 0.2); border: 1px solid rgba(37,99,235,0.4);
+  background: rgba(37,99,235,0.2); border: 1px solid rgba(37,99,235,0.4);
   color: #60a5fa; border-radius: 6px; padding: 6px 14px;
   font-size: 11px; cursor: pointer; white-space: nowrap;
   font-family: 'JetBrains Mono', monospace; letter-spacing: 0.03em;
@@ -112,27 +150,90 @@
 }
 .bb-btn:hover { background: rgba(37,99,235,0.35); }
 .bb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 .route-result { display: flex; flex-direction: column; gap: 6px; }
-.route-metric { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.rm-label { font-size: 11px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
-.rm-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
-.rm-val.green { color: #00c176; }
-.rm-val.red { color: #ff3b3b; }
+.route-metric {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.rm-label  { font-size: 11px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
+.rm-val    { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
+.rm-val.green  { color: #00c176; }
+.rm-val.red    { color: #ff3b3b; }
 .rm-val.accent { color: #00d4ff; }
 
-/* Tariff table */
+/* ── Tariff table ────────────────────────────────────────────────────────────── */
 .tariff-table { display: flex; flex-direction: column; gap: 4px; }
-.tariff-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.tariff-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
 .t-code { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #00d4ff; flex-shrink: 0; width: 36px; }
 .t-desc { font-size: 11px; color: #64748b; flex: 1; }
 .t-rate { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ff9f0a; flex-shrink: 0; }
 
+/* ── §301 actions ────────────────────────────────────────────────────────────── */
+.s301-list { display: flex; flex-direction: column; gap: 6px; }
+.s301-row {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+  gap: 2px 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.s301-left  { display: flex; align-items: center; gap: 6px; }
+.s301-right { display: flex; align-items: center; justify-content: flex-end; }
+.s301-list-badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+  color: #ff9f0a; background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.3); border-radius: 4px; padding: 1px 5px;
+}
+.s301-goods  { font-size: 10px; color: #475569; }
+.s301-rate   { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #ff3b3b; }
+.s301-cats   {
+  grid-column: 1 / -1; font-size: 10px; color: #475569;
+  padding-left: 2px;
+}
+
+/* ── Policy calendar ─────────────────────────────────────────────────────────── */
+.policy-list { display: flex; flex-direction: column; gap: 6px; }
+.policy-row {
+  display: flex; align-items: flex-start; gap: 6px;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.policy-date {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+  color: #475569; width: 60px; flex-shrink: 0; padding-top: 1px;
+}
+.policy-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.policy-event { font-size: 11px; color: #64748b; line-height: 1.4; }
+
+/* ── Freight mode split ──────────────────────────────────────────────────────── */
+.mode-list { display: flex; flex-direction: column; gap: 8px; }
+.mode-row  { display: flex; flex-direction: column; gap: 3px; }
+.mode-name { font-size: 11px; color: #94a3b8; }
+.mode-bars { display: flex; flex-direction: column; gap: 2px; }
+.mode-bar-row { display: flex; align-items: center; gap: 6px; }
+.mode-bar-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 8px;
+  color: #334155; width: 18px; flex-shrink: 0;
+}
+.mode-bar-wrap {
+  flex: 1; height: 5px; background: rgba(255,255,255,0.05);
+  border-radius: 3px; overflow: hidden;
+}
+.mode-bar { height: 100%; border-radius: 3px; min-width: 2px; }
+.mode-bar-pct {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  font-weight: 700; color: #475569; width: 28px; text-align: right; flex-shrink: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 1400px) {
-  .macro-tiles { grid-template-columns: repeat(3, 1fr); }
+  .macro-tiles    { grid-template-columns: repeat(3, 1fr); }
+  .trade-mid-row  { grid-template-columns: repeat(2, 1fr); }
+  .trade-extra-row { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 1100px) {
-  .macro-tiles { grid-template-columns: repeat(2, 1fr); }
-  .trade-main-row { grid-template-columns: 1fr; }
+  .macro-tiles     { grid-template-columns: repeat(2, 1fr); }
+  .trade-main-row  { grid-template-columns: 1fr; }
+  .trade-mid-row   { grid-template-columns: 1fr; }
   .trade-bottom-row { grid-template-columns: 1fr; }
+  .trade-extra-row  { grid-template-columns: 1fr; }
 }
