@@ -4,7 +4,7 @@ import './SignalFeed.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function SignalFeed() {
+export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
   const [signals, setSignals] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,6 +51,11 @@ export default function SignalFeed() {
               <div className="signal-tags">
                 {s.affected_sectors.map((sec, j) => <span key={j} className="signal-tag">{sec}</span>)}
               </div>
+            )}
+            {onOpenOutreach && (
+              <button className="signal-outreach-btn" onClick={e => { e.preventDefault(); onOpenOutreach(selectedProspect, null); }}>
+                → Outreach
+              </button>
             )}
           </a>
         ))}

@@ -13,3 +13,31 @@
 .stat-value.green { color: #10b981; }
 .calc-stat.highlight { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; padding: 8px 12px; }
 .calc-pitch { font-size: 12px; color: #64748b; line-height: 1.6; font-style: italic; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
+
+/* HS Code lookup */
+.hs-lookup { display: flex; flex-direction: column; gap: 6px; }
+.hs-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+.hs-input-wrap { position: relative; }
+.hs-input {
+  width: 100%; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+  color: #f1f5f9; font-size: 12px; padding: 7px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  transition: border-color 0.15s;
+}
+.hs-input:focus { outline: none; border-color: rgba(37,99,235,0.5); }
+.hs-spinner { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 14px; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+.hs-results { background: rgba(6,11,24,0.95); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+.hs-result-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  background: none; border: none; border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 8px 12px; cursor: pointer; transition: background 0.15s; text-align: left;
+}
+.hs-result-item:last-child { border-bottom: none; }
+.hs-result-item:hover, .hs-result-item.selected { background: rgba(37,99,235,0.12); }
+.hs-code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00d4ff; flex-shrink: 0; }
+.hs-desc { font-size: 11px; color: #94a3b8; flex: 1; }
+.hs-rate { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ef4444; flex-shrink: 0; }
+.hs-301 { font-size: 9px; background: rgba(239,68,68,0.15); color: #ef4444; border-radius: 4px; padding: 1px 5px; flex-shrink: 0; }
+.hs-selected-info { display: flex; align-items: center; gap: 8px; background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; padding: 6px 12px; font-size: 11px; color: #94a3b8; }

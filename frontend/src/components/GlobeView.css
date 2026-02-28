@@ -55,6 +55,30 @@
 .legend-item.amber  { color: #f59e0b; }
 .legend-item.red    { color: #ef4444; }
 
+.overlay-toggle {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 11, 24, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.03em;
+  transition: all 0.2s;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+.overlay-toggle:hover {
+  background: rgba(37, 99, 235, 0.25);
+  border-color: rgba(37, 99, 235, 0.5);
+  color: #f1f5f9;
+}
+
 .globe-tooltip {
   background: rgba(6, 11, 24, 0.9);
   border: 1px solid rgba(255,255,255,0.08);
