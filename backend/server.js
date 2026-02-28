@@ -269,7 +269,7 @@ app.post('/api/win-loss', async (req, res) => {
 // ── Market Map ─────────────────────────────────────
 app.get('/api/market-map', async (req, res) => {
   try {
-    const all = await getProspects({});
+    const all = await getProspects({ limit: 9999 });
     const bySecter = {};
     all.forEach(p => {
       const s = p.sector || 'Other';
