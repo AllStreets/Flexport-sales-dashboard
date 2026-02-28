@@ -89,6 +89,7 @@ export default function App() {
             {selectedProspect && (
               <div className="glass-card col-section">
                 <AnalysisPanel
+                  key={selectedProspect?.id}
                   prospect={selectedProspect}
                   onOpenOutreach={(prospect, analysis) =>
                     setOutreachState({ open: true, prospect, analysis })
