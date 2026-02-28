@@ -12,16 +12,37 @@ function getDb() {
 
 // Static port registry — coordinates + baseline congestion (used when no signal data exists)
 const PORT_REGISTRY = [
-  { name: 'LA/Long Beach', lat: 33.74,  lng: -118.26, baseline: 5, keywords: ['los angeles', 'long beach', 'la/lb', 'lalb', 'san pedro'] },
-  { name: 'Shanghai',      lat: 31.22,  lng: 121.47,  baseline: 3, keywords: ['shanghai', 'yangshan'] },
-  { name: 'Rotterdam',     lat: 51.95,  lng: 4.13,    baseline: 2, keywords: ['rotterdam', 'maasvlakte'] },
-  { name: 'Singapore',     lat: 1.26,   lng: 103.82,  baseline: 2, keywords: ['singapore', 'psa'] },
-  { name: 'Hong Kong',     lat: 22.29,  lng: 114.17,  baseline: 3, keywords: ['hong kong', 'kwai tsing'] },
-  { name: 'Felixstowe',    lat: 51.96,  lng: 1.35,    baseline: 5, keywords: ['felixstowe', 'harwich'] },
-  { name: 'Hamburg',       lat: 53.54,  lng: 9.97,    baseline: 2, keywords: ['hamburg', 'burchardkai'] },
-  { name: 'Savannah',      lat: 32.08,  lng: -81.09,  baseline: 3, keywords: ['savannah', 'georgia ports'] },
-  { name: 'Busan',         lat: 35.10,  lng: 129.04,  baseline: 2, keywords: ['busan', 'pusan'] },
-  { name: 'Yantian',       lat: 22.57,  lng: 114.27,  baseline: 3, keywords: ['yantian', 'shenzhen port', 'shekou'] },
+  // ── US Ports (Top 10 by container volume) ──────────────────────────────────
+  { name: 'LA/Long Beach',      lat: 33.74,  lng: -118.26, baseline: 5, keywords: ['los angeles', 'long beach', 'la/lb', 'lalb', 'san pedro'] },
+  { name: 'New York/New Jersey', lat: 40.68,  lng: -74.05,  baseline: 4, keywords: ['new york', 'new jersey', 'port newark', 'elizabeth', 'bayonne'] },
+  { name: 'Savannah',            lat: 32.08,  lng: -81.09,  baseline: 3, keywords: ['savannah', 'georgia ports', 'garden city'] },
+  { name: 'Seattle/Tacoma',      lat: 47.27,  lng: -122.42, baseline: 2, keywords: ['seattle', 'tacoma', 'nwsa', 'northwest seaport'] },
+  { name: 'Houston',             lat: 29.73,  lng: -95.02,  baseline: 3, keywords: ['houston', 'port of houston', 'bayport', 'barbours cut'] },
+  { name: 'Charleston',          lat: 32.78,  lng: -79.93,  baseline: 2, keywords: ['charleston', 'south carolina ports', 'wando welch'] },
+  { name: 'Norfolk/Hampton Roads', lat: 36.97, lng: -76.33, baseline: 2, keywords: ['norfolk', 'hampton roads', 'virginia port', 'portsmouth'] },
+  { name: 'Oakland',             lat: 37.80,  lng: -122.28, baseline: 3, keywords: ['oakland', 'port of oakland', 'alameda'] },
+  { name: 'Baltimore',           lat: 39.27,  lng: -76.58,  baseline: 2, keywords: ['baltimore', 'maryland port', 'seagirt', 'dundalk'] },
+  { name: 'Miami',               lat: 25.77,  lng: -80.18,  baseline: 3, keywords: ['miami', 'portmiami', 'port everglades', 'south florida'] },
+
+  // ── International Ports ────────────────────────────────────────────────────
+  { name: 'Shanghai',            lat: 31.22,  lng: 121.47,  baseline: 3, keywords: ['shanghai', 'yangshan'] },
+  { name: 'Ningbo-Zhoushan',     lat: 29.87,  lng: 121.55,  baseline: 3, keywords: ['ningbo', 'zhoushan', 'ningbo-zhoushan'] },
+  { name: 'Yantian/Shenzhen',    lat: 22.57,  lng: 114.27,  baseline: 3, keywords: ['yantian', 'shenzhen port', 'shekou', 'chiwan'] },
+  { name: 'Guangzhou/Nansha',    lat: 22.74,  lng: 113.62,  baseline: 3, keywords: ['guangzhou', 'nansha', 'guangzhou port', 'nansha port'] },
+  { name: 'Tianjin',             lat: 39.00,  lng: 117.73,  baseline: 3, keywords: ['tianjin', 'xingang', 'tianjin port'] },
+  { name: 'Busan',               lat: 35.10,  lng: 129.04,  baseline: 2, keywords: ['busan', 'pusan'] },
+  { name: 'Singapore',           lat: 1.26,   lng: 103.82,  baseline: 2, keywords: ['singapore', 'psa', 'jurong'] },
+  { name: 'Port Klang',          lat: 3.00,   lng: 101.40,  baseline: 2, keywords: ['port klang', 'klang', 'westports', 'northport'] },
+  { name: 'Tanjung Pelepas',     lat: 1.37,   lng: 103.55,  baseline: 2, keywords: ['tanjung pelepas', 'ptp', 'johor'] },
+  { name: 'Ho Chi Minh City',    lat: 10.77,  lng: 106.72,  baseline: 3, keywords: ['ho chi minh', 'saigon', 'cat lai', 'hcmc'] },
+  { name: 'Hong Kong',           lat: 22.29,  lng: 114.17,  baseline: 3, keywords: ['hong kong', 'kwai tsing', 'stonecutters'] },
+  { name: 'Jebel Ali',           lat: 25.01,  lng: 55.06,   baseline: 2, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza'] },
+  { name: 'Colombo',             lat: 6.94,   lng: 79.84,   baseline: 2, keywords: ['colombo', 'sri lanka port', 'jict', 'cict'] },
+  { name: 'Rotterdam',           lat: 51.95,  lng: 4.13,    baseline: 2, keywords: ['rotterdam', 'maasvlakte', 'europoort'] },
+  { name: 'Antwerp',             lat: 51.26,  lng: 4.40,    baseline: 2, keywords: ['antwerp', 'port of antwerp', 'antwerp-bruges'] },
+  { name: 'Hamburg',             lat: 53.54,  lng: 9.97,    baseline: 2, keywords: ['hamburg', 'burchardkai', 'tollerort'] },
+  { name: 'Felixstowe',          lat: 51.96,  lng: 1.35,    baseline: 5, keywords: ['felixstowe', 'harwich'] },
+  { name: 'Piraeus',             lat: 37.94,  lng: 23.63,   baseline: 3, keywords: ['piraeus', 'greece port', 'cosco piraeus', 'pct'] },
 ];
 
 /**
