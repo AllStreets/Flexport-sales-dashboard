@@ -139,7 +139,7 @@ function MacroTile({ label, data, color, formatter }) {
       <div className="tile-value" style={{ color }}>{fmtVal(data?.current)}</div>
       {delta && (
         <div className="tile-delta" style={{ color: positive ? '#00c176' : '#ff3b3b' }}>
-          {delta} MoM
+          {delta} {data?.period || 'MoM'}
         </div>
       )}
       <div className="tile-spark">
@@ -207,14 +207,14 @@ export default function TradePage() {
 
   const chartData = (() => {
     if (!tradeData) return [];
-    const ti = tradeData.total_imports?.sparkline || [];
-    const tb = tradeData.trade_balance?.sparkline || [];
-    const cg = tradeData.capital_goods?.sparkline || [];
-    return ti.map((pt, i) => ({
-      d: pt.d?.slice(0, 7),
-      imports: pt.v,
-      balance: tb[i]?.v ?? null,
-      capital: cg[i]?.v ?? null,
+    const tb   = tradeData.trade_balance?.sparkline  || [];
+    const cg   = tradeData.capital_goods?.sparkline  || [];
+    const cons = tradeData.consumer_goods?.sparkline || [];
+    return tb.map((pt, i) => ({
+      d:        pt.d?.slice(0, 7),
+      balance:  pt.v,
+      capital:  cg[i]?.v   ?? null,
+      consumer: cons[i]?.v ?? null,
     }));
   })();
 
@@ -249,20 +249,20 @@ export default function TradePage() {
       {/* ── Row 1: Chart · Commodity table · Live signals ── */}
       <div className="trade-main-row">
         <div className="bb-panel chart-panel">
-          <div className="bb-panel-header">US IMPORT FLOWS — 12M TREND</div>
+          <div className="bb-panel-header">US GOODS IMPORTS — 12M MONTHLY TREND</div>
           {loading ? (
             <div className="bb-loading">Fetching FRED data...</div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
                 <defs>
-                  <linearGradient id="gImports" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#00d4ff" stopOpacity={0} />
-                  </linearGradient>
                   <linearGradient id="gCapital" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00c176" stopOpacity={0.2} />
+                    <stop offset="5%" stopColor="#00c176" stopOpacity={0.25} />
                     <stop offset="95%" stopColor="#00c176" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gConsumer" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ff9f0a" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ff9f0a" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" />
@@ -273,15 +273,15 @@ export default function TradePage() {
                   labelStyle={{ color: '#94a3b8' }}
                   formatter={(v, name) => [`$${Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-US') : v?.toFixed(1)}B`, name]}
                 />
-                <Area type="monotone" dataKey="imports" name="Total Imports" stroke="#00d4ff" strokeWidth={2} fill="url(#gImports)" dot={false} />
-                <Area type="monotone" dataKey="capital" name="Capital Goods" stroke="#00c176" strokeWidth={1.5} fill="url(#gCapital)" dot={false} />
-                <Area type="monotone" dataKey="balance" name="Trade Balance" stroke="#ff3b3b" strokeWidth={1.5} fill="none" dot={false} />
+                <Area type="monotone" dataKey="capital"  name="Capital Goods"  stroke="#00c176" strokeWidth={2}   fill="url(#gCapital)"  dot={false} />
+                <Area type="monotone" dataKey="consumer" name="Consumer Goods" stroke="#ff9f0a" strokeWidth={1.5} fill="url(#gConsumer)" dot={false} />
+                <Area type="monotone" dataKey="balance"  name="Trade Balance"  stroke="#ff3b3b" strokeWidth={1.5} fill="none"            dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           )}
           <div className="chart-legend">
-            <span style={{ color: '#00d4ff' }}>── Total Imports</span>
             <span style={{ color: '#00c176' }}>── Capital Goods</span>
+            <span style={{ color: '#ff9f0a' }}>── Consumer Goods</span>
             <span style={{ color: '#ff3b3b' }}>── Trade Balance</span>
           </div>
         </div>
