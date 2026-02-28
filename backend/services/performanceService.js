@@ -88,7 +88,7 @@ async function getPerformanceSummary() {
   const callsThisWeek  = thisWeek.filter(a => a.type === 'call').length;
   const emailsThisWeek = thisWeek.filter(a => a.type === 'email').length;
   const demosBooked    = (pipeline.demo_booked || 0) + (pipeline.closed_won || 0);
-  const pipelineValue  = Object.values(pipeline).reduce((s, v) => s + v, 0) * 47000;
+  const pipelineValue  = Object.values(pipeline).reduce((s, v) => s + v, 0) * 72000; // ~$72k avg annual freight spend for Flexport mid-market SMB
 
   return {
     kpis: { callsThisWeek, emailsThisWeek, demosBooked, pipelineValue },

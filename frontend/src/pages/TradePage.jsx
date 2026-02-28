@@ -269,17 +269,19 @@ export default function TradePage() {
 
         {/* Tariff info panel */}
         <div className="bb-panel tariff-info-panel">
-          <div className="bb-panel-header">KEY TARIFF RATES — CHINA ORIGIN</div>
+          <div className="bb-panel-header">KEY TARIFF RATES — CHINA ORIGIN · Q2 2025</div>
           <div className="tariff-table">
             {[
               { code: '8471', desc: 'Computers & peripherals', rate: '0% + 25% §301' },
-              { code: '8517', desc: 'Smartphones', rate: '0% + 25% §301' },
-              { code: '9403', desc: 'Furniture', rate: '5% + 25% §301' },
-              { code: '6110', desc: 'Knitwear / Apparel', rate: '12%' },
-              { code: '4202', desc: 'Luggage & handbags', rate: '15.8%' },
-              { code: '6403', desc: 'Footwear', rate: '8.5%' },
-              { code: '8708', desc: 'Auto parts', rate: '2.5% + 7.5% §301' },
-              { code: '8501', desc: 'Electric motors', rate: '2.5% + 25% §301' },
+              { code: '8517', desc: 'Smartphones & telecom',   rate: '0% + 25% §301' },
+              { code: '9403', desc: 'Furniture',               rate: '5% + 25% §301' },
+              { code: '6110', desc: 'Knitwear / Apparel',      rate: '12%' },
+              { code: '4202', desc: 'Luggage & handbags',      rate: '15.8%' },
+              { code: '6403', desc: 'Footwear',                rate: '8.5%' },
+              { code: '8708', desc: 'Auto parts',              rate: '2.5% + 25% §301' },
+              { code: '8703', desc: 'Electric vehicles',       rate: '25% + 25% §301' },
+              { code: '8507', desc: 'EV batteries (lithium)',  rate: '7.5% + 25% §301' },
+              { code: '8501', desc: 'Electric motors',         rate: '2.5% + 25% §301' },
             ].map(r => (
               <div key={r.code} className="tariff-row">
                 <span className="t-code">{r.code}</span>
@@ -288,7 +290,7 @@ export default function TradePage() {
               </div>
             ))}
           </div>
-          <div className="fred-note">§301 = Section 301 China surcharge · Rates subject to change</div>
+          <div className="fred-note">§301 = Section 301 China surcharge · Rates as of Q2 2025 · Subject to change</div>
         </div>
       </div>
     </div>

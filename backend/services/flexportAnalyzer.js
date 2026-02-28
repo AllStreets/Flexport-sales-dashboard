@@ -35,7 +35,7 @@ Return JSON with exactly these fields:
 }`;
 
   const response = await axios.post(OPENAI_URL, {
-    model: 'gpt-4-turbo',
+    model: 'gpt-4.1-mini',
     max_tokens: 800,
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
   }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' } });

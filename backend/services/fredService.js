@@ -8,10 +8,10 @@ function getDb() {
 }
 
 const FRED_SERIES = {
-  electronics: 'AITGICS',     // Advance Imports: Capital Goods (monthly, $B)
-  apparel: 'AITGIGS',         // Advance Imports: Consumer Goods (monthly, $B)
-  trade_balance: 'BOPGSTB',   // Trade Balance: Goods
-  total_imports: 'IMPGS'      // Imports of Goods and Services
+  trade_balance:  'BOPGSTB',  // Trade Balance: Goods & Services (monthly, $B)
+  total_imports:  'IMPGS',    // Imports of Goods and Services (quarterly, $B annualized)
+  capital_goods:  'AITGICS',  // Advance Imports: Capital Goods (monthly, $B)
+  consumer_goods: 'AITGIGS',  // Advance Imports: Consumer Goods (monthly, $B)
 };
 
 async function getTradeData(commodity) {

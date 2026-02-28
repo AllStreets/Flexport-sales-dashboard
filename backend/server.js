@@ -54,14 +54,16 @@ app.get('/api/globe-data', (req, res) => {
       { src_lat: 22.3, src_lng: 114.2, dst_lat: 40.7, dst_lng: -74.0, label: 'HK-US East',         weight: 4 }
     ],
     ports: [
-      { name: 'LA/Long Beach', lat: 33.8, lng: -118.2, status: 'congestion', congestion: 7 },
-      { name: 'Shanghai',      lat: 31.2, lng: 121.5,  status: 'clear',      congestion: 3 },
-      { name: 'Rotterdam',     lat: 51.9, lng: 4.5,    status: 'clear',      congestion: 2 },
-      { name: 'Singapore',     lat: 1.35, lng: 103.8,  status: 'clear',      congestion: 2 },
-      { name: 'Hong Kong',     lat: 22.3, lng: 114.2,  status: 'clear',      congestion: 3 },
-      { name: 'Felixstowe',    lat: 51.96, lng: 1.35,  status: 'disruption', congestion: 8 },
-      { name: 'Hamburg',       lat: 53.55, lng: 9.99,  status: 'clear',      congestion: 3 },
-      { name: 'Savannah',      lat: 32.08, lng: -81.1, status: 'clear',      congestion: 4 }
+      { name: 'LA/Long Beach', lat: 33.74, lng: -118.26, status: 'congestion', congestion: 5 },
+      { name: 'Shanghai',      lat: 31.22, lng: 121.47,  status: 'clear',      congestion: 3 },
+      { name: 'Rotterdam',     lat: 51.95, lng: 4.13,    status: 'clear',      congestion: 2 },
+      { name: 'Singapore',     lat: 1.26,  lng: 103.82,  status: 'clear',      congestion: 2 },
+      { name: 'Hong Kong',     lat: 22.29, lng: 114.17,  status: 'clear',      congestion: 3 },
+      { name: 'Felixstowe',    lat: 51.96, lng: 1.35,    status: 'congestion', congestion: 5 },
+      { name: 'Hamburg',       lat: 53.54, lng: 9.97,    status: 'clear',      congestion: 2 },
+      { name: 'Savannah',      lat: 32.08, lng: -81.09,  status: 'clear',      congestion: 3 },
+      { name: 'Busan',         lat: 35.10, lng: 129.04,  status: 'clear',      congestion: 2 },
+      { name: 'Yantian',       lat: 22.57, lng: 114.27,  status: 'clear',      congestion: 3 }
     ]
   });
 });
@@ -147,7 +149,7 @@ Context: ${JSON.stringify({ prospectData, analysisData })}
 Return JSON: {"touches": [{"type":"email|linkedin|call","subject":"...","body":"...","day":1}]}
 Each touch should reference Flexport value props and the company's specific supply chain situation.`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4-turbo', max_tokens: 1200,
+      model: 'gpt-4.1-mini', max_tokens: 1200,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -232,7 +234,7 @@ const HS_CODES = {
   '3304': { desc: 'Beauty & skincare preparations', rate: 0.00, section301: 0 },
   '6204': { desc: "Women's apparel", rate: 0.12, section301: 0 },
   '8703': { desc: 'Passenger automobiles', rate: 0.025, section301: 0 },
-  '8708': { desc: 'Auto parts & accessories', rate: 0.025, section301: 0.075 },
+  '8708': { desc: 'Auto parts & accessories', rate: 0.025, section301: 0.25 },
   '3926': { desc: 'Plastic articles (misc.)', rate: 0.053, section301: 0.25 },
   '7318': { desc: 'Screws, bolts, nuts (iron/steel)', rate: 0.062, section301: 0.25 },
   '8544': { desc: 'Insulated wire & cable', rate: 0.026, section301: 0.25 },
@@ -259,13 +261,14 @@ app.get('/api/hs-lookup', (req, res) => {
 // ── Route Optimizer ────────────────────────────────
 app.post('/api/route-optimize', (req, res) => {
   const { origin, destination } = req.body;
+  // Transit benchmarks based on 2024-2025 ocean freight data (days port-to-port)
   const ROUTES = {
-    'China-US West Coast':    { flexport: 14, industry: 18, costSave: 12, risk: 'medium' },
-    'China-US East Coast':    { flexport: 28, industry: 33, costSave: 9,  risk: 'medium' },
-    'SE Asia-US West Coast':  { flexport: 17, industry: 22, costSave: 15, risk: 'low' },
-    'India-US':               { flexport: 21, industry: 27, costSave: 11, risk: 'low' },
-    'Europe-US East Coast':   { flexport: 10, industry: 14, costSave: 8,  risk: 'low' },
-    'Vietnam-US West Coast':  { flexport: 16, industry: 21, costSave: 14, risk: 'low' },
+    'China-US West Coast':    { flexport: 16, industry: 21, costSave: 11, risk: 'medium' },
+    'China-US East Coast':    { flexport: 30, industry: 36, costSave: 9,  risk: 'medium' },
+    'SE Asia-US West Coast':  { flexport: 18, industry: 24, costSave: 13, risk: 'low' },
+    'India-US':               { flexport: 22, industry: 28, costSave: 10, risk: 'low' },
+    'Europe-US East Coast':   { flexport: 12, industry: 16, costSave: 8,  risk: 'low' },
+    'Vietnam-US West Coast':  { flexport: 17, industry: 22, costSave: 13, risk: 'low' },
   };
   const key = `${origin}-${destination}`;
   const route = ROUTES[key] || ROUTES['China-US West Coast'];
@@ -289,7 +292,7 @@ Return JSON: {
   "call_to_action": "Specific next step to propose"
 }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4-turbo', max_tokens: 800,
+      model: 'gpt-4.1-mini', max_tokens: 800,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -308,7 +311,7 @@ Context: ${JSON.stringify(context || {})}
 Objection: "${objection}"
 Return JSON: { "response": "2-3 sentence counter", "follow_up_question": "Question to keep conversation going" }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4-turbo', max_tokens: 300,
+      model: 'gpt-4.1-mini', max_tokens: 300,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -334,7 +337,7 @@ Return JSON: {
   "success_criteria": "What does success look like at 90 days"
 }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4-turbo', max_tokens: 600,
+      model: 'gpt-4.1-mini', max_tokens: 600,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -352,7 +355,7 @@ Context: ${JSON.stringify({ prospectData, signal })}
 Rules: Under 25 words. Reference something specific (a lane, a recent event, their imports). No generic phrases.
 Return JSON: { "first_line": "..." }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4-turbo', max_tokens: 100,
+      model: 'gpt-4.1-mini', max_tokens: 100,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);

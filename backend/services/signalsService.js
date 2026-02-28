@@ -13,7 +13,7 @@ async function fetchAndScoreSignals() {
   const cached = await getCachedSignals();
   if (cached.length > 0) return cached;
 
-  const q = 'supply chain freight logistics tariff port disruption shipping';
+  const q = 'import freight customs tariff port congestion disruption supply chain ocean shipping international logistics';
   const newsRes = await axios.get('https://newsapi.org/v2/everything', {
     params: { q, language: 'en', sortBy: 'publishedAt', pageSize: 20, apiKey: process.env.NEWS_API_KEY }
   });
@@ -31,7 +31,7 @@ Return a JSON array (same order as input):
 [{"urgency_score": 8, "urgency_reason": "Port congestion on Asia-US West Coast affects electronics importers", "affected_lanes": ["Asia-US West Coast"], "affected_sectors": ["electronics","e-commerce"]}]`;
 
   const scoreRes = await axios.post(OPENAI_URL, {
-    model: 'gpt-4-turbo', max_tokens: 1000,
+    model: 'gpt-4.1-mini', max_tokens: 1000,
     messages: [{ role: 'user', content: scorePrompt }]
   }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' } });
 

@@ -8,54 +8,55 @@ import './MarketMapPage.css';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ── Static sector intelligence ────────────────────────────────────────────────
+// TAMs reflect US freight forwarding addressable market by sector (2024-2025 trade data)
 const SECTOR_META = {
   'e-commerce': {
-    tam: '$24B', freight: '$180K avg/yr',
+    tam: '$38B', freight: '$180K avg/yr',
     products: ['Cross-Border', 'Duty Deferral', 'Ocean LCL', 'Tracking'],
     subsegments: ['DTC Apparel', 'DTC Beauty', 'DTC Home', 'Multi-Cat'],
-    signal: 'High import activity pre-Q2 peak season',
+    signal: 'Q2 peak season import surge underway — window to displace incumbents',
   },
   'apparel': {
-    tam: '$18B', freight: '$220K avg/yr',
+    tam: '$22B', freight: '$220K avg/yr',
     products: ['Ocean FCL', 'Air Freight', 'Customs Brokerage'],
     subsegments: ['Fast Fashion', 'Activewear', 'Luxury', 'Accessories'],
-    signal: 'Asia-US West Coast demand rising',
+    signal: 'Vietnam & Bangladesh sourcing shift accelerating — new lane complexity',
   },
   'beauty': {
-    tam: '$8B', freight: '$90K avg/yr',
+    tam: '$8B', freight: '$95K avg/yr',
     products: ['Air Freight', 'Customs Brokerage', 'Duty Deferral'],
     subsegments: ['Skincare', 'Color Cosmetics', 'Hair Care', 'Wellness'],
-    signal: 'K-beauty & Korean skincare imports surging',
+    signal: 'K-beauty import volumes up 18% YoY — FDA compliance complexity rising',
   },
   'furniture': {
-    tam: '$12B', freight: '$340K avg/yr',
+    tam: '$20B', freight: '$340K avg/yr',
     products: ['Ocean LCL', 'Ocean FCL', 'Warehousing'],
     subsegments: ['Home Furniture', 'Office Furniture', 'Outdoor', 'Lighting'],
-    signal: 'China tariffs high — sourcing diversification in progress',
+    signal: 'China §301 tariffs at 25%+ — brands actively repricing Vietnam/Malaysia sourcing',
   },
   'cpg': {
-    tam: '$31B', freight: '$280K avg/yr',
+    tam: '$45B', freight: '$280K avg/yr',
     products: ['Ocean FCL', 'Cross-Border', 'Duty Deferral'],
     subsegments: ['Food & Bev', 'Personal Care', 'Household', 'Pet'],
-    signal: 'Supply chain resilience is top CFO priority this quarter',
+    signal: 'Supply chain resilience top CFO priority — visibility platforms in high demand',
   },
   'industrial': {
-    tam: '$45B', freight: '$520K avg/yr',
+    tam: '$65B', freight: '$520K avg/yr',
     products: ['Air Freight', 'Project Cargo', 'Customs Brokerage'],
     subsegments: ['Capital Goods', 'Auto Parts', 'Electronics MFG', 'Machinery'],
-    signal: 'Reshoring creates new freight flows — high urgency',
+    signal: 'Auto parts §301 tariffs raised to 25% in 2025 — duty deferral urgency high',
   },
   'pharma': {
-    tam: '$11B', freight: '$310K avg/yr',
+    tam: '$18B', freight: '$310K avg/yr',
     products: ['Temperature Control', 'Air Freight', 'Compliance'],
     subsegments: ['OTC Products', 'Medical Devices', 'Supplements', 'Biotech'],
-    signal: 'Cold chain compliance requirements tightening',
+    signal: 'FDA cold chain traceability rules tightening — compliance-first forwarder demand up',
   },
   'electronics': {
-    tam: '$29B', freight: '$410K avg/yr',
+    tam: '$62B', freight: '$410K avg/yr',
     products: ['Air Freight', 'Section 301 Mgmt', 'Duty Deferral'],
     subsegments: ['Consumer Elec.', 'Semiconductors', 'Industrial Equip.', 'Components'],
-    signal: 'Section 301 tariffs — urgent duty savings opportunities',
+    signal: 'Section 301 at 25% on most China electronics — duty savings ROI compelling',
   },
 };
 

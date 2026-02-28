@@ -5,8 +5,8 @@ async function getTradeIntelligence() {
   const [tb, ti, cg, cons] = await Promise.allSettled([
     getTradeData('trade_balance'),
     getTradeData('total_imports'),
-    getTradeData('electronics'),  // capital goods (AITGICS)
-    getTradeData('apparel')       // consumer goods (AITGIGS)
+    getTradeData('capital_goods'),
+    getTradeData('consumer_goods'),
   ]);
 
   const process = (result, label, unit) => {

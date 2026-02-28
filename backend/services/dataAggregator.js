@@ -23,7 +23,7 @@ async function fetchNewsAPI(companyName) {
   try {
     const response = await axios.get('https://newsapi.org/v2/everything', {
       params: {
-        q: `"${companyName}" AND (trucking OR logistics OR freight OR dispatch OR drivers)`,
+        q: `"${companyName}" AND (import OR "supply chain" OR freight OR customs OR sourcing OR logistics)`,
         sortBy: 'publishedAt',
         language: 'en',
         pageSize: 5,
@@ -52,7 +52,7 @@ async function fetchSerperAPI(companyName) {
     }
 
     const response = await axios.post('https://google.serper.dev/search', {
-      q: `${companyName} trucking logistics operations`
+      q: `${companyName} import sourcing supply chain logistics freight`
     }, {
       headers: {
         'X-API-KEY': process.env.SERPER_API_KEY,
