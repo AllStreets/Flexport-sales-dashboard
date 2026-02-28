@@ -58,6 +58,60 @@ const SECTOR_META = {
     subsegments: ['Consumer Elec.', 'Semiconductors', 'Industrial Equip.', 'Components'],
     signal: 'Section 301 at 25% on most China electronics — duty savings ROI compelling',
   },
+  'activewear': {
+    tam: '$12B', freight: '$180K avg/yr',
+    products: ['Ocean FCL', 'Air Freight', 'Duty Deferral'],
+    subsegments: ['Performance', 'Yoga & Studio', 'Running', 'Outdoor Sport'],
+    signal: 'Vietnam & Cambodia near-shore sourcing growing fast — Flexport Asia lanes ideal',
+  },
+  'accessories': {
+    tam: '$9B', freight: '$140K avg/yr',
+    products: ['Ocean LCL', 'Air Freight', 'Customs Brokerage'],
+    subsegments: ['Bags & Leather', 'Sunglasses', 'Hats & Belts', 'Tech Accessories'],
+    signal: 'Italy & Turkey sourcing adds EU compliance complexity — brokerage value-add high',
+  },
+  'footwear': {
+    tam: '$15B', freight: '$195K avg/yr',
+    products: ['Ocean FCL', 'Air Freight', 'Customs Brokerage'],
+    subsegments: ['Athletic', 'Casual', 'Luxury', 'Workwear'],
+    signal: 'China §301 duties at 25–67% on footwear — Vietnam reshoring creating new lanes',
+  },
+  'home-goods': {
+    tam: '$18B', freight: '$260K avg/yr',
+    products: ['Ocean FCL', 'Ocean LCL', 'Warehousing'],
+    subsegments: ['Cookware', 'Kitchen Storage', 'Home Decor', 'Small Appliances'],
+    signal: 'China §301 tariffs on HTS 39/73/85 — Vietnam & India reshoring accelerating',
+  },
+  'home-textiles': {
+    tam: '$11B', freight: '$210K avg/yr',
+    products: ['Ocean FCL', 'Customs Brokerage', 'Duty Deferral'],
+    subsegments: ['Bedding', 'Bath Linens', 'Rugs & Flooring', 'Window Treatments'],
+    signal: 'India & Bangladesh share rising — long dwell times demand 3PL visibility tools',
+  },
+  'pet': {
+    tam: '$7B', freight: '$155K avg/yr',
+    products: ['Ocean FCL', 'Customs Brokerage', 'Cold Chain'],
+    subsegments: ['Pet Food', 'Toys & Play', 'Health & Wellness', 'Habitat & Gear'],
+    signal: 'Pet category grew 14% in 2024 — China-sourced compliance burden is rising',
+  },
+  'health': {
+    tam: '$14B', freight: '$220K avg/yr',
+    products: ['Air Freight', 'Temperature Control', 'Compliance'],
+    subsegments: ['Supplements', 'Fitness Devices', 'Wellness Tech', 'Nutrition'],
+    signal: 'FTC supplement crackdown + FDA traceability rules — compliance-first pitch wins',
+  },
+  'outdoor': {
+    tam: '$16B', freight: '$240K avg/yr',
+    products: ['Ocean FCL', 'Air Freight', 'Customs Brokerage'],
+    subsegments: ['Camping & Hiking', 'Cycling', 'Water Sports', 'Snow Sports'],
+    signal: 'Post-pandemic outdoor demand sustained — Asia-sourced gear reshoring to Vietnam',
+  },
+  'jewelry': {
+    tam: '$6B', freight: '$110K avg/yr',
+    products: ['Air Freight', 'Customs Brokerage', 'Duty Deferral'],
+    subsegments: ['Fine Jewelry', 'Fashion Jewelry', 'Watches', 'Lab-Grown'],
+    signal: 'High-value air shipments at risk from duty changes — FTZ bonded warehouse pitch',
+  },
 };
 
 const DEFAULT_META = {
@@ -94,10 +148,10 @@ function NodeGraph({ sector, onProspectClick }) {
   const allProspects = sector.prospects || [];
   const subs = meta.subsegments;
 
-  const W = 560, H = 440;
+  const W = 680, H = 540;
   const cx = W / 2, cy = H / 2;
-  const R1 = 140;
-  const R2 = 75;
+  const R1 = 155;
+  const R2 = 88;
 
   // Assign prospects to sub-segments round-robin
   const subGroups = subs.map((sub, si) => ({
@@ -140,7 +194,7 @@ function NodeGraph({ sector, onProspectClick }) {
               />
               <text x={sx} y={sy + 1} textAnchor="middle" dominantBaseline="middle"
                 fill="#a5b4fc" fontSize="7.5" fontFamily="'Space Grotesk', sans-serif" fontWeight="600"
-              >{sub.length > 13 ? sub.slice(0, 12) + '…' : sub}</text>
+              >{sub.length > 16 ? sub.slice(0, 15) + '…' : sub}</text>
             </g>
 
             {/* Prospect nodes */}
@@ -169,8 +223,8 @@ function NodeGraph({ sector, onProspectClick }) {
                     filter="url(#ng-glow-sm)"
                   />
                   <text x={px} y={py + pr + 9} textAnchor="middle"
-                    fill="#94a3b8" fontSize="6.5" fontFamily="'Space Grotesk', sans-serif"
-                  >{p.name?.split(' ')[0] ?? ''}</text>
+                    fill="#94a3b8" fontSize="6" fontFamily="'Space Grotesk', sans-serif"
+                  >{p.name?.split(' ').slice(0, 2).join(' ') ?? ''}</text>
                 </g>
               );
             })}

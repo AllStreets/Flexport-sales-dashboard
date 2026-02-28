@@ -45,13 +45,33 @@ app.get('/api/prospects/:id', async (req, res) => {
 
 // ── Globe Data ─────────────────────────────────────
 const SHIPPING_LANES = [
-  { src_lat: 31.2, src_lng: 121.5, dst_lat: 33.7, dst_lng: -118.2, label: 'Asia-US West Coast', weight: 10 },
-  { src_lat: 31.2, src_lng: 121.5, dst_lat: 51.9, dst_lng: 4.5,   label: 'China-Rotterdam',    weight: 8 },
-  { src_lat: 1.35, src_lng: 103.8, dst_lat: 40.7, dst_lng: -74.0, label: 'SE Asia-US East',    weight: 7 },
-  { src_lat: 19.0, src_lng: 72.8,  dst_lat: 33.7, dst_lng: -118.2, label: 'India-US West',     weight: 5 },
-  { src_lat: 51.9, src_lng: 4.5,   dst_lat: 40.7, dst_lng: -74.0, label: 'Europe-US East',     weight: 6 },
-  { src_lat: 10.8, src_lng: 106.7, dst_lat: 33.7, dst_lng: -118.2, label: 'Vietnam-US West',   weight: 6 },
-  { src_lat: 22.3, src_lng: 114.2, dst_lat: 40.7, dst_lng: -74.0, label: 'HK-US East',         weight: 4 }
+  // ── Trans-Pacific ────────────────────────────────────────────────────────────
+  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 33.7,  dst_lng: -118.2, label: 'China-US West Coast',   weight: 10 },
+  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 40.7,  dst_lng: -74.0,  label: 'China-US East Coast',   weight: 7  },
+  { src_lat: 10.8,  src_lng: 106.7, dst_lat: 33.7,  dst_lng: -118.2, label: 'Vietnam-US West',       weight: 6  },
+  { src_lat: 35.7,  src_lng: 139.7, dst_lat: 33.7,  dst_lng: -118.2, label: 'Japan-US West',         weight: 5  },
+  { src_lat: 35.1,  src_lng: 129.0, dst_lat: 33.7,  dst_lng: -118.2, label: 'Korea-US West',         weight: 5  },
+  { src_lat: 25.0,  src_lng: 121.5, dst_lat: 33.7,  dst_lng: -118.2, label: 'Taiwan-US West',        weight: 4  },
+  { src_lat: 1.35,  src_lng: 103.8, dst_lat: 40.7,  dst_lng: -74.0,  label: 'SE Asia-US East',       weight: 7  },
+  { src_lat: 22.3,  src_lng: 114.2, dst_lat: 40.7,  dst_lng: -74.0,  label: 'HK-US East',            weight: 4  },
+  // ── Asia-Europe ──────────────────────────────────────────────────────────────
+  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 51.9,  dst_lng: 4.5,    label: 'China-Rotterdam',       weight: 8  },
+  { src_lat: 10.8,  src_lng: 106.7, dst_lat: 51.9,  dst_lng: 4.5,    label: 'SE Asia-Europe',        weight: 4  },
+  // ── South Asia-US ────────────────────────────────────────────────────────────
+  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: 33.7,  dst_lng: -118.2, label: 'India-US West',         weight: 5  },
+  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: 40.7,  dst_lng: -74.0,  label: 'India-US East',         weight: 4  },
+  // ── Atlantic ─────────────────────────────────────────────────────────────────
+  { src_lat: 51.9,  src_lng: 4.5,   dst_lat: 40.7,  dst_lng: -74.0,  label: 'Europe-US East',        weight: 6  },
+  { src_lat: 41.0,  src_lng: 28.9,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Turkey-Europe',         weight: 3  },
+  // ── Middle East / Africa ─────────────────────────────────────────────────────
+  { src_lat: 25.0,  src_lng: 55.1,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Middle East-Europe',    weight: 5  },
+  { src_lat: -29.9, src_lng: 31.0,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Africa-Europe',         weight: 3  },
+  // ── Americas ─────────────────────────────────────────────────────────────────
+  { src_lat: 19.4,  src_lng: -99.1, dst_lat: 29.7,  dst_lng: -95.0,  label: 'Mexico-US South',       weight: 5  },
+  { src_lat: -23.9, src_lng: -46.3, dst_lat: 40.7,  dst_lng: -74.0,  label: 'Brazil-US East',        weight: 3  },
+  { src_lat: -12.0, src_lng: -77.1, dst_lat: 33.7,  dst_lng: -118.2, label: 'Peru-US West',          weight: 3  },
+  // ── Australia ────────────────────────────────────────────────────────────────
+  { src_lat: -33.9, src_lng: 151.2, dst_lat: 33.7,  dst_lng: -118.2, label: 'Australia-US West',     weight: 3  },
 ];
 
 app.get('/api/globe-data', async (req, res) => {

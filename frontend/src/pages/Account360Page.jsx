@@ -8,11 +8,20 @@ import './Account360Page.css';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const COUNTRY_FLAGS = {
+  // Asia-Pacific
   'China': '🇨🇳', 'Vietnam': '🇻🇳', 'India': '🇮🇳', 'Bangladesh': '🇧🇩',
-  'Malaysia': '🇲🇾', 'South Korea': '🇰🇷', 'Italy': '🇮🇹', 'Portugal': '🇵🇹',
-  'Spain': '🇪🇸', 'Netherlands': '🇳🇱', 'Sweden': '🇸🇪', 'Turkey': '🇹🇷',
-  'Mexico': '🇲🇽', 'Philippines': '🇵🇭', 'Cambodia': '🇰🇭', 'Singapore': '🇸🇬',
-  'Peru': '🇵🇪', 'Argentina': '🇦🇷', 'Indonesia': '🇮🇩', 'Thailand': '🇹🇭',
+  'Malaysia': '🇲🇾', 'South Korea': '🇰🇷', 'Philippines': '🇵🇭', 'Cambodia': '🇰🇭',
+  'Singapore': '🇸🇬', 'Japan': '🇯🇵', 'Taiwan': '🇹🇼', 'Thailand': '🇹🇭',
+  'Indonesia': '🇮🇩', 'Sri Lanka': '🇱🇰', 'New Zealand': '🇳🇿',
+  // Europe
+  'Italy': '🇮🇹', 'Portugal': '🇵🇹', 'Spain': '🇪🇸', 'Netherlands': '🇳🇱',
+  'Sweden': '🇸🇪', 'Turkey': '🇹🇷', 'France': '🇫🇷', 'Germany': '🇩🇪',
+  'Finland': '🇫🇮', 'Belgium': '🇧🇪', 'Austria': '🇦🇹', 'Switzerland': '🇨🇭',
+  // Americas
+  'Mexico': '🇲🇽', 'Peru': '🇵🇪', 'Argentina': '🇦🇷', 'Brazil': '🇧🇷',
+  'Colombia': '🇨🇴', 'Chile': '🇨🇱', 'USA': '🇺🇸',
+  // Africa / Middle East
+  'Morocco': '🇲🇦',
 };
 
 function StreamText({ text, speed = 4, delay = 18 }) {
@@ -58,7 +67,7 @@ function SupplyChainDiagram({ origins = [], lanes = [] }) {
             <g key={country} className="sc-node" style={{ animationDelay: `${i * 0.08}s` }}>
               <circle cx={52} cy={y} r={22} fill="rgba(37,99,235,0.12)" stroke="rgba(37,99,235,0.4)" strokeWidth="1.5" />
               <text x={52} y={y + 2} textAnchor="middle" fontSize="18" dominantBaseline="middle">{flag}</text>
-              <text x={52} y={y + 28} textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="Inter">{country.slice(0, 8)}</text>
+              <text x={52} y={y + 28} textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="Inter">{country}</text>
               {/* Flow line to port */}
               <path
                 d={`M74,${y} Q${cx - 60},${y} ${cx - 28},${cy}`}

@@ -52,15 +52,28 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   }, [selectedProspect]);
 
   const originCoords = {
+    // Asia-Pacific
     'China': { lat: 31.2, lng: 121.5 }, 'Vietnam': { lat: 10.8, lng: 106.7 },
-    'India': { lat: 19.0, lng: 72.8 }, 'Portugal': { lat: 38.7, lng: -9.1 },
-    'Italy': { lat: 41.9, lng: 12.5 }, 'South Korea': { lat: 37.5, lng: 127.0 },
+    'India': { lat: 19.0, lng: 72.8 }, 'South Korea': { lat: 37.5, lng: 127.0 },
     'Bangladesh': { lat: 23.8, lng: 90.4 }, 'Malaysia': { lat: 3.1, lng: 101.7 },
-    'Spain': { lat: 40.4, lng: -3.7 }, 'Philippines': { lat: 14.6, lng: 121.0 },
-    'Cambodia': { lat: 11.6, lng: 104.9 }, 'Mexico': { lat: 19.4, lng: -99.1 },
-    'Turkey': { lat: 41.0, lng: 28.9 }, 'Netherlands': { lat: 52.4, lng: 4.9 },
-    'Singapore': { lat: 1.35, lng: 103.8 }, 'Peru': { lat: -12.0, lng: -77.0 },
-    'Argentina': { lat: -34.6, lng: -58.4 }, 'Sweden': { lat: 59.3, lng: 18.1 },
+    'Philippines': { lat: 14.6, lng: 121.0 }, 'Cambodia': { lat: 11.6, lng: 104.9 },
+    'Singapore': { lat: 1.35, lng: 103.8 }, 'Japan': { lat: 35.7, lng: 139.7 },
+    'Taiwan': { lat: 25.0, lng: 121.5 }, 'Thailand': { lat: 13.8, lng: 100.5 },
+    'Indonesia': { lat: -6.2, lng: 106.8 }, 'Sri Lanka': { lat: 6.9, lng: 79.9 },
+    'New Zealand': { lat: -36.9, lng: 174.8 },
+    // Europe
+    'Italy': { lat: 41.9, lng: 12.5 }, 'Portugal': { lat: 38.7, lng: -9.1 },
+    'Spain': { lat: 40.4, lng: -3.7 }, 'Netherlands': { lat: 52.4, lng: 4.9 },
+    'Sweden': { lat: 59.3, lng: 18.1 }, 'Turkey': { lat: 41.0, lng: 28.9 },
+    'France': { lat: 48.9, lng: 2.4 }, 'Germany': { lat: 52.5, lng: 13.4 },
+    'Finland': { lat: 60.2, lng: 24.9 }, 'Belgium': { lat: 50.8, lng: 4.4 },
+    'Austria': { lat: 48.2, lng: 16.4 }, 'Switzerland': { lat: 47.4, lng: 8.5 },
+    // Americas
+    'Mexico': { lat: 19.4, lng: -99.1 }, 'Peru': { lat: -12.0, lng: -77.0 },
+    'Argentina': { lat: -34.6, lng: -58.4 }, 'Brazil': { lat: -23.5, lng: -46.6 },
+    'Colombia': { lat: 4.7, lng: -74.1 }, 'Chile': { lat: -33.5, lng: -70.6 },
+    // Africa / Middle East
+    'Morocco': { lat: 33.6, lng: -7.6 }, 'USA': { lat: 37.8, lng: -96.0 },
   };
 
   const mode = OVERLAY_MODES[overlayMode];
