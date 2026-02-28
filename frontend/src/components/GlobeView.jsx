@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Globe from 'react-globe.gl';
 import { RiGlobalLine, RiPercentLine, RiAlertLine } from 'react-icons/ri';
 import './GlobeView.css';
@@ -158,14 +159,20 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
         <span className="legend-item red">■ Disruption</span>
       </div>
 
-      {/* Overlay mode toggle — visible in both normal and fullscreen */}
-      <button
-        className={`overlay-toggle${fullscreen ? ' overlay-toggle--fs' : ''}`}
-        onClick={e => { e.stopPropagation(); setOverlayMode(m => (m + 1) % OVERLAY_MODES.length); }}
-        title="Cycle globe overlay"
-      >
-        {(() => { const Icon = OVERLAY_ICONS[mode]; return <><Icon size={12} />{' '}{OVERLAY_LABELS[mode]}</>; })()}
-      </button>
+      {/* Overlay mode toggle — in fullscreen, portalled to document.body to escape stacking context */}
+      {(() => {
+        const Icon = OVERLAY_ICONS[mode];
+        const btn = (
+          <button
+            className={`overlay-toggle${fullscreen ? ' overlay-toggle--fs' : ''}`}
+            onClick={e => { e.stopPropagation(); setOverlayMode(m => (m + 1) % OVERLAY_MODES.length); }}
+            title="Cycle globe overlay"
+          >
+            <Icon size={12} />{' '}{OVERLAY_LABELS[mode]}
+          </button>
+        );
+        return fullscreen ? createPortal(btn, document.body) : btn;
+      })()}
 
       {/* Port detail popup — rendered inside the wrapper so it layers above the globe in fullscreen */}
       {portDetail && (
