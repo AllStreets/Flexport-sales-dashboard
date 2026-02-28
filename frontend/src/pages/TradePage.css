@@ -12,7 +12,7 @@
 
 /* ── Macro tiles ─────────────────────────────────────────────────────────────── */
 .macro-tiles {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
 }
 .macro-tile {
   background: #0a0e1a; border: 1px solid #1a2744;

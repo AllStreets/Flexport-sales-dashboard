@@ -130,7 +130,38 @@ function Sparkline({ data, color }) {
   );
 }
 
-function MacroTile({ label, data, color, formatter }) {
+function BarSparkline({ data, color }) {
+  if (!data?.length) return <div className="sparkline-empty" />;
+  const vals = data.map(d => d.v);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const H = 36, W = 120;
+  const n = Math.min(data.length, 12);
+  const gap = 1.5;
+  const bw = (W - gap * (n - 1)) / n;
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      {data.slice(0, n).map((pt, i) => {
+        const bh = Math.max(2, ((pt.v - min) / range) * (H - 4));
+        return (
+          <rect
+            key={i}
+            x={i * (bw + gap)}
+            y={H - bh}
+            width={bw}
+            height={bh}
+            fill={color}
+            opacity={0.35 + 0.65 * ((pt.v - min) / range)}
+            rx={1}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function MacroTile({ label, data, color, formatter, barSpark }) {
   const fmtVal = formatter || fmt;
   const delta = data ? fmtDelta(data.momDelta, data.momPct) : null;
   const positive = data?.momDelta >= 0;
@@ -144,7 +175,9 @@ function MacroTile({ label, data, color, formatter }) {
         </div>
       )}
       <div className="tile-spark">
-        <Sparkline data={data?.sparkline} color={color} />
+        {barSpark
+          ? <BarSparkline data={data?.sparkline} color={color} />
+          : <Sparkline    data={data?.sparkline} color={color} />}
       </div>
     </div>
   );
@@ -242,10 +275,10 @@ export default function TradePage() {
       <div className="macro-tiles">
         <MacroTile label="TRADE BALANCE"              data={tradeData?.trade_balance}  color="#ff3b3b" />
         <MacroTile label="TOTAL IMPORTS"              data={tradeData?.total_imports}  color="#00d4ff" />
-        <MacroTile label="CAPITAL GOODS"              data={tradeData?.capital_goods}  color="#00c176" />
-        <MacroTile label="CONSUMER GOODS"             data={tradeData?.consumer_goods} color="#ff9f0a" />
+        <MacroTile label="CAPITAL GOODS"              data={tradeData?.capital_goods}  color="#00c176" barSpark />
+        <MacroTile label="CONSUMER GOODS"             data={tradeData?.consumer_goods} color="#ff9f0a" barSpark />
         <MacroTile label="BRENT CRUDE · FREIGHT PROXY" data={tradeData?.freight_index} color="#a78bfa" formatter={fmtBbl} />
-        <MacroTile label="US DIESEL RETAIL"           data={tradeData?.diesel_price}  color="#f59e0b" formatter={fmtGal} />
+        <MacroTile label="US DIESEL RETAIL"           data={tradeData?.diesel_price}  color="#e2e8f0" formatter={fmtGal} />
       </div>
 
       {/* ── Row 1: Chart · Commodity table · Live signals ── */}
