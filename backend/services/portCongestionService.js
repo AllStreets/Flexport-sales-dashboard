@@ -43,6 +43,21 @@ const PORT_REGISTRY = [
   { name: 'Hamburg',             lat: 53.54,  lng: 9.97,    baseline: 2, keywords: ['hamburg', 'burchardkai', 'tollerort'] },
   { name: 'Felixstowe',          lat: 51.96,  lng: 1.35,    baseline: 5, keywords: ['felixstowe', 'harwich'] },
   { name: 'Piraeus',             lat: 37.94,  lng: 23.63,   baseline: 3, keywords: ['piraeus', 'greece port', 'cosco piraeus', 'pct'] },
+
+  // ── Africa ─────────────────────────────────────────────────────────────────
+  { name: 'Durban',              lat: -29.87, lng: 31.03,   baseline: 3, keywords: ['durban', 'south africa port', 'transnet', 'pier 1'] },
+  { name: 'Tangier Med',         lat: 35.88,  lng: -5.50,   baseline: 2, keywords: ['tangier', 'tanger med', 'morocco port'] },
+  { name: 'Port Said',           lat: 31.26,  lng: 32.30,   baseline: 3, keywords: ['port said', 'suez canal', 'egypt port', 'sczone'] },
+
+  // ── South America ──────────────────────────────────────────────────────────
+  { name: 'Santos',              lat: -23.95, lng: -46.33,  baseline: 3, keywords: ['santos', 'brazil port', 'porto de santos'] },
+  { name: 'Callao',              lat: -12.04, lng: -77.14,  baseline: 3, keywords: ['callao', 'peru port', 'lima port', 'dpp'] },
+  { name: 'Buenos Aires',        lat: -34.59, lng: -58.37,  baseline: 3, keywords: ['buenos aires', 'argentina port', 'exolgan', 'tec plata'] },
+
+  // ── Australia ──────────────────────────────────────────────────────────────
+  { name: 'Melbourne',           lat: -37.83, lng: 144.93,  baseline: 2, keywords: ['melbourne', 'port of melbourne', 'victoria port'] },
+  { name: 'Sydney/Port Botany',  lat: -33.97, lng: 151.22,  baseline: 2, keywords: ['sydney', 'port botany', 'new south wales port'] },
+  { name: 'Brisbane',            lat: -27.38, lng: 153.17,  baseline: 2, keywords: ['brisbane', 'port of brisbane', 'queensland port'] },
 ];
 
 /**

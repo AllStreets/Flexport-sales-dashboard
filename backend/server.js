@@ -93,6 +93,18 @@ app.get('/api/globe-data', async (req, res) => {
         { name: 'Hamburg',              lat: 53.54,  lng: 9.97,    status: 'clear',      congestion: 2 },
         { name: 'Felixstowe',           lat: 51.96,  lng: 1.35,    status: 'congestion', congestion: 5 },
         { name: 'Piraeus',              lat: 37.94,  lng: 23.63,   status: 'clear',      congestion: 3 },
+        // Africa
+        { name: 'Durban',               lat: -29.87, lng: 31.03,   status: 'clear',      congestion: 3 },
+        { name: 'Tangier Med',          lat: 35.88,  lng: -5.50,   status: 'clear',      congestion: 2 },
+        { name: 'Port Said',            lat: 31.26,  lng: 32.30,   status: 'clear',      congestion: 3 },
+        // South America
+        { name: 'Santos',               lat: -23.95, lng: -46.33,  status: 'clear',      congestion: 3 },
+        { name: 'Callao',               lat: -12.04, lng: -77.14,  status: 'clear',      congestion: 3 },
+        { name: 'Buenos Aires',         lat: -34.59, lng: -58.37,  status: 'clear',      congestion: 3 },
+        // Australia
+        { name: 'Melbourne',            lat: -37.83, lng: 144.93,  status: 'clear',      congestion: 2 },
+        { name: 'Sydney/Port Botany',   lat: -33.97, lng: 151.22,  status: 'clear',      congestion: 2 },
+        { name: 'Brisbane',             lat: -27.38, lng: 153.17,  status: 'clear',      congestion: 2 },
       ]
     });
   }
