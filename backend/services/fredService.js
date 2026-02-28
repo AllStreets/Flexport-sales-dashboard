@@ -12,6 +12,7 @@ const FRED_SERIES = {
   total_imports:  'IMPGS',    // Imports of Goods and Services (quarterly, $B annualized)
   capital_goods:  'AITGICS',  // Advance Imports: Capital Goods (monthly, $B)
   consumer_goods: 'AITGIGS',  // Advance Imports: Consumer Goods (monthly, $B)
+  freight_index:  'DCOILBRENTEU', // Brent Crude Oil ($/bbl) — freight cost leading indicator
 };
 
 async function getTradeData(commodity) {
@@ -21,8 +22,12 @@ async function getTradeData(commodity) {
   const cached = await getCached(seriesId);
   if (cached) return cached;
 
+  // Daily series (like Brent Crude) need more observations for year-ago comparison
+  const isDailyLike = ['DCOILBRENTEU'].includes(seriesId);
+  const limit = isDailyLike ? 400 : 24;
+
   const res = await axios.get('https://api.stlouisfed.org/fred/series/observations', {
-    params: { series_id: seriesId, api_key: process.env.FRED_API_KEY, file_type: 'json', limit: 24, sort_order: 'desc' }
+    params: { series_id: seriesId, api_key: process.env.FRED_API_KEY, file_type: 'json', limit, sort_order: 'desc' }
   });
 
   const data = res.data;

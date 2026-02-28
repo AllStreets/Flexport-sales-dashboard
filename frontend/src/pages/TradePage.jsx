@@ -37,13 +37,14 @@ function Sparkline({ data, color }) {
   );
 }
 
-function MacroTile({ label, data, color }) {
+function MacroTile({ label, data, color, formatter }) {
+  const fmtVal = formatter || fmt;
   const delta = data ? fmtDelta(data.momDelta, data.momPct) : null;
   const positive = data?.momDelta >= 0;
   return (
     <div className="macro-tile">
       <div className="tile-label">{label}</div>
-      <div className="tile-value" style={{ color }}>{fmt(data?.current)}</div>
+      <div className="tile-value" style={{ color }}>{fmtVal(data?.current)}</div>
       {delta && (
         <div className="tile-delta" style={{ color: positive ? '#00c176' : '#ff3b3b' }}>
           {delta} MoM
@@ -55,6 +56,11 @@ function MacroTile({ label, data, color }) {
     </div>
   );
 }
+
+const fmtBbl = n => {
+  if (!n && n !== 0) return '—';
+  return `$${n.toFixed(2)}/bbl`;
+};
 
 const COMMODITIES = [
   { key: 'total_imports',  label: 'Total Imports' },
@@ -133,6 +139,7 @@ export default function TradePage() {
         <MacroTile label="TOTAL IMPORTS" data={tradeData?.total_imports} color="#00d4ff" />
         <MacroTile label="CAPITAL GOODS" data={tradeData?.capital_goods} color="#00c176" />
         <MacroTile label="CONSUMER GOODS" data={tradeData?.consumer_goods} color="#ff9f0a" />
+        <MacroTile label="BRENT CRUDE · FREIGHT PROXY" data={tradeData?.freight_index} color="#a78bfa" formatter={fmtBbl} />
       </div>
 
       {/* Main row */}

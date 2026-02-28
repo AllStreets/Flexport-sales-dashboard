@@ -24,6 +24,8 @@ const { getPipeline, addToPipeline, updatePipeline, removeFromPipeline } = requi
 const { aggregateCompanyData } = require('./services/dataAggregator');
 const { getTradeIntelligence } = require('./services/tradeIntelligenceService');
 const { getPerformanceSummary, logActivity, getWinLoss, addWinLoss } = require('./services/performanceService');
+const { getPortCongestion } = require('./services/portCongestionService');
+const { lookupHSCode } = require('./services/usitcService');
 
 // ── Prospects ──────────────────────────────────────
 app.get('/api/prospects', async (req, res) => {
@@ -42,30 +44,38 @@ app.get('/api/prospects/:id', async (req, res) => {
 });
 
 // ── Globe Data ─────────────────────────────────────
-app.get('/api/globe-data', (req, res) => {
-  res.json({
-    shippingLanes: [
-      { src_lat: 31.2, src_lng: 121.5, dst_lat: 33.7, dst_lng: -118.2, label: 'Asia-US West Coast', weight: 10 },
-      { src_lat: 31.2, src_lng: 121.5, dst_lat: 51.9, dst_lng: 4.5,   label: 'China-Rotterdam',    weight: 8 },
-      { src_lat: 1.35, src_lng: 103.8, dst_lat: 40.7, dst_lng: -74.0, label: 'SE Asia-US East',    weight: 7 },
-      { src_lat: 19.0, src_lng: 72.8,  dst_lat: 33.7, dst_lng: -118.2, label: 'India-US West',     weight: 5 },
-      { src_lat: 51.9, src_lng: 4.5,   dst_lat: 40.7, dst_lng: -74.0, label: 'Europe-US East',     weight: 6 },
-      { src_lat: 10.8, src_lng: 106.7, dst_lat: 33.7, dst_lng: -118.2, label: 'Vietnam-US West',   weight: 6 },
-      { src_lat: 22.3, src_lng: 114.2, dst_lat: 40.7, dst_lng: -74.0, label: 'HK-US East',         weight: 4 }
-    ],
-    ports: [
-      { name: 'LA/Long Beach', lat: 33.74, lng: -118.26, status: 'congestion', congestion: 5 },
-      { name: 'Shanghai',      lat: 31.22, lng: 121.47,  status: 'clear',      congestion: 3 },
-      { name: 'Rotterdam',     lat: 51.95, lng: 4.13,    status: 'clear',      congestion: 2 },
-      { name: 'Singapore',     lat: 1.26,  lng: 103.82,  status: 'clear',      congestion: 2 },
-      { name: 'Hong Kong',     lat: 22.29, lng: 114.17,  status: 'clear',      congestion: 3 },
-      { name: 'Felixstowe',    lat: 51.96, lng: 1.35,    status: 'congestion', congestion: 5 },
-      { name: 'Hamburg',       lat: 53.54, lng: 9.97,    status: 'clear',      congestion: 2 },
-      { name: 'Savannah',      lat: 32.08, lng: -81.09,  status: 'clear',      congestion: 3 },
-      { name: 'Busan',         lat: 35.10, lng: 129.04,  status: 'clear',      congestion: 2 },
-      { name: 'Yantian',       lat: 22.57, lng: 114.27,  status: 'clear',      congestion: 3 }
-    ]
-  });
+const SHIPPING_LANES = [
+  { src_lat: 31.2, src_lng: 121.5, dst_lat: 33.7, dst_lng: -118.2, label: 'Asia-US West Coast', weight: 10 },
+  { src_lat: 31.2, src_lng: 121.5, dst_lat: 51.9, dst_lng: 4.5,   label: 'China-Rotterdam',    weight: 8 },
+  { src_lat: 1.35, src_lng: 103.8, dst_lat: 40.7, dst_lng: -74.0, label: 'SE Asia-US East',    weight: 7 },
+  { src_lat: 19.0, src_lng: 72.8,  dst_lat: 33.7, dst_lng: -118.2, label: 'India-US West',     weight: 5 },
+  { src_lat: 51.9, src_lng: 4.5,   dst_lat: 40.7, dst_lng: -74.0, label: 'Europe-US East',     weight: 6 },
+  { src_lat: 10.8, src_lng: 106.7, dst_lat: 33.7, dst_lng: -118.2, label: 'Vietnam-US West',   weight: 6 },
+  { src_lat: 22.3, src_lng: 114.2, dst_lat: 40.7, dst_lng: -74.0, label: 'HK-US East',         weight: 4 }
+];
+
+app.get('/api/globe-data', async (req, res) => {
+  try {
+    const ports = await getPortCongestion();
+    res.json({ shippingLanes: SHIPPING_LANES, ports });
+  } catch {
+    // Fallback to baseline values if service fails
+    res.json({
+      shippingLanes: SHIPPING_LANES,
+      ports: [
+        { name: 'LA/Long Beach', lat: 33.74, lng: -118.26, status: 'congestion', congestion: 5 },
+        { name: 'Shanghai',      lat: 31.22, lng: 121.47,  status: 'clear',      congestion: 3 },
+        { name: 'Rotterdam',     lat: 51.95, lng: 4.13,    status: 'clear',      congestion: 2 },
+        { name: 'Singapore',     lat: 1.26,  lng: 103.82,  status: 'clear',      congestion: 2 },
+        { name: 'Hong Kong',     lat: 22.29, lng: 114.17,  status: 'clear',      congestion: 3 },
+        { name: 'Felixstowe',    lat: 51.96, lng: 1.35,    status: 'congestion', congestion: 5 },
+        { name: 'Hamburg',       lat: 53.54, lng: 9.97,    status: 'clear',      congestion: 2 },
+        { name: 'Savannah',      lat: 32.08, lng: -81.09,  status: 'clear',      congestion: 3 },
+        { name: 'Busan',         lat: 35.10, lng: 129.04,  status: 'clear',      congestion: 2 },
+        { name: 'Yantian',       lat: 22.57, lng: 114.27,  status: 'clear',      congestion: 3 }
+      ]
+    });
+  }
 });
 
 // ── Intelligence ───────────────────────────────────
@@ -249,12 +259,35 @@ const HS_CODES = {
   '8528': { desc: 'Monitors, TVs & displays', rate: 0.00, section301: 0.25 },
 };
 
-app.get('/api/hs-lookup', (req, res) => {
+app.get('/api/hs-lookup', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.json([]);
+
+  // Try live USITC HTS API first
+  try {
+    const usitcResults = await lookupHSCode(q);
+    if (usitcResults.length > 0) {
+      // Merge with local §301 data where we have it
+      const enriched = usitcResults.map(r => {
+        const local = HS_CODES[r.htsno?.slice(0, 4)] || {};
+        return {
+          code:       r.htsno,
+          desc:       r.description,
+          rate:       r.generalRate ?? local.rate ?? null,
+          section301: local.section301 ?? 0,
+          general:    r.general,
+          special:    r.special,
+          source:     'usitc',
+        };
+      });
+      return res.json(enriched.slice(0, 5));
+    }
+  } catch { /* fall through to local */ }
+
+  // Fallback: local hardcoded HS_CODES
   const results = Object.entries(HS_CODES)
     .filter(([code, info]) => code.startsWith(q) || info.desc.toLowerCase().includes(q.toLowerCase()))
-    .map(([code, info]) => ({ code, ...info }));
+    .map(([code, info]) => ({ code, ...info, source: 'local' }));
   res.json(results.slice(0, 5));
 });
 
