@@ -10,35 +10,21 @@ import TariffCalculator from '../components/TariffCalculator';
 import SignalTicker from '../components/SignalTicker';
 import './HomePage.css';
 
-export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscreen, onEnterFullscreen, onPortClick }) {
+export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscreen, onEnterFullscreen }) {
   const [selectedProspect, setSelectedProspect] = useState(null);
-  const [portDetail, setPortDetail] = useState(null);
   const navigate = useNavigate();
-
-  const handlePortClick = (port) => {
-    setPortDetail(port);
-    onPortClick?.(port);
-  };
 
   return (
     <div className="home-page">
       <SignalTicker />
 
-      {/* Globe hero */}
+      {/* Globe hero — port detail popup now lives inside GlobeView */}
       <section className="globe-section">
         <GlobeView
           selectedProspect={selectedProspect}
-          onPortClick={handlePortClick}
           fullscreen={globeFullscreen}
           onEnterFullscreen={onEnterFullscreen}
         />
-        {portDetail && (
-          <div className="port-detail-popup glass-card" onClick={() => setPortDetail(null)}>
-            <strong>{portDetail.name}</strong>
-            <span>Status: {portDetail.status} · Congestion {portDetail.congestion}/10</span>
-            <span className="popup-close">✕</span>
-          </div>
-        )}
       </section>
 
       {/* Two-column below globe */}

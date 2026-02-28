@@ -9,10 +9,13 @@ const OVERLAY_MODES = ['standard', 'tariff', 'disruption'];
 const OVERLAY_ICONS = { standard: RiGlobalLine, tariff: RiPercentLine, disruption: RiAlertLine };
 const OVERLAY_LABELS = { standard: 'Standard', tariff: 'Tariff Risk', disruption: 'Disruption' };
 
+const statusColor = s => s === 'disruption' ? '#ef4444' : s === 'congestion' ? '#f59e0b' : '#10b981';
+
 export default function GlobeView({ selectedProspect, onPortClick, fullscreen = false, onEnterFullscreen }) {
   const globeRef = useRef(null);
   const [globeData, setGlobeData] = useState({ shippingLanes: [], ports: [] });
   const [overlayMode, setOverlayMode] = useState(0);
+  const [portDetail, setPortDetail] = useState(null);
 
   const getDimensions = (fs) => ({
     w: window.innerWidth,
@@ -31,6 +34,9 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
     window.addEventListener('resize', handle);
     return () => window.removeEventListener('resize', handle);
   }, [fullscreen]);
+
+  // Close port popup when exiting fullscreen
+  useEffect(() => { if (!fullscreen) setPortDetail(null); }, [fullscreen]);
 
   useEffect(() => {
     const g = globeRef.current;
@@ -56,7 +62,6 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
     'Argentina': { lat: -34.6, lng: -58.4 }, 'Sweden': { lat: 59.3, lng: 18.1 },
   };
 
-  // Overlay-aware arc color
   const mode = OVERLAY_MODES[overlayMode];
   const laneColor = (lane) => {
     if (mode === 'tariff') {
@@ -75,7 +80,6 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
     color: laneColor(lane), label: lane.label, weight: lane.weight, type: 'lane'
   }));
 
-  // Particle layer (fast-dash overlay)
   const particleLanes = globeData.shippingLanes.map(lane => ({
     startLat: lane.src_lat, startLng: lane.src_lng,
     endLat: lane.dst_lat, endLng: lane.dst_lng,
@@ -96,7 +100,6 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
 
   const allArcs = [...baseLanes, ...particleLanes, ...prospectArcs];
 
-  // Pulsing rings for disrupted/congested ports
   const rings = globeData.ports
     .filter(p => p.status === 'disruption' || p.status === 'congestion')
     .map(p => ({
@@ -107,11 +110,12 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       color: p.status === 'disruption' ? '#ef4444' : '#f59e0b'
     }));
 
-  const portColor = useCallback((port) => {
-    if (port.status === 'disruption') return '#ef4444';
-    if (port.status === 'congestion') return '#f59e0b';
-    return '#10b981';
-  }, []);
+  const portColor = useCallback((port) => statusColor(port.status), []);
+
+  const handlePortClick = (port) => {
+    setPortDetail(port);
+    onPortClick?.(port);
+  };
 
   return (
     <div
@@ -140,25 +144,60 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
         pointAltitude={0.02}
         pointRadius={0.4}
         pointLabel={d => `<div class="globe-tooltip"><strong>${d.name}</strong><br/>Status: ${d.status}<br/>Congestion: ${d.congestion}/10</div>`}
-        onPointClick={port => onPortClick?.(port)}
+        onPointClick={handlePortClick}
         ringsData={rings}
         ringColor="color"
         ringMaxRadius="maxRadius"
         ringPropagationSpeed="propagationSpeed"
         ringRepeatPeriod="repeatPeriod"
       />
+
       <div className="globe-legend">
         <span className="legend-item green">■ Clear</span>
         <span className="legend-item amber">■ Congestion</span>
         <span className="legend-item red">■ Disruption</span>
       </div>
+
+      {/* Overlay mode toggle — visible in both normal and fullscreen */}
       <button
-        className="overlay-toggle"
+        className={`overlay-toggle${fullscreen ? ' overlay-toggle--fs' : ''}`}
         onClick={e => { e.stopPropagation(); setOverlayMode(m => (m + 1) % OVERLAY_MODES.length); }}
         title="Cycle globe overlay"
       >
         {(() => { const Icon = OVERLAY_ICONS[mode]; return <><Icon size={12} />{' '}{OVERLAY_LABELS[mode]}</>; })()}
       </button>
+
+      {/* Port detail popup — rendered inside the wrapper so it layers above the globe in fullscreen */}
+      {portDetail && (
+        <div
+          className={`port-popup${fullscreen ? ' port-popup--fs' : ''}`}
+          onClick={e => { e.stopPropagation(); setPortDetail(null); }}
+        >
+          <div className="port-popup-inner" onClick={e => e.stopPropagation()}>
+            <div className="port-popup-header">
+              <span
+                className="port-popup-dot"
+                style={{ background: statusColor(portDetail.status) }}
+              />
+              <strong className="port-popup-name">{portDetail.name}</strong>
+              <button className="port-popup-close" onClick={() => setPortDetail(null)}>✕</button>
+            </div>
+            <div className="port-popup-row">
+              <span className="port-popup-label">Status</span>
+              <span className="port-popup-val" style={{ color: statusColor(portDetail.status), textTransform: 'capitalize' }}>
+                {portDetail.status}
+              </span>
+            </div>
+            <div className="port-popup-row">
+              <span className="port-popup-label">Congestion</span>
+              <span className="port-popup-val">{portDetail.congestion}/10</span>
+            </div>
+            {portDetail.signalHit && (
+              <div className="port-popup-signal">Signal detected in recent news</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
