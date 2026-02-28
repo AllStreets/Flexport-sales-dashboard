@@ -10,8 +10,9 @@
 
 .bar-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .menu-toggle {
-  background: none; border: none; color: #64748b; font-size: 20px;
-  cursor: pointer; padding: 4px 8px; line-height: 1;
+  background: none; border: none; color: #64748b;
+  cursor: pointer; padding: 4px 8px;
+  display: flex; align-items: center;
   transition: color 0.15s;
 }
 .menu-toggle:hover { color: #f1f5f9; }
@@ -25,7 +26,7 @@
 .port-name { font-size: 10px; color: #64748b; white-space: nowrap; }
 
 .bar-right { display: flex; gap: 8px; flex-shrink: 0; }
-.bar-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; border-radius: 8px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.bar-btn { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; border-radius: 8px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
 .bar-btn:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
 .bar-btn.primary { background: rgba(37,99,235,0.2); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
 .bar-btn.primary:hover { background: rgba(37,99,235,0.35); }

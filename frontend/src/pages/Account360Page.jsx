@@ -1,6 +1,7 @@
 // frontend/src/pages/Account360Page.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { RiFileTextLine, RiMailSendLine, RiBoxingLine, RiLightbulbLine, RiFlashlightLine, RiRoadMapLine, RiCloseCircleLine } from 'react-icons/ri';
 import ICPBadge from '../components/ICPBadge';
 import './Account360Page.css';
 
@@ -52,7 +53,7 @@ function SupplyChainDiagram({ origins = [], lanes = [] }) {
         {/* Source country nodes */}
         {origins.map((country, i) => {
           const y = (i + 1) * (svgH / (origins.length + 1));
-          const flag = COUNTRY_FLAGS[country] || '🌏';
+          const flag = COUNTRY_FLAGS[country] || '??';
           return (
             <g key={country} className="sc-node" style={{ animationDelay: `${i * 0.08}s` }}>
               <circle cx={52} cy={y} r={22} fill="rgba(37,99,235,0.12)" stroke="rgba(37,99,235,0.4)" strokeWidth="1.5" />
@@ -83,7 +84,7 @@ function SupplyChainDiagram({ origins = [], lanes = [] }) {
 
         {/* US node */}
         <circle cx={usX} cy={usY} r={22} fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.5)" strokeWidth="1.5" />
-        <text x={usX} y={usY - 3} textAnchor="middle" fill="#10b981" fontSize="10" fontFamily="JetBrains Mono" fontWeight="700">🏭</text>
+        <text x={usX} y={usY + 4} textAnchor="middle" fill="#10b981" fontSize="9" fontFamily="JetBrains Mono" fontWeight="700">WH</text>
         <text x={usX} y={usY + 12} textAnchor="middle" fill="#475569" fontSize="9" fontFamily="Inter">US DC</text>
       </svg>
 
@@ -119,7 +120,7 @@ function ObjectionDrawer({ prospect, analysis }) {
   return (
     <>
       <button className="objection-toggle" onClick={() => setOpen(o => !o)}>
-        {open ? '✕ Close' : '🥊 Objection Handler'}
+        {open ? '✕ Close' : <><RiBoxingLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Objection Handler</>}
       </button>
       {open && (
         <div className="objection-drawer glass-card">
@@ -143,13 +144,81 @@ function ObjectionDrawer({ prospect, analysis }) {
             <div className="obj-response">
               <p className="obj-counter">{response.response}</p>
               {response.follow_up_question && (
-                <p className="obj-followup">💡 "{response.follow_up_question}"</p>
+                <p className="obj-followup"><RiLightbulbLine size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />"{response.follow_up_question}"</p>
               )}
             </div>
           )}
         </div>
       )}
     </>
+  );
+}
+
+function MutualActionPlanModal({ prospect, onClose }) {
+  const [plan, setPlan] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const OWNER_COLORS = { SDR: '#00d4ff', Prospect: '#8b5cf6', Both: '#10b981', Flexport: '#f59e0b' };
+
+  const generate = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/api/map-plan`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect }),
+      });
+      setPlan(await r.json());
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="cp-overlay" onClick={onClose}>
+      <div className="cp-modal glass-card map-modal" onClick={e => e.stopPropagation()}>
+        <div className="cp-header">
+          <h3><RiRoadMapLine size={16} style={{ verticalAlign: 'middle', marginRight: 8 }} />Mutual Action Plan — {prospect.name}</h3>
+          <button onClick={onClose}><RiCloseCircleLine size={18} /></button>
+        </div>
+
+        {!plan && (
+          <button className="btn-primary" onClick={generate} disabled={loading} style={{ margin: '16px 0' }}>
+            {loading
+              ? 'Generating…'
+              : <><RiFlashlightLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Generate MAP</>}
+          </button>
+        )}
+
+        {plan && (
+          <div className="map-body">
+            <div className="map-timeline">
+              {(plan.milestones || []).map((m, i) => {
+                const color = OWNER_COLORS[m.owner] || '#94a3b8';
+                return (
+                  <div key={i} className="map-milestone">
+                    <div className="map-day-col">
+                      <div className="map-day-pill">Day {m.day}</div>
+                      {i < (plan.milestones.length - 1) && <div className="map-connector" />}
+                    </div>
+                    <div className="map-content">
+                      <span className="map-owner-badge" style={{ background: `${color}18`, color, borderColor: `${color}40` }}>
+                        {m.owner}
+                      </span>
+                      <p className="map-action">{m.action}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {plan.success_criteria && (
+              <div className="map-success">
+                <div className="map-success-label">90-Day Success Criteria</div>
+                <p className="map-success-text">{plan.success_criteria}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -164,6 +233,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
   const [callPrepLoading, setCallPrepLoading] = useState(false);
   const [showCallPrep, setShowCallPrep] = useState(false);
   const [pipelined, setPipelined] = useState(false);
+  const [showMapPlan, setShowMapPlan] = useState(false);
 
   useEffect(() => {
     setLoading(true); setAnalysis(null); setData(null);
@@ -253,7 +323,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
           <div className="a360-col-header">AI Intelligence</div>
           {!analysis && (
             <button className="btn-primary" onClick={runAnalysis} disabled={analysisLoading}>
-              {analysisLoading ? 'Analyzing...' : '⚡ Run Full Analysis'}
+              {analysisLoading ? 'Analyzing...' : <><RiFlashlightLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Run Full Analysis</>}
             </button>
           )}
           {analysis && (
@@ -321,7 +391,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
           {/* Call prep */}
           <div className="a360-col-header" style={{ marginTop: 16 }}>Call Prep</div>
           <button className="btn-secondary" onClick={generateCallPrep} disabled={callPrepLoading}>
-            {callPrepLoading ? 'Generating...' : '📋 Generate Call Prep Sheet'}
+            {callPrepLoading ? 'Generating...' : <><RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Generate Call Prep Sheet</>}
           </button>
 
           <ObjectionDrawer prospect={p} analysis={analysis} />
@@ -386,20 +456,25 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
       {/* Footer action bar */}
       <div className="a360-footer glass-card">
         {onOpenOutreach && (
-          <button className="btn-primary" onClick={() => onOpenOutreach(p, analysis)}>✉ Outreach Sequence</button>
+          <button className="btn-primary" onClick={() => onOpenOutreach(p, analysis)}><RiMailSendLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Outreach Sequence</button>
         )}
         <button className="btn-secondary" onClick={generateCallPrep} disabled={callPrepLoading}>
-          {callPrepLoading ? '...' : '📋 Call Prep'}
+          {callPrepLoading ? '...' : <><RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Call Prep</>}
+        </button>
+        <button className="btn-secondary" onClick={() => setShowMapPlan(true)}>
+          <RiRoadMapLine size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Mutual Action Plan
         </button>
         <button className="btn-secondary" onClick={addToPipeline} disabled={pipelined}>
           {pipelined ? '✓ In Pipeline' : '+ Pipeline'}
         </button>
         {!analysis && (
           <button className="btn-secondary" onClick={runAnalysis} disabled={analysisLoading}>
-            {analysisLoading ? 'Analyzing...' : '⚡ Run Analysis'}
+            {analysisLoading ? 'Analyzing...' : <><RiFlashlightLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Run Analysis</>}
           </button>
         )}
       </div>
+
+      {showMapPlan && <MutualActionPlanModal prospect={p} onClose={() => setShowMapPlan(false)} />}
     </div>
   );
 }

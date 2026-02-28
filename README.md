@@ -1,37 +1,53 @@
 # Flexport SDR Intelligence Hub
 
-An AI-powered sales intelligence platform built for Flexport SDRs. Search and profile 45 high-ICP import/export prospects, run GPT-4 company analysis, track a drag-and-drop pipeline, monitor real-time supply chain signals, and generate personalized outreach sequences — all in one dark-themed dashboard.
+A full-stack sales intelligence dashboard built for Flexport SDRs. Combines live prospect data, AI-generated insights, trade intelligence, and pipeline management into a single dark-mode terminal aesthetic.
+
+![Stack](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white) ![Stack](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=white) ![Stack](https://img.shields.io/badge/Express-5-black?logo=express) ![Stack](https://img.shields.io/badge/SQLite-3-003b57?logo=sqlite)
 
 ---
 
-## Features
+## Pages
 
-- **3D Interactive Globe** — Live shipping lane arcs and port congestion hotspots. Click any prospect to highlight their import origin routes. Click the globe to go fullscreen.
-- **45-Prospect Database** — Pre-seeded with ICP-scored importers across e-commerce, apparel, electronics, food & bev, industrial, beauty, and home goods.
-- **GPT-4 Company Analysis** — One-click AI analysis generating supply chain pain points, decision maker profiles, ICP breakdown, and Flexport value prop mapping.
-- **Drag-and-Drop Pipeline Kanban** — Move prospects across New → Researched → Called → Demo Booked → Closed Won/Lost with live DB persistence.
-- **Supply Chain Signal Feed** — NewsAPI headlines scored 1–10 for urgency by GPT-4, with ACT NOW / MONITOR / POSITIVE classification.
-- **FRED Trade Data Charts** — Live US import charts (Capital Goods, Consumer Goods, Trade Balance, Total Imports) pulled from the St. Louis Fed API.
-- **Tariff ROI Calculator** — Sector-specific tariff rate slider showing potential Flexport savings.
-- **Outreach Sequence Generator** — GPT-4 generates a 4-touch email/LinkedIn/call sequence tailored to the prospect's supply chain situation.
-- **Competitor Battle Cards** — C.H. Robinson, Forto, DHL Global Forwarding, and Convoy — with talk tracks and trigger phrases.
+| Route | Page | Description |
+|---|---|---|
+| `/` | Home | Interactive 3D globe, live signal ticker, ICP gauge, AI streaming analysis |
+| `/trade` | Trade Intelligence | Bloomberg terminal — macro indicators, tariff heatmap, HS code lookup |
+| `/account/:id` | Account 360 | Supply chain diagram, AI call prep, objection handler, mutual action plan |
+| `/performance` | SDR Dashboard | Activity heatmap, conversion funnel, quota ring, win/loss tracker |
+| `/market` | Market Map | Radial node graph of prospects by sector with AI sector intelligence |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, Vite 7, Tailwind 4 |
-| 3D Globe | react-globe.gl, three.js |
-| Charts | Recharts |
-| Drag & Drop | @dnd-kit/core, @dnd-kit/sortable |
-| Backend | Node.js, Express 5 |
-| Database | SQLite 3 (5-table schema) |
-| AI | OpenAI GPT-4-turbo |
-| News | NewsAPI |
-| Search Context | Serper API |
-| Trade Data | FRED API (St. Louis Fed) |
+**Frontend** — React 19, Vite 7, React Router v7, Recharts, Three.js (globe), react-icons/ri
+
+**Backend** — Express 5, SQLite3 (better-sqlite3), Anthropic Claude API (streaming), FRED API
+
+---
+
+## Project Structure
+
+```
+.
+├── frontend/               # React + Vite app
+│   ├── src/
+│   │   ├── components/     # 14 shared components
+│   │   ├── pages/          # 5 page components
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── vercel.json         # SPA routing config
+│   └── vite.config.js
+│
+├── backend/                # Express API server
+│   ├── services/           # 11 service modules
+│   ├── data/               # Seed data + JSON fixtures
+│   ├── initDb.js           # Schema migration
+│   ├── server.js           # Route definitions
+│   └── flexport.db         # SQLite database (gitignored)
+│
+└── docs/plans/             # Design + implementation docs (v2)
+```
 
 ---
 
@@ -39,149 +55,103 @@ An AI-powered sales intelligence platform built for Flexport SDRs. Search and pr
 
 ### Prerequisites
 
-- Node.js 18+
-- API keys for: OpenAI, NewsAPI, Serper, FRED
+- Node.js 20+
+- Anthropic API key (for AI features)
+- FRED API key (optional — for macro charts)
 
-### Backend
+### 1. Clone and install
+
+```bash
+git clone https://github.com/AllStreets/Flexport-sales-dashboard.git
+cd Flexport-sales-dashboard
+```
+
+```bash
+# Backend
+cd backend
+npm install
+cp .env.example .env
+# Fill in CLAUDE_API_KEY and optionally FRED_API_KEY in .env
+```
+
+```bash
+# Frontend
+cd ../frontend
+npm install
+cp .env.example .env
+# VITE_API_URL defaults to http://localhost:5000
+```
+
+### 2. Initialize and seed the database
 
 ```bash
 cd backend
-cp .env.example .env
-# Fill in your API keys in .env
-npm install
-npm run init-db   # creates the 5-table SQLite schema
-npm run seed      # loads 45 prospects
-npm run dev       # starts on port 5001
+node initDb.js
+node data/seedProspects.js
 ```
 
-### Frontend
+### 3. Start both servers
 
 ```bash
+# Terminal 1 — backend
+cd backend
+npm start
+# Runs on http://localhost:5000
+
+# Terminal 2 — frontend
 cd frontend
-cp .env.example .env
-# Set VITE_API_URL=http://localhost:5001
-npm install
-npm run dev       # starts on port 5173 (or next available)
-```
-
-Open `http://localhost:5173` (or whichever port Vite picks).
-
----
-
-## Project Structure
-
-```
-Flexport-sales-dashboard/
-├── backend/
-│   ├── server.js                      # Express app, 15 API endpoints
-│   ├── initDb.js                      # Creates 5 SQLite tables
-│   ├── data/
-│   │   └── seedProspects.js           # 45-prospect seed (idempotent)
-│   ├── services/
-│   │   ├── prospectsService.js        # Prospect queries + filtering
-│   │   ├── flexportAnalyzer.js        # GPT-4 analysis
-│   │   ├── signalsService.js          # NewsAPI + urgency scoring
-│   │   ├── fredService.js             # FRED trade data + 7-day cache
-│   │   ├── pipelineService.js         # Pipeline CRUD
-│   │   ├── database.js                # Analyses CRUD
-│   │   └── dataAggregator.js          # News + search context aggregation
-│   ├── tests/
-│   │   └── api.test.js                # 7 API tests (Jest + Supertest)
-│   ├── .env.example
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx                    # Root layout + state
-│   │   ├── components/
-│   │   │   ├── GlobeView.jsx/css      # 3D globe with arc lanes
-│   │   │   ├── ProspectSearch.jsx/css # Search + sector/ICP filters
-│   │   │   ├── AnalysisPanel.jsx/css  # AI analysis display
-│   │   │   ├── PipelineKanban.jsx/css # Drag-and-drop pipeline
-│   │   │   ├── SignalFeed.jsx/css     # Supply chain news feed
-│   │   │   ├── TradeDataCharts.jsx/css# FRED line charts
-│   │   │   ├── TariffCalculator.jsx/css # ROI calculator
-│   │   │   ├── OutreachSequenceModal.jsx/css
-│   │   │   ├── BattleCardsModal.jsx/css
-│   │   │   ├── PortStatusBar.jsx/css  # Sticky header
-│   │   │   └── ICPBadge.jsx           # ICP score chip
-│   │   └── index.css                  # Design system + particles
-│   ├── vercel.json
-│   ├── .env.example
-│   └── package.json
-└── README.md
+npm run dev
+# Runs on http://localhost:3000
 ```
 
 ---
 
-## API Endpoints
+## API Routes
 
-| Method | Endpoint | Description |
+| Method | Route | Description |
 |---|---|---|
-| GET | `/api/prospects` | List prospects (filter: `sector`, `icp_min`, `lane`, `search`) |
-| GET | `/api/prospects/sectors` | Sector list with counts |
-| GET | `/api/prospects/:id` | Single prospect |
-| GET | `/api/globe-data` | Shipping lanes + port status |
-| POST | `/api/analyze` | GPT-4 company analysis |
-| GET | `/api/analyses` | Saved analyses |
-| POST | `/api/analyses` | Save an analysis |
-| DELETE | `/api/analyses/:id` | Delete analysis |
-| PUT | `/api/analyses/:id/favorite` | Toggle favorite |
-| GET | `/api/signals` | Supply chain signals (1-hr cache) |
-| GET | `/api/trade-data/:commodity` | FRED data (`electronics`, `apparel`, `trade_balance`, `total_imports`) |
-| GET | `/api/pipeline` | Pipeline grouped by stage |
-| POST | `/api/pipeline` | Add prospect to pipeline |
-| PUT | `/api/pipeline/:id` | Update stage |
-| DELETE | `/api/pipeline/:id` | Remove from pipeline |
-| POST | `/api/generate-sequence` | GPT-4 outreach sequence |
-| GET | `/api/battle-cards` | Competitor battle cards |
+| GET | `/api/prospects` | List prospects with filters (`icp_min`, `sector`, `stage`) |
+| GET | `/api/prospects/:id` | Single prospect with full data |
+| GET | `/api/prospects/sectors` | Sector summary counts |
+| GET | `/api/market-map` | Prospects grouped by sector for node graph |
+| POST | `/api/analyze` | Claude AI analysis (streaming SSE) |
+| POST | `/api/call-prep` | AI-generated call prep brief |
+| POST | `/api/map-plan` | AI-generated mutual action plan |
+| POST | `/api/objection` | AI objection handler |
+| GET | `/api/trade-intelligence` | Macro trade data + tariff signals |
+| GET | `/api/signals` | Live freight + market signals feed |
+| GET | `/api/performance` | SDR KPIs summary |
+| POST | `/api/performance/activity` | Log an activity |
+| GET | `/api/win-loss` | Win/loss records |
+| POST | `/api/win-loss` | Add win/loss record |
+| GET/POST/PUT/DELETE | `/api/pipeline` | Pipeline CRUD |
+| POST | `/api/generate-sequence` | AI outreach sequence generator |
 
 ---
 
 ## Environment Variables
 
-### Backend
+### Backend (`backend/.env`)
 
-```env
-OPENAI_API_KEY=        # platform.openai.com
-NEWS_API_KEY=          # newsapi.org
-SERPER_API_KEY=        # serper.dev
-FRED_API_KEY=          # fred.stlouisfed.org/docs/api
-FRONTEND_URL=          # your Vercel URL (for CORS)
-PORT=5001
+```
+CLAUDE_API_KEY=your_anthropic_api_key
+FRED_API_KEY=your_fred_api_key        # optional
+NEWSAPI_KEY=your_newsapi_key          # optional
+PORT=5000
+FRONTEND_URL=http://localhost:3000    # override in production
 ```
 
-### Frontend
+### Frontend (`frontend/.env`)
 
-```env
-VITE_API_URL=          # your Railway backend URL
+```
+VITE_API_URL=http://localhost:5000
 ```
 
 ---
 
-## Deployment
+## Design System
 
-**Backend → Railway**
-
-1. New Project → Deploy from GitHub → set Root Directory: `backend`
-2. Add all 5 backend environment variables (do **not** set PORT — Railway injects it)
-3. Generate domain → copy the URL
-
-**Frontend → Vercel**
-
-1. New Project → Import from GitHub → set Root Directory: `frontend`
-2. Add `VITE_API_URL` = your Railway URL
-3. Deploy → copy Vercel URL
-
-**After both are live:** set `FRONTEND_URL` in Railway to your Vercel URL and redeploy.
-
-> The start script automatically initializes the database and seeds 45 prospects on every deploy.
-
----
-
-## Running Tests
-
-```bash
-cd backend
-npm test
-# 7 tests: Prospects API (4) + Pipeline API (3)
-```
+- Background: `#060b18` (deep navy)
+- Accent: `#00d4ff` (cyan)
+- Fonts: Space Grotesk (UI text), JetBrains Mono (numbers/code)
+- Icons: Remix Icons via `react-icons/ri`

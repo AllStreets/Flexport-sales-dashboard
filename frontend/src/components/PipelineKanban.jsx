@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { DndContext, useDroppable, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { RiFocus3Line } from 'react-icons/ri';
 import './PipelineKanban.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -111,7 +112,7 @@ export default function PipelineKanban({ isOpen, onClose, refreshTrigger }) {
       <div className="kanban-drawer">
         <div className="kanban-header">
           <h2>Pipeline</h2>
-          {totalMoved > 0 && <span className="kanban-metric">🎯 {totalMoved} demos/wins this pipeline</span>}
+          {totalMoved > 0 && <span className="kanban-metric"><RiFocus3Line size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{totalMoved} demos/wins this pipeline</span>}
           <button className="kanban-close" onClick={onClose}>✕</button>
         </div>
 

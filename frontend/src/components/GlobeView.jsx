@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Globe from 'react-globe.gl';
+import { RiGlobalLine, RiPercentLine, RiAlertLine } from 'react-icons/ri';
 import './GlobeView.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const OVERLAY_MODES = ['standard', 'tariff', 'disruption'];
-const OVERLAY_LABELS = { standard: '🌐 Standard', tariff: '📋 Tariff Risk', disruption: '⚠️ Disruption' };
+const OVERLAY_ICONS = { standard: RiGlobalLine, tariff: RiPercentLine, disruption: RiAlertLine };
+const OVERLAY_LABELS = { standard: 'Standard', tariff: 'Tariff Risk', disruption: 'Disruption' };
 
 export default function GlobeView({ selectedProspect, onPortClick, fullscreen = false, onEnterFullscreen }) {
   const globeRef = useRef(null);
@@ -155,7 +157,7 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
         onClick={e => { e.stopPropagation(); setOverlayMode(m => (m + 1) % OVERLAY_MODES.length); }}
         title="Cycle globe overlay"
       >
-        {OVERLAY_LABELS[mode]}
+        {(() => { const Icon = OVERLAY_ICONS[mode]; return <><Icon size={12} />{' '}{OVERLAY_LABELS[mode]}</>; })()}
       </button>
     </div>
   );

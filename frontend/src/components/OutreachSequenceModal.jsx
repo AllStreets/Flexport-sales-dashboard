@@ -1,5 +1,6 @@
 // frontend/src/components/OutreachSequenceModal.jsx
 import { useState } from 'react';
+import { RiMailLine, RiLinkedinBoxLine, RiPhoneLine, RiPushpin2Line, RiFlashlightLine } from 'react-icons/ri';
 import './OutreachSequenceModal.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -43,7 +44,7 @@ export default function OutreachSequenceModal({ prospect, analysis, isOpen, onCl
 
   if (!isOpen) return null;
 
-  const TOUCH_ICONS = { email: '📧', linkedin: '💼', call: '📞' };
+  const TOUCH_ICON_MAP = { email: RiMailLine, linkedin: RiLinkedinBoxLine, call: RiPhoneLine };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -55,7 +56,7 @@ export default function OutreachSequenceModal({ prospect, analysis, isOpen, onCl
 
         <div className="outreach-actions">
           <button className="btn-primary" onClick={generate} disabled={loading}>
-            {loading ? 'Generating...' : '⚡ Generate 4-Touch Sequence'}
+            {loading ? 'Generating...' : <><RiFlashlightLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Generate 4-Touch Sequence</>}
           </button>
           {touches.length > 0 && <button className="btn-secondary" onClick={exportAll}>↓ Export .txt</button>}
         </div>
@@ -65,7 +66,7 @@ export default function OutreachSequenceModal({ prospect, analysis, isOpen, onCl
             {touches.map((t, i) => (
               <div key={i} className="touch-card">
                 <div className="touch-header">
-                  <span className="touch-icon">{TOUCH_ICONS[t.type] || '📌'}</span>
+                  <span className="touch-icon">{(() => { const Icon = TOUCH_ICON_MAP[t.type] || RiPushpin2Line; return <Icon size={14} />; })()}</span>
                   <span className="touch-type">{t.type?.toUpperCase()}</span>
                   <span className="touch-day">Day {t.day}</span>
                   <button className="copy-btn" onClick={() => copyTouch(`${t.subject ? `Subject: ${t.subject}\n\n` : ''}${t.body}`, i)}>

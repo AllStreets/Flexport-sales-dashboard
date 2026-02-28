@@ -11,3 +11,4 @@ frontend/dist/
 backend/node_modules/
 *.db
 frontend/package-lock.json
+.playwright-mcp/

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RiSave2Line, RiCheckLine } from 'react-icons/ri';
 import './SaveAnalysisButton.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -48,7 +49,9 @@ export default function SaveAnalysisButton({ companyName, analysisData, onSaved 
       disabled={isSaved || isLoading}
     >
       {isLoading && <span className="spinner"></span>}
-      {isSaved ? '✓ Saved to Favorites' : '💾 Save Analysis'}
+      {isSaved
+        ? <><RiCheckLine size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Saved to Favorites</>
+        : <><RiSave2Line size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Save Analysis</>}
     </button>
   );
 }

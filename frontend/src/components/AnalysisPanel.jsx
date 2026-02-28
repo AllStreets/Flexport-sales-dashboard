@@ -1,5 +1,6 @@
 // frontend/src/components/AnalysisPanel.jsx
 import { useState, useEffect } from 'react';
+import { RiFlashlightLine, RiMailSendLine, RiSparklingLine } from 'react-icons/ri';
 import ICPBadge from './ICPBadge';
 import './AnalysisPanel.css';
 
@@ -135,12 +136,12 @@ export default function AnalysisPanel({ prospect, onOpenOutreach, onAddToPipelin
 
       <div className="analysis-actions">
         <button className="btn-primary" onClick={runAnalysis} disabled={loading}>
-          {loading ? 'Analyzing...' : '⚡ Run AI Analysis'}
+          {loading ? 'Analyzing...' : <><RiFlashlightLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Run AI Analysis</>}
         </button>
         {analysis && <>
           <button className="btn-secondary" onClick={saveAnalysis} disabled={saved}>{saved ? '✓ Saved' : 'Save'}</button>
           <button className="btn-secondary" onClick={addToPipeline} disabled={pipelined}>{pipelined ? '✓ Pipeline' : '+ Pipeline'}</button>
-          <button className="btn-secondary" onClick={() => onOpenOutreach?.(prospect, analysis)}>✉ Outreach</button>
+          <button className="btn-secondary" onClick={() => onOpenOutreach?.(prospect, analysis)}><RiMailSendLine size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Outreach</button>
         </>}
         {onViewProfile && (
           <button className="btn-ghost" onClick={onViewProfile}>Account 360 →</button>
@@ -150,7 +151,7 @@ export default function AnalysisPanel({ prospect, onOpenOutreach, onAddToPipelin
       {/* First-line generator */}
       <div className="first-line-section">
         <button className="btn-ghost small" onClick={generateFirstLine} disabled={firstLineLoading}>
-          {firstLineLoading ? 'Generating...' : '✨ Generate Cold Email First Line'}
+          {firstLineLoading ? 'Generating...' : <><RiSparklingLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Generate Cold Email First Line</>}
         </button>
         {firstLine && <p className="first-line-result">"{firstLine}"</p>}
       </div>

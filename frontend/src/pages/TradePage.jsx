@@ -1,6 +1,7 @@
 // frontend/src/pages/TradePage.jsx
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { RiBarChartBoxLine } from 'react-icons/ri';
 import './TradePage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -118,7 +119,7 @@ export default function TradePage() {
     <div className="trade-page page-wrap">
       <div className="trade-header">
         <div>
-          <div className="page-title">📊 Trade Intelligence Terminal</div>
+          <div className="page-title"><RiBarChartBoxLine size={22} style={{ verticalAlign: 'middle', marginRight: 8 }} />Trade Intelligence Terminal</div>
           <div className="page-subtitle">Live FRED macro data · Global supply chain signals · Route analytics</div>
         </div>
         <div className="bb-clock">{new Date().toUTCString().slice(0, 25)} UTC</div>

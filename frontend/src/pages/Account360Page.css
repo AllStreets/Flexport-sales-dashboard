@@ -122,3 +122,106 @@
 .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 1000px) { .a360-body { grid-template-columns: 1fr; } }
+
+/* Mutual Action Plan modal */
+.map-modal { width: min(760px, 95vw) !important; }
+
+.map-body { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+
+.map-timeline { display: flex; flex-direction: column; gap: 0; }
+
+.map-milestone {
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+}
+
+.map-day-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  width: 60px;
+}
+
+.map-day-pill {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.map-connector {
+  width: 1px;
+  flex: 1;
+  min-height: 20px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 212, 255, 0.25) 0px,
+    rgba(0, 212, 255, 0.25) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin-top: 4px;
+}
+
+.map-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 10px;
+  flex: 1;
+}
+
+.map-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  border: 1px solid;
+  border-radius: 99px;
+  padding: 2px 8px;
+  align-self: flex-start;
+}
+
+.map-action {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.map-success {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-success-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #10b981;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+
+.map-success-text {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.6;
+  margin: 0;
+}
