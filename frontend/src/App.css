@@ -1,21 +1,45 @@
 /* frontend/src/App.css */
+.app-root { position: relative; min-height: 100vh; display: flex; flex-direction: column; }
+
+.app-body {
+  display: flex;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* Old layout helpers still used by HomePage */
+.content-columns {
+  display: grid; grid-template-columns: 60% 40%;
+  gap: 16px; padding: 20px;
+}
+.left-column, .right-column { display: flex; flex-direction: column; gap: 16px; }
+.col-section { padding: 20px; }
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px; font-weight: 600; color: #f1f5f9;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  .content-columns { grid-template-columns: 1fr; }
+}
+
+/* Globe close button */
 .globe-close-btn {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
+  position: fixed; top: 20px; right: 20px; z-index: 9999;
   background: rgba(6, 11, 24, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  color: #f1f5f9;
-  font-size: 16px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  border-radius: 50%; color: #f1f5f9;
+  font-size: 16px; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
 }
 .globe-close-btn:hover {
   background: rgba(239, 68, 68, 0.3);
@@ -23,36 +47,11 @@
   color: #f87171;
 }
 
-.app-root { position: relative; min-height: 100vh; display: flex; flex-direction: column; }
-
-.app-main { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; }
-
-.globe-section { position: relative; }
-
-.port-detail-popup {
-  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 20px; cursor: pointer;
-  font-size: 13px; color: #f1f5f9;
-  z-index: 10;
-}
-.popup-close { color: #64748b; margin-left: 8px; }
-
-.content-columns {
-  display: grid; grid-template-columns: 60% 40%;
-  gap: 16px; padding: 20px;
-}
-
-.left-column, .right-column { display: flex; flex-direction: column; gap: 16px; }
-
-.col-section { padding: 20px; }
-
-.section-title {
+/* Page wrapper */
+.page-wrap { padding: 24px; display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
+.page-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 16px; font-weight: 600; color: #f1f5f9;
-  margin-bottom: 16px;
+  font-size: 22px; font-weight: 700; color: #f1f5f9;
+  display: flex; align-items: center; gap: 10px;
 }
-
-@media (max-width: 900px) {
-  .content-columns { grid-template-columns: 1fr; }
-}
+.page-subtitle { font-size: 13px; color: #64748b; margin-top: 2px; }

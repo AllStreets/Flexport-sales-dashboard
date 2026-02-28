@@ -1,0 +1,13 @@
+/* frontend/src/pages/HomePage.css */
+.home-page { display: flex; flex-direction: column; }
+
+.globe-section { position: relative; }
+
+.port-detail-popup {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; cursor: pointer;
+  font-size: 13px; color: #f1f5f9;
+  z-index: 10;
+}
+.popup-close { color: #64748b; margin-left: 8px; }

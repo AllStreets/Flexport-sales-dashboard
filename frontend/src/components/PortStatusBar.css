@@ -8,7 +8,13 @@
   position: sticky; top: 0; z-index: 50;
 }
 
-.bar-left { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.bar-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.menu-toggle {
+  background: none; border: none; color: #64748b; font-size: 20px;
+  cursor: pointer; padding: 4px 8px; line-height: 1;
+  transition: color 0.15s;
+}
+.menu-toggle:hover { color: #f1f5f9; }
 .app-logo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: #2563EB; letter-spacing: 0.05em; }
 .app-sub { font-size: 11px; color: #475569; }
 

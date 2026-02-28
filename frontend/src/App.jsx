@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import PortStatusBar from './components/PortStatusBar';
-import GlobeView from './components/GlobeView';
-import ProspectSearch from './components/ProspectSearch';
-import AnalysisPanel from './components/AnalysisPanel';
-import SignalFeed from './components/SignalFeed';
-import TradeDataCharts from './components/TradeDataCharts';
-import TariffCalculator from './components/TariffCalculator';
-import PipelineKanban from './components/PipelineKanban';
+import Sidebar from './components/Sidebar';
+import HomePage from './pages/HomePage';
+import TradePage from './pages/TradePage';
+import Account360Page from './pages/Account360Page';
+import PerformancePage from './pages/PerformancePage';
+import MarketMapPage from './pages/MarketMapPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
+import PipelineKanban from './components/PipelineKanban';
 import './App.css';
 
 // Generate particle field
@@ -38,17 +39,15 @@ function Particles() {
 }
 
 export default function App() {
-  const [selectedProspect, setSelectedProspect] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showPipeline, setShowPipeline] = useState(false);
   const [showBattleCards, setShowBattleCards] = useState(false);
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
-  const [portDetail, setPortDetail] = useState(null);
-  const [globeFullscreen, setGlobeFullscreen] = useState(false);
   const [pipelineRefresh, setPipelineRefresh] = useState(0);
+  const [globeFullscreen, setGlobeFullscreen] = useState(false);
 
-  const handlePortClick = (port) => setPortDetail(port);
   const handleAddToPipeline = () => { setPipelineRefresh(r => r + 1); setShowPipeline(true); };
-  const closePortDetail = () => setPortDetail(null);
+  const handleOpenOutreach = (prospect, analysis) => setOutreachState({ open: true, prospect, analysis });
 
   return (
     <div className="app-root">
@@ -57,67 +56,37 @@ export default function App() {
       <PortStatusBar
         onPipelineClick={() => setShowPipeline(true)}
         onBattleCardsClick={() => setShowBattleCards(true)}
+        onMenuToggle={() => setSidebarCollapsed(c => !c)}
       />
 
-      <main className="app-main">
-        {/* Globe hero */}
-        <section className="globe-section">
-          <GlobeView
-            selectedProspect={selectedProspect}
-            onPortClick={handlePortClick}
-            fullscreen={globeFullscreen}
-            onEnterFullscreen={() => setGlobeFullscreen(true)}
-          />
-          {portDetail && (
-            <div className="port-detail-popup glass-card" onClick={closePortDetail}>
-              <strong>{portDetail.name}</strong>
-              <span>Status: {portDetail.status} · Congestion {portDetail.congestion}/10</span>
-              <span className="popup-close">✕</span>
-            </div>
-          )}
-        </section>
+      <div className="app-body">
+        <Sidebar collapsed={sidebarCollapsed} />
 
-        {/* Two-column below globe */}
-        <div className="content-columns">
-          {/* Left column — Prospect Intelligence */}
-          <div className="left-column">
-            <div className="glass-card col-section">
-              <h2 className="section-title">Prospect Intelligence</h2>
-              <ProspectSearch onSelect={setSelectedProspect} />
-            </div>
+        <main className="app-content">
+          <Routes>
+            <Route path="/" element={
+              <HomePage
+                onAddToPipeline={handleAddToPipeline}
+                onOpenOutreach={handleOpenOutreach}
+                globeFullscreen={globeFullscreen}
+                onEnterFullscreen={() => setGlobeFullscreen(true)}
+              />
+            } />
+            <Route path="/trade" element={<TradePage />} />
+            <Route path="/account/:id" element={
+              <Account360Page
+                onAddToPipeline={handleAddToPipeline}
+                onOpenOutreach={handleOpenOutreach}
+              />
+            } />
+            <Route path="/performance" element={<PerformancePage />} />
+            <Route path="/market" element={<MarketMapPage />} />
+          </Routes>
+        </main>
+      </div>
 
-            {selectedProspect && (
-              <div className="glass-card col-section">
-                <AnalysisPanel
-                  key={selectedProspect?.id}
-                  prospect={selectedProspect}
-                  onOpenOutreach={(prospect, analysis) =>
-                    setOutreachState({ open: true, prospect, analysis })
-                  }
-                  onAddToPipeline={handleAddToPipeline}
-                />
-              </div>
-            )}
-
-            {selectedProspect && (
-              <TariffCalculator prospectSector={selectedProspect.sector} />
-            )}
-          </div>
-
-          {/* Right column — Signals + Trade Data */}
-          <div className="right-column">
-            <div className="glass-card col-section">
-              <SignalFeed />
-            </div>
-            <TradeDataCharts />
-          </div>
-        </div>
-      </main>
-
-      {/* Pipeline Kanban */}
       <PipelineKanban isOpen={showPipeline} onClose={() => setShowPipeline(false)} refreshTrigger={pipelineRefresh} />
 
-      {/* Modals */}
       <OutreachSequenceModal
         isOpen={outreachState.open}
         prospect={outreachState.prospect}

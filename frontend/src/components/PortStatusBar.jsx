@@ -4,7 +4,7 @@ import './PortStatusBar.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function PortStatusBar({ onPipelineClick, onBattleCardsClick }) {
+export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onMenuToggle }) {
   const [ports, setPorts] = useState([]);
 
   useEffect(() => {
@@ -20,6 +20,7 @@ export default function PortStatusBar({ onPipelineClick, onBattleCardsClick }) {
   return (
     <header className="port-status-bar">
       <div className="bar-left">
+        <button className="menu-toggle" onClick={onMenuToggle} aria-label="Toggle sidebar">≡</button>
         <span className="app-logo">FLEXPORT SDR</span>
         <span className="app-sub">Intelligence Hub</span>
       </div>
