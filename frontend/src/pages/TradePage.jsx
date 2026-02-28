@@ -8,14 +8,16 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const fmt = n => {
   if (!n && n !== 0) return '—';
-  const v = Math.abs(n);
-  if (v >= 1000) return `$${(n / 1000).toFixed(1)}T`;
-  return `$${n.toFixed(1)}B`;
+  const abs = Math.abs(n);
+  const formatted = abs >= 100 ? Math.round(n).toLocaleString('en-US') : n.toFixed(1);
+  return `$${formatted}B`;
 };
 const fmtDelta = (n, pct) => {
   if (!n && n !== 0) return null;
   const sign = n >= 0 ? '+' : '';
-  return `${sign}${pct}% (${sign}${n.toFixed(1)}B)`;
+  const abs = Math.abs(n);
+  const formatted = abs >= 100 ? Math.round(n).toLocaleString('en-US') : n.toFixed(1);
+  return `${sign}${pct}% (${sign}${formatted}B)`;
 };
 
 function Sparkline({ data, color }) {
@@ -155,11 +157,11 @@ export default function TradePage() {
                 </defs>
                 <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="d" tick={{ fill: '#475569', fontSize: 9, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#475569', fontSize: 9, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}B`} width={50} />
+                <YAxis tick={{ fill: '#475569', fontSize: 9, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} tickFormatter={v => `$${Math.round(v).toLocaleString('en-US')}B`} width={60} />
                 <Tooltip
                   contentStyle={{ background: '#0a0e1a', border: '1px solid #1a2744', borderRadius: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}
                   labelStyle={{ color: '#94a3b8' }}
-                  formatter={(v, name) => [`$${v?.toFixed(1)}B`, name]}
+                  formatter={(v, name) => [`$${Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-US') : v?.toFixed(1)}B`, name]}
                 />
                 <Area type="monotone" dataKey="imports" name="Total Imports" stroke="#00d4ff" strokeWidth={2} fill="url(#gImports)" dot={false} />
                 <Area type="monotone" dataKey="capital" name="Capital Goods" stroke="#00c176" strokeWidth={1.5} fill="url(#gCapital)" dot={false} />
