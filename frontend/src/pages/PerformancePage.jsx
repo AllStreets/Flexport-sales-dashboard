@@ -1,5 +1,6 @@
 // frontend/src/pages/PerformancePage.jsx
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -162,11 +163,12 @@ function ActivityHeatmap({ activities }) {
         ))}
         <span className="heatmap-legend-label">More</span>
       </div>
-      {tooltip && (
+      {tooltip && createPortal(
         <div className="heatmap-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y - 40 }}>
           <strong>{tooltip.date}</strong>
           <span>{tooltip.count} {tooltip.count === 1 ? 'activity' : 'activities'}</span>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
