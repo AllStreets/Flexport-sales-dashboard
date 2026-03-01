@@ -22,8 +22,10 @@
 .tc-field { display: flex; flex-direction: column; gap: 5px; }
 .tc-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
 .tc-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tc-field-row > * { min-width: 0; }
 
 .tc-select, .tc-input {
+  width: 100%; box-sizing: border-box;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; padding: 9px 12px;
