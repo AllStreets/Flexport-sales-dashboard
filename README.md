@@ -13,7 +13,7 @@ A full-stack sales intelligence dashboard built for Flexport SDRs. Combines live
 | `/` | Home | Interactive 3D globe with live shipping lanes, signal ticker, ICP prospect search with AI natural language mode, AI streaming analysis, Hot Prospects panel |
 | `/market` | Market Map | Zoomable radial SVG node graph of prospects by sector with live pipeline stage colors, sector intelligence panel, signal alerts |
 | `/tariff` | Tariff Calculator | Landed cost calculator — origin country, product category (HS code), cargo value, weight, Ocean FCL vs Air Freight mode, §301 + reciprocal tariff breakdown, SDR angle generator, HS code lookup |
-| `/performance` | SDR Dashboard | Activity heatmap, 7-day outreach cadence, quota attainment ring, conversion funnel, follow-up radar, pipeline velocity, win/loss chart and logger, outreach stats with activity notes history |
+| `/performance` | SDR Dashboard | Activity heatmap, 7-day outreach cadence, follow-up radar, pipeline velocity, quota attainment ring, recent activity feed (today only · resets midnight EST), win/loss chart and logger, outreach stats with activity notes history |
 | `/trade` | Trade Intelligence | Bloomberg-style macro terminal — FRED live data, container spot rates for 20 global routes, port congestion, live FX rates with 1-day % change, tariff tables, route optimizer, earnings & trigger event monitor |
 | `/account/:id` | Account 360 | Full prospect deep-dive — supply chain diagram, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser |
 
