@@ -1,5 +1,5 @@
 // frontend/src/pages/MarketMapPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { RiFlashlightLine, RiArrowRightLine } from 'react-icons/ri';
@@ -134,13 +134,65 @@ const ICP_COLOR = s => s >= 85 ? '#10b981' : s >= 70 ? '#f59e0b' : '#ef4444';
 
 // ── Node Graph ────────────────────────────────────────────────────────────────
 function NodeGraph({ sector, onProspectClick }) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible]     = useState(false);
+  const [scale, setScale]         = useState(1);
+  const [offset, setOffset]       = useState({ x: 0, y: 0 });
+  const containerRef              = useRef(null);
+  const isPanning                 = useRef(false);
+  const panStart                  = useRef(null);
+  const dragMoved                 = useRef(false);
 
+  // Reset view when sector changes
   useEffect(() => {
     setVisible(false);
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);
   }, [sector?.sector]);
+
+  // Attach wheel listener as non-passive so we can preventDefault
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      if (e.ctrlKey) {
+        // Pinch-to-zoom: ctrlKey is set by browser for trackpad pinch gestures
+        const factor = e.deltaY > 0 ? 0.92 : 1.08;
+        setScale(prev => Math.min(5, Math.max(0.25, prev * factor)));
+      } else {
+        // Two-finger scroll → pan
+        setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Click-drag to pan
+  const onMouseDown = (e) => {
+    if (e.button !== 0) return;
+    isPanning.current  = true;
+    dragMoved.current  = false;
+    panStart.current   = { mx: e.clientX, my: e.clientY, ox: offset.x, oy: offset.y };
+    e.currentTarget.style.cursor = 'grabbing';
+  };
+
+  const onMouseMove = (e) => {
+    if (!isPanning.current || !panStart.current) return;
+    const dx = e.clientX - panStart.current.mx;
+    const dy = e.clientY - panStart.current.my;
+    if (Math.abs(dx) + Math.abs(dy) > 3) dragMoved.current = true;
+    setOffset({ x: panStart.current.ox + dx, y: panStart.current.oy + dy });
+  };
+
+  const onMouseUp = (e) => {
+    isPanning.current = false;
+    if (e.currentTarget) e.currentTarget.style.cursor = 'grab';
+  };
+
+  const resetView = () => { setScale(1); setOffset({ x: 0, y: 0 }); };
 
   if (!sector) return null;
 
@@ -162,7 +214,27 @@ function NodeGraph({ sector, onProspectClick }) {
   }));
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="ng-svg">
+    <div
+      ref={containerRef}
+      className="ng-container"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+    >
+      {(scale !== 1 || offset.x !== 0 || offset.y !== 0) && (
+        <button className="ng-reset-btn" onClick={resetView} title="Reset zoom">1:1</button>
+      )}
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      className="ng-svg"
+      style={{
+        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+        transformOrigin: 'center center',
+        transition: isPanning.current ? 'none' : 'transform 0.08s ease-out',
+      }}
+    >
       <defs>
         <filter id="ng-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b" />
@@ -211,7 +283,7 @@ function NodeGraph({ sector, onProspectClick }) {
                 <g key={p.id}
                   className={`ng-node ng-prospect ${visible ? 'visible' : ''}`}
                   style={{ '--d': `${si * 80 + pi * 70 + 180}ms`, cursor: 'pointer' }}
-                  onClick={() => onProspectClick(p.id)}
+                  onClick={(e) => { if (dragMoved.current) { e.stopPropagation(); return; } onProspectClick(p.id); }}
                 >
                   <line x1={sx} y1={sy} x2={px} y2={py}
                     stroke={`${color}35`} strokeWidth="1"
@@ -247,6 +319,7 @@ function NodeGraph({ sector, onProspectClick }) {
         fill="#475569" fontSize="8" fontFamily="'JetBrains Mono', monospace"
       >{sector.count} prospects</text>
     </svg>
+    </div>
   );
 }
 
