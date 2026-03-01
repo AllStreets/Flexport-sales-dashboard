@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Globe from 'react-globe.gl';
-import { RiGlobalLine, RiPercentLine, RiAlertLine } from 'react-icons/ri';
+import { RiGlobalLine, RiPercentLine } from 'react-icons/ri';
 import './GlobeView.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const OVERLAY_MODES = ['standard', 'tariff', 'disruption'];
-const OVERLAY_ICONS = { standard: RiGlobalLine, tariff: RiPercentLine, disruption: RiAlertLine };
-const OVERLAY_LABELS = { standard: 'Standard', tariff: 'Tariff Risk', disruption: 'Disruption' };
+const OVERLAY_MODES = ['standard', 'tariff'];
+const OVERLAY_ICONS = { standard: RiGlobalLine, tariff: RiPercentLine };
+const OVERLAY_LABELS = { standard: 'Standard', tariff: 'Tariff Risk' };
 
 const statusColor = s => s === 'disruption' ? '#ef4444' : s === 'congestion' ? '#f59e0b' : '#10b981';
 
@@ -95,7 +95,6 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
         ? ['rgba(239,68,68,0.7)', 'rgba(239,68,68,0.7)']
         : ['rgba(16,185,129,0.6)', 'rgba(16,185,129,0.6)'];
     }
-    if (mode === 'disruption') return ['rgba(251,191,36,0.7)', 'rgba(251,191,36,0.7)'];
     // Standard mode: color by source port status
     const status = srcPortStatus(lane);
     if (status === 'disruption') return ['rgba(239,68,68,0.75)', 'rgba(239,68,68,0.75)'];
