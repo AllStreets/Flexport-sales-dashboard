@@ -718,7 +718,7 @@ const STAGE_META = {
 };
 
 // ── Follow-up Radar ───────────────────────────────────────────────────────────
-function FollowupRadar() {
+function FollowupRadar({ refreshKey }) {
   const [items, setItems] = useState(null);
 
   useEffect(() => {
@@ -726,7 +726,7 @@ function FollowupRadar() {
       .then(r => r.json())
       .then(setItems)
       .catch(() => setItems([]));
-  }, []);
+  }, [refreshKey]);
 
   function urgencyColor(days) {
     if (days >= 999) return '#ef4444';   // never contacted
@@ -885,6 +885,7 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [showLogModal, setShowLogModal] = useState(false);
   const [winLossRecords, setWinLossRecords] = useState([]);
+  const [radarKey, setRadarKey] = useState(0);
 
   async function load() {
     try {
@@ -894,6 +895,7 @@ export default function PerformancePage() {
       ]);
       setData(perfRes.data);
       setWinLossRecords(Array.isArray(wlRes.data) ? wlRes.data : (perfRes.data?.winLoss || []));
+      setRadarKey(k => k + 1);
     } catch {
       setData(null);
       setWinLossRecords([]);
@@ -953,7 +955,7 @@ export default function PerformancePage() {
             <span className="panel-title">Follow-up Radar</span>
             <span className="panel-sub">pipeline companies overdue for contact</span>
           </div>
-          <FollowupRadar />
+          <FollowupRadar refreshKey={radarKey} />
         </div>
         <div className="perf-card">
           <div className="panel-header">
