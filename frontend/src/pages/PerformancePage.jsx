@@ -1,5 +1,5 @@
 // frontend/src/pages/PerformancePage.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 
@@ -976,16 +976,20 @@ export default function PerformancePage() {
   const [winLossRecords, setWinLossRecords] = useState([]);
   const [radarKey, setRadarKey] = useState(0);
 
-  // Mirror right column height → left column so raf-list scrolls at the right boundary
+  // Mirror right column height → left column so raf-list scrolls at the right boundary.
+  // useLayoutEffect with [loading] ensures we run after the real layout renders (not the spinner).
   const rightColRef = useRef(null);
-  const [rightColH, setRightColH] = useState(null);
-  useEffect(() => {
-    const el = rightColRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setRightColH(Math.round(entry.contentRect.height)));
-    ro.observe(el);
+  const leftColRef  = useRef(null);
+  useLayoutEffect(() => {
+    const rightEl = rightColRef.current;
+    const leftEl  = leftColRef.current;
+    if (!rightEl || !leftEl) return;
+    function sync() { leftEl.style.height = rightEl.offsetHeight + 'px'; }
+    const ro = new ResizeObserver(sync);
+    ro.observe(rightEl);
+    sync(); // immediate sync on first run
     return () => ro.disconnect();
-  }, []);
+  }, [loading]); // re-runs when loading flips false and real DOM is in place
 
   async function load() {
     try {
@@ -1052,7 +1056,7 @@ export default function PerformancePage() {
       <div className="row2-grid">
 
         {/* Left: Activity Heatmap + 7-Day Cadence stacked */}
-        <div className="perf-left-col" style={rightColH ? { height: rightColH } : {}}>
+        <div className="perf-left-col" ref={leftColRef}>
           <div className="perf-card heatmap-panel">
             <div className="panel-header">
               <span className="panel-title">Activity Heatmap</span>
