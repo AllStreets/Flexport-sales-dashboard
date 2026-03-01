@@ -79,9 +79,9 @@ const IMPORT_ORIGINS = [
   { country: 'China',       pct: 14.5, color: '#ff3b3b' },
   { country: 'Mexico',      pct: 14.4, color: '#ff9f0a' },
   { country: 'Canada',      pct: 13.2, color: '#00c176' },
-  { country: 'Germany',     pct: 4.3,  color: '#00d4ff' },
+  { country: 'Germany',     pct: 4.3,  color: '#e2e8f0' },
   { country: 'Japan',       pct: 4.1,  color: '#a78bfa' },
-  { country: 'Vietnam',     pct: 3.9,  color: '#f472b6' },
+  { country: 'Vietnam',     pct: 3.9,  color: '#60a5fa' },
   { country: 'South Korea', pct: 3.8,  color: '#34d399' },
   { country: 'Taiwan',      pct: 3.4,  color: '#fb923c' },
 ];
@@ -320,7 +320,7 @@ export default function TradePage() {
       {/* ── Macro tiles ── */}
       <div className="macro-tiles">
         <MacroTile label="TRADE BALANCE"              data={tradeData?.trade_balance}  color="#ff3b3b" />
-        <MacroTile label="TOTAL IMPORTS"              data={tradeData?.total_imports}  color="#00d4ff" />
+        <MacroTile label="TOTAL IMPORTS"              data={tradeData?.total_imports}  color="#60a5fa" />
         <MacroTile label="CAPITAL GOODS"              data={tradeData?.capital_goods}  color="#00c176" barSpark />
         <MacroTile label="CONSUMER GOODS"             data={tradeData?.consumer_goods} color="#ff9f0a" barSpark />
         <MacroTile label="BRENT CRUDE · FREIGHT PROXY" data={tradeData?.freight_index} color="#a78bfa" formatter={fmtBbl} />
