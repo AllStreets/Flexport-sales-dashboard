@@ -976,6 +976,17 @@ export default function PerformancePage() {
   const [winLossRecords, setWinLossRecords] = useState([]);
   const [radarKey, setRadarKey] = useState(0);
 
+  // Mirror right column height → left column so raf-list scrolls at the right boundary
+  const rightColRef = useRef(null);
+  const [rightColH, setRightColH] = useState(null);
+  useEffect(() => {
+    const el = rightColRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setRightColH(Math.round(entry.contentRect.height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   async function load() {
     try {
       const [perfRes, wlRes] = await Promise.all([
@@ -1041,7 +1052,7 @@ export default function PerformancePage() {
       <div className="row2-grid">
 
         {/* Left: Activity Heatmap + 7-Day Cadence stacked */}
-        <div className="perf-left-col">
+        <div className="perf-left-col" style={rightColH ? { height: rightColH } : {}}>
           <div className="perf-card heatmap-panel">
             <div className="panel-header">
               <span className="panel-title">Activity Heatmap</span>
@@ -1066,7 +1077,7 @@ export default function PerformancePage() {
         </div>
 
         {/* Right: Follow-up Radar + Pipeline Velocity (top), Quota Attainment (bottom) */}
-        <div className="perf-right-col">
+        <div className="perf-right-col" ref={rightColRef}>
           <div className="fr-pv-row">
             <div className="perf-card">
               <div className="panel-header">

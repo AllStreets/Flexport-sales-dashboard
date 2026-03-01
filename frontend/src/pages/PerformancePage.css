@@ -116,15 +116,15 @@
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   gap: 16px;
-  align-items: stretch;
+  align-items: start;
 }
 
-/* Left column — flex column, stretches to match right column height */
+/* Left column — height set explicitly via JS ResizeObserver on right col */
 .perf-left-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
+  overflow: hidden;
 }
 
 /* Right column container */
