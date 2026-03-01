@@ -27,7 +27,7 @@ async function fetchNewsAPI(companyName) {
         sortBy: 'publishedAt',
         language: 'en',
         pageSize: 5,
-        apiKey: process.env.NEWSAPI_KEY
+        apiKey: process.env.NEWSAPI_KEY || process.env.NEWS_API_KEY
       }
     });
 
