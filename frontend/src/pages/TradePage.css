@@ -124,17 +124,20 @@
 .fx-pct   { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; width: 52px; text-align: right; }
 
 /* ── Import origins ──────────────────────────────────────────────────────────── */
-.origins-list { display: flex; flex-direction: column; gap: 7px; }
-.origin-row { display: flex; align-items: center; gap: 8px; }
-.origin-country { font-size: 11px; color: #94a3b8; width: 96px; flex-shrink: 0; }
-.origin-bar-wrap {
-  flex: 1; height: 5px; background: rgba(255,255,255,0.05);
-  border-radius: 3px; overflow: hidden;
+.origins-list {
+  display: flex; flex-direction: column;
+  flex: 1; justify-content: space-between;
 }
-.origin-bar { height: 100%; border-radius: 3px; min-width: 3px; }
+.origin-row { display: flex; align-items: center; gap: 10px; }
+.origin-country { font-size: 13px; color: #94a3b8; width: 104px; flex-shrink: 0; }
+.origin-bar-wrap {
+  flex: 1; height: 8px; background: rgba(255,255,255,0.05);
+  border-radius: 4px; overflow: hidden;
+}
+.origin-bar { height: 100%; border-radius: 4px; min-width: 4px; }
 .origin-pct {
-  font-family: 'JetBrains Mono', monospace; font-size: 10px;
-  font-weight: 700; width: 36px; text-align: right; flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  font-weight: 700; width: 42px; text-align: right; flex-shrink: 0;
 }
 
 /* ── Route optimizer ─────────────────────────────────────────────────────────── */

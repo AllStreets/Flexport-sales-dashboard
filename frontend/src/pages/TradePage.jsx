@@ -531,7 +531,7 @@ export default function TradePage() {
               </div>
             ))}
           </div>
-          <div className="fred-note">Source: US Census Bureau · Top 8 by import value</div>
+          <div className="fred-note">Source: US Census Bureau · Top 18 by import value</div>
         </div>
       </div>
 
