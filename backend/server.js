@@ -540,7 +540,7 @@ Return JSON: { "first_line": "..." }`;
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── FX Rates — live from exchangerate-api.com, 5-min cache ───────────────
+// ── FX Rates — live rates + 1-day change via frankfurter.app ─────────────
 let _fxCache = null, _fxCacheAt = 0;
 app.get('/api/fx-rates', async (req, res) => {
   if (_fxCache && Date.now() - _fxCacheAt < 5 * 60 * 1000) return res.json(_fxCache);
@@ -548,8 +548,6 @@ app.get('/api/fx-rates', async (req, res) => {
   if (!key) return res.json({ source: 'static', rates: null });
   try {
     const axios = require('axios');
-    const r = await axios.get(`https://v6.exchangerate-api.com/v6/${key}/latest/USD`);
-    const raw = r.data.conversion_rates || {};
     const pairs = [
       { pair: 'USD/CNY', symbol: 'CNY', note: 'China Yuan' },
       { pair: 'USD/EUR', symbol: 'EUR', note: 'Euro' },
@@ -560,7 +558,27 @@ app.get('/api/fx-rates', async (req, res) => {
       { pair: 'USD/JPY', symbol: 'JPY', note: 'Japanese Yen' },
       { pair: 'USD/SGD', symbol: 'SGD', note: 'Singapore Dollar' },
     ];
-    const rates = pairs.map(p => ({ pair: p.pair, rate: raw[p.symbol] || null, note: p.note, pct: 0 }));
+
+    // Yesterday's date string for historical comparison
+    const yest = new Date(); yest.setDate(yest.getDate() - 1);
+    const yStr = yest.toISOString().slice(0, 10);
+
+    // Fetch current rates (user key) + yesterday's rates (frankfurter, free, no key)
+    const [todayRes, yestRes] = await Promise.allSettled([
+      axios.get(`https://v6.exchangerate-api.com/v6/${key}/latest/USD`),
+      axios.get(`https://api.frankfurter.app/${yStr}?from=USD&to=CNY,EUR,INR,MXN,KRW,JPY,SGD`),
+    ]);
+
+    const raw = todayRes.status === 'fulfilled' ? (todayRes.value.data.conversion_rates || {}) : {};
+    const yestRaw = yestRes.status === 'fulfilled' ? (yestRes.value.data.rates || {}) : {};
+
+    const rates = pairs.map(p => {
+      const current = raw[p.symbol] || null;
+      const prev = yestRaw[p.symbol] || null;
+      const pct = (current && prev) ? parseFloat(((current - prev) / prev * 100).toFixed(3)) : 0;
+      return { pair: p.pair, rate: current, note: p.note, pct };
+    });
+
     _fxCache = { source: 'live', updated: new Date().toISOString(), rates };
     _fxCacheAt = Date.now();
     res.json(_fxCache);
