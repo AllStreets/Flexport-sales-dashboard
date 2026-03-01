@@ -37,12 +37,33 @@ const FALLBACK_SIGNALS = [
 
 // ── Static reference data ─────────────────────────────────────────────────────
 const CONTAINER_RATES = [
-  { lane: 'Shanghai → Los Angeles',   feu: 1_850, change: -4.2,  trend: 'down' },
-  { lane: 'Shanghai → Rotterdam',     feu: 1_650, change: -2.8,  trend: 'down' },
-  { lane: 'Vietnam → Los Angeles',    feu: 1_950, change: +3.1,  trend: 'up'   },
-  { lane: 'India → Los Angeles',      feu: 2_100, change: +1.8,  trend: 'up'   },
-  { lane: 'Europe → New York',        feu: 1_350, change: -1.5,  trend: 'down' },
-  { lane: 'China → US East Coast',    feu: 2_800, change: +5.4,  trend: 'up'   },
+  // Trans-Pacific
+  { route: 'China-US West Coast',   lane: 'Shanghai → Los Angeles',      feu: 1_850, change: -4.2 },
+  { route: 'China-US East Coast',   lane: 'Shanghai → New York',         feu: 2_800, change: +5.4 },
+  { route: 'Vietnam-US West',       lane: 'Ho Chi Minh → Los Angeles',   feu: 1_950, change: +3.1 },
+  { route: 'Japan-US West',         lane: 'Tokyo → Los Angeles',         feu: 1_420, change: -1.2 },
+  { route: 'Korea-US West',         lane: 'Busan → Los Angeles',         feu: 1_380, change: -0.9 },
+  { route: 'Taiwan-US West',        lane: 'Kaohsiung → Los Angeles',     feu: 1_490, change: +0.7 },
+  { route: 'SE Asia-US East',       lane: 'Singapore → New York',        feu: 2_650, change: +4.2 },
+  { route: 'HK-US East',            lane: 'Hong Kong → New York',        feu: 2_750, change: +3.8 },
+  // Asia-Europe
+  { route: 'China-Rotterdam',       lane: 'Shanghai → Rotterdam',        feu: 1_650, change: -2.8 },
+  { route: 'SE Asia-Europe',        lane: 'Singapore → Rotterdam',       feu: 1_520, change: -1.4 },
+  // South Asia
+  { route: 'India-US West',         lane: 'Mumbai → Los Angeles',        feu: 2_100, change: +1.8 },
+  { route: 'India-US East',         lane: 'Mumbai → New York',           feu: 2_280, change: +2.3 },
+  // Atlantic
+  { route: 'Europe-US East',        lane: 'Rotterdam → New York',        feu: 1_350, change: -1.5 },
+  { route: 'Turkey-Europe',         lane: 'Istanbul → Rotterdam',        feu:   980, change: -0.6 },
+  // Middle East / Africa
+  { route: 'Middle East-Europe',    lane: 'Dubai → Rotterdam',           feu: 1_150, change: +1.1 },
+  { route: 'Africa-Europe',         lane: 'Durban → Rotterdam',          feu: 1_320, change: -2.1 },
+  // Americas
+  { route: 'Mexico-US South',       lane: 'Manzanillo → Houston',        feu:   750, change: -3.4 },
+  { route: 'Brazil-US East',        lane: 'Santos → New York',           feu: 1_680, change: +2.7 },
+  { route: 'Peru-US West',          lane: 'Callao → Los Angeles',        feu: 1_450, change: +1.5 },
+  // Australia
+  { route: 'Australia-US West',     lane: 'Melbourne → Los Angeles',     feu: 2_050, change: +0.9 },
 ];
 
 const FX_RATES = [
@@ -428,7 +449,8 @@ export default function TradePage() {
           <div className="bb-panel-header">CONTAINER RATES — 40FT FEU SPOT · 2025</div>
           <div className="container-rate-list">
             {CONTAINER_RATES.map(r => (
-              <div key={r.lane} className="cr-row">
+              <div key={r.route} className="cr-row">
+                <span className="cr-route">{r.route}</span>
                 <span className="cr-lane">{r.lane}</span>
                 <span className="cr-rate">${r.feu.toLocaleString()}</span>
                 <span className="cr-change" style={{ color: r.change >= 0 ? '#ff3b3b' : '#00c176' }}>

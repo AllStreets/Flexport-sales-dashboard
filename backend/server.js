@@ -276,14 +276,30 @@ app.post('/api/win-loss', async (req, res) => {
 // ── Market Map ─────────────────────────────────────
 app.get('/api/market-map', async (req, res) => {
   try {
-    const all = await getProspects({ limit: 9999 });
-    const bySecter = {};
+    const db = getDb();
+    const all = await new Promise((resolve, reject) => {
+      db.all(`
+        SELECT p.*, pl.stage AS pipeline_stage
+        FROM prospects p
+        LEFT JOIN pipeline pl ON pl.prospect_id = p.id
+        ORDER BY p.icp_score DESC
+      `, [], (err, rows) => {
+        db.close();
+        if (err) return reject(err);
+        resolve(rows.map(r => ({
+          ...r,
+          import_origins: JSON.parse(r.import_origins || '[]'),
+          primary_lanes: JSON.parse(r.primary_lanes || '[]'),
+        })));
+      });
+    });
+    const bySector = {};
     all.forEach(p => {
       const s = p.sector || 'Other';
-      if (!bySecter[s]) bySecter[s] = [];
-      bySecter[s].push(p);
+      if (!bySector[s]) bySector[s] = [];
+      bySector[s].push(p);
     });
-    const sectors = Object.entries(bySecter).map(([sector, prospects]) => ({
+    const sectors = Object.entries(bySector).map(([sector, prospects]) => ({
       sector,
       count: prospects.length,
       avgIcp: Math.round(prospects.reduce((s, p) => s + (p.icp_score || 0), 0) / prospects.length),

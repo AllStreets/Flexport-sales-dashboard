@@ -136,6 +136,8 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .ng-container {
@@ -144,7 +146,6 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
-  overflow: hidden;
   cursor: grab;
   position: relative;
   user-select: none;
@@ -154,7 +155,6 @@
 
 .ng-svg {
   display: block;
-  max-height: 100%;
   will-change: transform;
 }
 

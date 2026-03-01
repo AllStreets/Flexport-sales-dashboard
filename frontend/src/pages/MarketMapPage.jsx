@@ -157,13 +157,13 @@ function NodeGraph({ sector, onProspectClick }) {
     if (!el) return;
     const onWheel = (e) => {
       e.preventDefault();
-      if (e.ctrlKey) {
-        // Pinch-to-zoom: ctrlKey is set by browser for trackpad pinch gestures
-        const factor = e.deltaY > 0 ? 0.92 : 1.08;
+      // Two-finger scroll OR pinch (ctrlKey) → zoom in/out (matches globe behavior)
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) || e.ctrlKey) {
+        const factor = e.deltaY > 0 ? 0.93 : 1.07;
         setScale(prev => Math.min(5, Math.max(0.25, prev * factor)));
       } else {
-        // Two-finger scroll → pan
-        setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+        // Predominantly horizontal scroll → pan horizontally
+        setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y }));
       }
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -200,10 +200,10 @@ function NodeGraph({ sector, onProspectClick }) {
   const allProspects = sector.prospects || [];
   const subs = meta.subsegments;
 
-  const W = 680, H = 540;
+  const W = 680, H = 600;
   const cx = W / 2, cy = H / 2;
-  const R1 = 155;
-  const R2 = 88;
+  const R1 = 148;
+  const R2 = 82;
 
   // Assign prospects to sub-segments round-robin, up to 5 per sub (= 20 max visible)
   const subGroups = subs.map((sub, si) => ({
@@ -227,12 +227,15 @@ function NodeGraph({ sector, onProspectClick }) {
       )}
     <svg
       width="100%"
+      height="100%"
       viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="xMidYMid meet"
       className="ng-svg"
       style={{
         transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
         transformOrigin: 'center center',
         transition: isPanning.current ? 'none' : 'transform 0.08s ease-out',
+        overflow: 'visible',
       }}
     >
       <defs>

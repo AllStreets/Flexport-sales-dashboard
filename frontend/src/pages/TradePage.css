@@ -98,11 +98,14 @@
 }
 
 /* ── Container rates ─────────────────────────────────────────────────────────── */
-.container-rate-list { display: flex; flex-direction: column; gap: 6px; }
+.container-rate-list {
+  display: flex; flex-direction: column; gap: 4px;
+}
 .cr-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
 }
+.cr-route  { font-size: 9px; color: #475569; font-family: 'Space Grotesk', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; width: 110px; flex-shrink: 0; }
 .cr-lane   { font-size: 11px; color: #64748b; flex: 1; }
 .cr-rate   { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #f1f5f9; flex-shrink: 0; }
 .cr-change { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; width: 46px; text-align: right; flex-shrink: 0; }
