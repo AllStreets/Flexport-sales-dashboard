@@ -418,6 +418,282 @@
   cursor: not-allowed;
 }
 
+/* ── Mid Row (Follow-up Radar + Pipeline Velocity) ───────────────────────────── */
+.mid-row {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Follow-up Radar ─────────────────────────────────────────────────────────── */
+.fr-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fr-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.fr-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+
+.fr-chip-red {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.fr-chip-dark {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+}
+
+.fr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.fr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: background 0.15s, border-color 0.15s;
+  animation: fr-slide-in 0.3s ease both;
+}
+
+@keyframes fr-slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.fr-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.fr-stage-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fr-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e2e8f0;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fr-stage-label {
+  font-size: 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.fr-icp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  padding: 1px 6px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.fr-days {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.fr-all-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 8px;
+}
+
+.fr-empty {
+  font-size: 12px;
+  color: #475569;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 12px 0;
+}
+
+/* ── Pipeline Velocity ───────────────────────────────────────────────────────── */
+.pv-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pv-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pv-summary-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pv-summary-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pv-summary-label {
+  font-size: 10px;
+  color: #475569;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pv-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pv-stage-row {
+  animation: fr-slide-in 0.3s ease both;
+}
+
+.pv-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.pv-stage-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pv-stage-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  flex: 1;
+}
+
+.pv-stage-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #475569;
+}
+
+.pv-stuck-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 9px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+}
+
+.pv-stage-days {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pv-bar-bg {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.pv-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pv-legend {
+  display: flex;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pv-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.pv-legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* ── Win/Loss Section ────────────────────────────────────────────────────────── */
 .winloss-section {
   display: grid;

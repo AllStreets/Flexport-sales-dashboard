@@ -25,6 +25,13 @@ const { aggregateCompanyData } = require('./services/dataAggregator');
 const { getTradeIntelligence } = require('./services/tradeIntelligenceService');
 const { initDb, getPerformanceSummary, logActivity, getWinLoss, addWinLoss } = require('./services/performanceService');
 const { getPortCongestion } = require('./services/portCongestionService');
+
+// Shared DB helper for inline endpoints
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+function getDb() {
+  return new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'flexport.db'));
+}
 const { lookupHSCode } = require('./services/usitcService');
 
 // ── Prospects ──────────────────────────────────────
@@ -342,6 +349,53 @@ app.get('/api/hs-lookup', async (req, res) => {
     .filter(([code, info]) => code.startsWith(q) || info.desc.toLowerCase().includes(q.toLowerCase()))
     .map(([code, info]) => ({ code, ...info, source: 'local' }));
   res.json(results.slice(0, 5));
+});
+
+// ── Follow-up Radar ────────────────────────────────
+app.get('/api/followup-radar', (req, res) => {
+  const db = getDb();
+  db.all(`
+    SELECT p.id, p.company_name, p.stage, pr.icp_score, pr.sector,
+      MAX(a.date) as last_contact,
+      CASE
+        WHEN MAX(a.date) IS NULL THEN 999
+        ELSE CAST(julianday('now', 'localtime') - julianday(MAX(a.date)) AS INTEGER)
+      END as days_since
+    FROM pipeline p
+    LEFT JOIN prospects pr ON p.prospect_id = pr.id
+    LEFT JOIN sdr_activities a ON lower(a.company_name) = lower(p.company_name)
+    WHERE p.stage NOT IN ('closed_won', 'closed_lost')
+    GROUP BY p.id
+    HAVING days_since >= 3
+    ORDER BY pr.icp_score DESC, days_since DESC
+    LIMIT 12
+  `, [], (err, rows) => {
+    db.close();
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// ── Pipeline Velocity ───────────────────────────────
+app.get('/api/pipeline-velocity', (req, res) => {
+  const db = getDb();
+  db.all(`
+    SELECT stage,
+      COUNT(*) as count,
+      ROUND(AVG(julianday('now', 'localtime') - julianday(updated_at)), 1) as avg_days,
+      COUNT(CASE WHEN julianday('now', 'localtime') - julianday(updated_at) > 7 THEN 1 END) as stuck_count
+    FROM pipeline
+    WHERE stage NOT IN ('closed_won', 'closed_lost')
+    GROUP BY stage
+    ORDER BY CASE stage
+      WHEN 'new' THEN 1 WHEN 'researched' THEN 2
+      WHEN 'called' THEN 3 WHEN 'demo_booked' THEN 4
+      ELSE 5 END
+  `, [], (err, rows) => {
+    db.close();
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
 // ── Route Optimizer ────────────────────────────────

@@ -6,7 +6,8 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import {
   RiPhoneLine, RiMailSendLine, RiCalendarCheckLine, RiMoneyDollarCircleLine,
-  RiAddLine, RiTrophyLine, RiCloseCircleLine
+  RiAddLine, RiTrophyLine, RiCloseCircleLine, RiTimeLine, RiAlertLine,
+  RiCheckLine, RiArrowRightLine
 } from 'react-icons/ri';
 import './PerformancePage.css';
 
@@ -617,6 +618,176 @@ function WeeklyTable({ activities }) {
   );
 }
 
+// ── Stage meta shared across both new tiles ───────────────────────────────────
+const STAGE_META = {
+  new:          { label: 'New',          color: '#94a3b8' },
+  researched:   { label: 'Researched',   color: '#60a5fa' },
+  called:       { label: 'Called',       color: '#a78bfa' },
+  demo_booked:  { label: 'Demo Booked',  color: '#34d399' },
+};
+
+// ── Follow-up Radar ───────────────────────────────────────────────────────────
+function FollowupRadar() {
+  const [items, setItems] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API}/api/followup-radar`)
+      .then(r => r.json())
+      .then(setItems)
+      .catch(() => setItems([]));
+  }, []);
+
+  function urgencyColor(days) {
+    if (days >= 999) return '#ef4444';   // never contacted
+    if (days >= 7)   return '#ef4444';   // red
+    if (days >= 4)   return '#f59e0b';   // amber
+    return '#94a3b8';                    // 3 days — mild
+  }
+
+  function daysLabel(days) {
+    if (days >= 999) return 'Never contacted';
+    if (days === 1)  return '1 day ago';
+    return `${days}d ago`;
+  }
+
+  if (!items) {
+    return <div className="fr-empty">Loading...</div>;
+  }
+
+  const neverCount  = items.filter(i => i.days_since >= 999).length;
+  const overdueCount = items.length;
+
+  return (
+    <div className="fr-wrap">
+      {overdueCount === 0 ? (
+        <div className="fr-all-clear">
+          <RiCheckLine size={20} color="#10b981" />
+          <span>All pipeline companies contacted within 3 days</span>
+        </div>
+      ) : (
+        <>
+          <div className="fr-summary">
+            <span className="fr-summary-chip fr-chip-red">
+              <RiAlertLine size={11} />
+              {overdueCount} overdue
+            </span>
+            {neverCount > 0 && (
+              <span className="fr-summary-chip fr-chip-dark">
+                {neverCount} never touched
+              </span>
+            )}
+          </div>
+          <div className="fr-list">
+            {items.map((item, i) => {
+              const sm = STAGE_META[item.stage] || { label: item.stage, color: '#64748b' };
+              const icp = item.icp_score || 0;
+              const color = urgencyColor(item.days_since);
+              return (
+                <div key={item.id} className="fr-row" style={{ animationDelay: `${i * 40}ms` }}>
+                  <span className="fr-stage-dot" style={{ background: sm.color }} />
+                  <span className="fr-name">{item.company_name}</span>
+                  <span className="fr-stage-label" style={{ color: sm.color }}>{sm.label}</span>
+                  {icp > 0 && (
+                    <span className="fr-icp">ICP {icp}</span>
+                  )}
+                  <span className="fr-days" style={{ color }}>
+                    <RiTimeLine size={10} />
+                    {daysLabel(item.days_since)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Pipeline Velocity ─────────────────────────────────────────────────────────
+function PipelineVelocity() {
+  const [stages, setStages] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API}/api/pipeline-velocity`)
+      .then(r => r.json())
+      .then(setStages)
+      .catch(() => setStages([]));
+  }, []);
+
+  if (!stages) return <div className="fr-empty">Loading...</div>;
+
+  if (stages.length === 0) {
+    return <div className="fr-empty">No active pipeline deals</div>;
+  }
+
+  const maxDays = Math.max(1, ...stages.map(s => s.avg_days || 0));
+  const totalStuck = stages.reduce((s, r) => s + (r.stuck_count || 0), 0);
+  const totalActive = stages.reduce((s, r) => s + (r.count || 0), 0);
+
+  function velocityColor(days) {
+    if (days > 7)  return '#ef4444';
+    if (days > 3)  return '#f59e0b';
+    return '#10b981';
+  }
+
+  return (
+    <div className="pv-wrap">
+      <div className="pv-summary">
+        <div className="pv-summary-stat">
+          <span className="pv-summary-val" style={{ color: '#00d4ff' }}>{totalActive}</span>
+          <span className="pv-summary-label">Active Deals</span>
+        </div>
+        <div className="pv-summary-stat">
+          <span className="pv-summary-val" style={{ color: totalStuck > 0 ? '#ef4444' : '#10b981' }}>
+            {totalStuck}
+          </span>
+          <span className="pv-summary-label">Stuck &gt;7d</span>
+        </div>
+      </div>
+
+      <div className="pv-stages">
+        {stages.map((s, i) => {
+          const sm = STAGE_META[s.stage] || { label: s.stage, color: '#64748b' };
+          const days = s.avg_days || 0;
+          const barPct = (days / maxDays) * 100;
+          const vColor = velocityColor(days);
+          return (
+            <div key={s.stage} className="pv-stage-row" style={{ animationDelay: `${i * 60}ms` }}>
+              <div className="pv-stage-header">
+                <span className="pv-stage-dot" style={{ background: sm.color }} />
+                <span className="pv-stage-name">{sm.label}</span>
+                <span className="pv-stage-count">{s.count}</span>
+                {s.stuck_count > 0 && (
+                  <span className="pv-stuck-badge">
+                    <RiAlertLine size={9} />
+                    {s.stuck_count} stuck
+                  </span>
+                )}
+                <span className="pv-stage-days" style={{ color: vColor }}>
+                  {days.toFixed(1)}d avg
+                </span>
+              </div>
+              <div className="pv-bar-bg">
+                <div
+                  className="pv-bar"
+                  style={{ width: `${barPct}%`, background: vColor, boxShadow: `0 0 8px ${vColor}50` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="pv-legend">
+        <span className="pv-legend-item" style={{ color: '#10b981' }}><span className="pv-legend-dot" style={{ background: '#10b981' }} />Fast (&lt;3d)</span>
+        <span className="pv-legend-item" style={{ color: '#f59e0b' }}><span className="pv-legend-dot" style={{ background: '#f59e0b' }} />Moderate (3–7d)</span>
+        <span className="pv-legend-item" style={{ color: '#ef4444' }}><span className="pv-legend-dot" style={{ background: '#ef4444' }} />Slow (&gt;7d)</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PerformancePage() {
   const [data, setData] = useState(null);
@@ -738,6 +909,24 @@ export default function PerformancePage() {
             <RiAddLine size={15} />
             Log Activity
           </button>
+        </div>
+      </div>
+
+      {/* ── Follow-up Radar + Pipeline Velocity ───────────────────────── */}
+      <div className="mid-row">
+        <div className="perf-card">
+          <div className="panel-header">
+            <span className="panel-title">Follow-up Radar</span>
+            <span className="panel-sub">pipeline companies overdue for contact</span>
+          </div>
+          <FollowupRadar />
+        </div>
+        <div className="perf-card">
+          <div className="panel-header">
+            <span className="panel-title">Pipeline Velocity</span>
+            <span className="panel-sub">avg days per stage</span>
+          </div>
+          <PipelineVelocity />
         </div>
       </div>
 
