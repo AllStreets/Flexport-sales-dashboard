@@ -446,6 +446,10 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
             </button>
             {callIntel && !callIntel.error && (
               <div className="ci-results">
+                <div className="ci-submitted-notes">
+                  <div className="ci-result-label">Submitted Notes</div>
+                  <p className="ci-notes-text">{callNotes}</p>
+                </div>
                 <div className="ci-result-grid">
                   {callIntel.pain_points?.length > 0 && (
                     <div className="ci-result-block">

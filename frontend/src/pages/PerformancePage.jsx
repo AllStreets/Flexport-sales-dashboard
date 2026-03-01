@@ -439,6 +439,23 @@ function OutreachStats({ activities, winLossRecords }) {
       {!topComp && total === 0 && (
         <div className="os-empty">Log wins and losses to see stats</div>
       )}
+
+      {/* Recent activity notes */}
+      {activities.filter(a => a.notes?.trim()).length > 0 && (
+        <div className="os-notes-log">
+          <div className="os-breakdown-label" style={{ marginTop: 12 }}>Recent Activity Notes</div>
+          {activities.filter(a => a.notes?.trim()).slice(-5).reverse().map((a, i) => (
+            <div key={i} className="os-note-row">
+              <div className="os-note-meta">
+                <span style={{ color: '#00d4ff', textTransform: 'capitalize' }}>{a.type}</span>
+                {a.company_name && <span style={{ color: '#64748b' }}> · {a.company_name}</span>}
+                <span style={{ color: '#334155' }}> · {a.date}</span>
+              </div>
+              <p className="os-note-text">{a.notes}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1029,12 +1046,13 @@ export default function PerformancePage() {
                   <th>Outcome</th>
                   <th>Stage</th>
                   <th>Competitor</th>
+                  <th>Reason</th>
                   <th>Deal</th>
                 </tr>
               </thead>
               <tbody>
                 {winLossRecords.length === 0 && (
-                  <tr><td colSpan={5} className="wl-empty">No records yet — log your first win or loss.</td></tr>
+                  <tr><td colSpan={6} className="wl-empty">No records yet — log your first win or loss.</td></tr>
                 )}
                 {winLossRecords.slice(0, 12).map(r => (
                   <tr key={r.id}>
@@ -1047,6 +1065,7 @@ export default function PerformancePage() {
                     </td>
                     <td style={{ color: '#64748b' }}>{r.stage_reached || '—'}</td>
                     <td style={{ color: '#64748b' }}>{r.competitor || '—'}</td>
+                    <td style={{ color: '#94a3b8', maxWidth: 160 }}>{r.reason || '—'}</td>
                     <td style={{ color: r.outcome === 'won' ? '#10b981' : '#64748b', fontFamily: 'JetBrains Mono' }}>
                       {r.deal_value ? `$${Number(r.deal_value).toLocaleString()}` : '—'}
                     </td>
