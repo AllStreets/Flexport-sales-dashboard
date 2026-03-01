@@ -604,7 +604,8 @@ app.get('/api/hot-prospects', (req, res) => {
     ORDER BY opp_score DESC
     LIMIT 8`;
   db.all(sql, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) { db.close(); return res.status(500).json({ error: err.message }); }
+    db.close();
     res.json(rows || []);
   });
 });

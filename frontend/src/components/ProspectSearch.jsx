@@ -21,7 +21,8 @@ export default function ProspectSearch({ onSelect }) {
     const params = new URLSearchParams(Object.entries(filters).filter(([,v]) => v));
     try {
       const r = await fetch(`${API}/api/prospects?${params}&limit=50`);
-      setProspects(await r.json());
+      const json = await r.json();
+      setProspects(Array.isArray(json) ? json : []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [filters]);

@@ -88,7 +88,7 @@ export default function TariffCalculatorPage() {
 
     const totalTariffRate = baseRate + s301Rate + addlRate;
     const dutyAmount = value * (totalTariffRate / 100);
-    const freightCost = (FREIGHT_RATES[origin]?.[freightMode] || 1500) * Math.ceil(weight / 1000);
+    const freightCost = (FREIGHT_RATES[origin]?.[freightMode] || 1500) * Math.max(1, Math.ceil(weight / 1000));
     const totalLandedCost = value + dutyAmount + freightCost;
     const effectiveRate = value > 0 ? (dutyAmount / value) * 100 : 0;
 
@@ -99,10 +99,7 @@ export default function TariffCalculatorPage() {
     if (!hsCode) return;
     setHsLoading(true);
     try {
-      const r = await fetch(`${API}/api/hs-lookup`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hsCode, origin }),
-      });
+      const r = await fetch(`${API}/api/hs-lookup?q=${encodeURIComponent(hsCode)}`);
       setHsResult(await r.json());
     } catch { setHsResult({ error: 'Lookup failed' }); }
     finally { setHsLoading(false); }

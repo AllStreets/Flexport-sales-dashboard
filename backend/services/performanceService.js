@@ -186,7 +186,8 @@ async function getPerformanceSummary() {
 
   const now = new Date();
   const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
+  const dowOffset = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  weekStart.setDate(now.getDate() - dowOffset);
   const weekStartStr = weekStart.toISOString().slice(0, 10);
 
   const thisWeek       = activities.filter(a => a.date >= weekStartStr);

@@ -16,7 +16,7 @@ export default function SaveAnalysisButton({ companyName, analysisData, onSaved 
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/save-analysis`, {
+      const response = await fetch(`${API_BASE_URL}/api/analyses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyName, analysisData })

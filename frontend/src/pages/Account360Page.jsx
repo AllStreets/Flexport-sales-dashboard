@@ -112,6 +112,11 @@ function ObjectionDrawer({ prospect, analysis }) {
   const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setResponse(null);
+    setObjection('');
+  }, [prospect?.id]);
+
   const QUICK = ['We already have a forwarder', "We're happy with our current rates", 'We don\'t need real-time visibility', 'The timing isn\'t right'];
 
   const handle = async (text) => {
@@ -250,6 +255,13 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
 
   useEffect(() => {
     setLoading(true); setAnalysis(null); setData(null);
+    setPipelined(false);
+    setCallNotes('');
+    setCallIntel(null);
+    setCallIntelOpen(false);
+    setCallPrep(null);
+    setShowCallPrep(false);
+    setShowMapPlan(false);
     fetch(`${API}/api/account360/${id}`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
