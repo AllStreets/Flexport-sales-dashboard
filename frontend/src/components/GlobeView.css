@@ -53,7 +53,6 @@
   pointer-events: none;
 }
 
-.legend-item.green  { color: #10b981; }
 .legend-item.amber  { color: #f59e0b; }
 .legend-item.red    { color: #ef4444; }
 

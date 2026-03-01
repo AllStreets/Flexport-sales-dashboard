@@ -181,7 +181,7 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       />
 
       <div className="globe-legend">
-        <span className="legend-item green">■ Clear</span>
+        <span className="legend-item" style={{ color: mode === 'tariff' ? '#10b981' : '#00d4ff' }}>■ Clear</span>
         <span className="legend-item amber">■ Congestion</span>
         <span className="legend-item red">■ Disruption</span>
       </div>
