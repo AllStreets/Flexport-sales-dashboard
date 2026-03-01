@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { DndContext, useDroppable, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { RiFocus3Line } from 'react-icons/ri';
+import { RiFocus3Line, RiDeleteBinLine } from 'react-icons/ri';
 import './PipelineKanban.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -19,13 +19,23 @@ const STAGES = [
 
 const STAGE_KEYS = STAGES.map(s => s.key);
 
-function PipelineCard({ item, isDragging }) {
+function PipelineCard({ item, isDragging, onDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="pipeline-card">
-      <div className="card-name">{item.company_name}</div>
+      <div className="card-top-row">
+        <div className="card-name">{item.company_name}</div>
+        <button
+          className="card-delete"
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onDelete(item.id); }}
+          title="Remove from pipeline"
+        >
+          <RiDeleteBinLine size={13} />
+        </button>
+      </div>
       <div className="card-meta">
         {item.icp_score && <span className="card-icp">ICP {item.icp_score}</span>}
         {item.sector && <span className="card-sector">{item.sector}</span>}
@@ -35,7 +45,7 @@ function PipelineCard({ item, isDragging }) {
   );
 }
 
-function DroppableColumn({ stage, items, activeId }) {
+function DroppableColumn({ stage, items, activeId, onDelete }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.key });
 
   return (
@@ -48,7 +58,7 @@ function DroppableColumn({ stage, items, activeId }) {
       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
         <div className="column-body" ref={setNodeRef}>
           {items.map(item => (
-            <PipelineCard key={item.id} item={item} isDragging={activeId === item.id} />
+            <PipelineCard key={item.id} item={item} isDragging={activeId === item.id} onDelete={onDelete} />
           ))}
         </div>
       </SortableContext>
@@ -103,6 +113,15 @@ export default function PipelineKanban({ isOpen, onClose, refreshTrigger }) {
     }).catch(console.error);
   };
 
+  const handleDelete = async (id) => {
+    // Find which stage this item is in
+    const stage = Object.entries(pipeline).find(([, items]) => items.find(i => i.id === id))?.[0];
+    if (!stage) return;
+    // Optimistic removal
+    setPipeline(prev => ({ ...prev, [stage]: prev[stage].filter(i => i.id !== id) }));
+    await fetch(`${API}/api/pipeline/${id}`, { method: 'DELETE' }).catch(console.error);
+  };
+
   const totalMoved = (pipeline.demo_booked?.length || 0) + (pipeline.closed_won?.length || 0);
 
   if (!isOpen) return null;
@@ -124,6 +143,7 @@ export default function PipelineKanban({ isOpen, onClose, refreshTrigger }) {
                 stage={stage}
                 items={pipeline[stage.key] || []}
                 activeId={activeId}
+                onDelete={handleDelete}
               />
             ))}
           </div>

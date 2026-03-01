@@ -10,6 +10,11 @@ import {
 } from 'react-icons/ri';
 import './PerformancePage.css';
 
+// ── Local date helper — avoids UTC offset shifting the date ───────────────────
+function localDateStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ── Quota targets ─────────────────────────────────────────────────────────────
 const QUOTA = { calls: 50, emails: 100, demos: 5 };
 const HEATMAP_LEVELS = [
@@ -89,7 +94,7 @@ function ActivityHeatmap({ activities }) {
   for (let w = 0; w < 53; w++) {
     const week = [];
     for (let d = 0; d < 7; d++) {
-      const iso = cursor.toISOString().slice(0, 10);
+      const iso = localDateStr(cursor);
       const count = countMap[iso] || 0;
       week.push({ date: iso, count, future: cursor > today });
       cursor.setDate(cursor.getDate() + 1);
@@ -260,7 +265,7 @@ function LogActivityModal({ onClose, onLogged }) {
   const [form, setForm] = useState({
     type: 'call',
     company_name: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: localDateStr(),
     notes: '',
   });
   const [saving, setSaving] = useState(false);
@@ -356,7 +361,7 @@ function OutreachStats({ activities, winLossRecords }) {
   const activityDays = new Set(activities.map(a => a.date));
   let streak = 0;
   if (activityDays.size > 0) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr();
     const sortedDays = Array.from(activityDays).sort().reverse();
     const latest = sortedDays[0];
     const daysDiff = Math.floor((new Date(today) - new Date(latest)) / 86400000);
@@ -566,10 +571,12 @@ function WeeklyTable({ activities }) {
   const monday = new Date(today);
   monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
 
+  const todayStr = localDateStr(today);
+
   const days = Array.from({ length: 5 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    return d.toISOString().slice(0, 10);
+    return localDateStr(d);
   });
 
   const rows = days.map((date, i) => {
@@ -580,7 +587,7 @@ function WeeklyTable({ activities }) {
       emails:   dayActivities.filter(a => a.type === 'email').length,
       demos:    dayActivities.filter(a => a.type === 'demo').length,
       linkedin: dayActivities.filter(a => a.type === 'linkedin').length,
-      isToday:  date === today.toISOString().slice(0, 10),
+      isToday:  date === todayStr,
     };
   });
 

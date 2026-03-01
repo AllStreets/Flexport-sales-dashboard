@@ -58,7 +58,23 @@
 .pipeline-card:hover { background: rgba(37,99,235,0.12); border-color: rgba(37,99,235,0.3); }
 .pipeline-card:active { cursor: grabbing; }
 
-.card-name { font-size: 12px; font-weight: 500; color: #f1f5f9; margin-bottom: 4px; }
+.card-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
+.card-name { font-size: 12px; font-weight: 500; color: #f1f5f9; flex: 1; min-width: 0; }
+.card-delete {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.pipeline-card:hover .card-delete { opacity: 1; }
+.card-delete:hover { color: #f87171; }
 .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
 .card-icp { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #10b981; }
 .card-sector { font-size: 10px; color: #475569; }

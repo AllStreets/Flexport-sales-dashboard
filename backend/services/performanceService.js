@@ -161,11 +161,19 @@ function getWinLoss() {
 }
 
 function addWinLoss({ company_name, outcome, stage_reached, competitor, reason, deal_value }) {
+  // Use local time so created_at month matches the chart's JS new Date() month keys
+  const now = new Date();
+  const created_at = now.getFullYear() + '-'
+    + String(now.getMonth() + 1).padStart(2, '0') + '-'
+    + String(now.getDate()).padStart(2, '0') + ' '
+    + String(now.getHours()).padStart(2, '0') + ':'
+    + String(now.getMinutes()).padStart(2, '0') + ':'
+    + String(now.getSeconds()).padStart(2, '0');
   return new Promise((resolve, reject) => {
     const db = getDb();
     db.run(
-      'INSERT INTO win_loss (company_name, outcome, stage_reached, competitor, reason, deal_value) VALUES (?,?,?,?,?,?)',
-      [company_name, outcome, stage_reached || null, competitor || null, reason || null, deal_value || 0],
+      'INSERT INTO win_loss (company_name, outcome, stage_reached, competitor, reason, deal_value, created_at) VALUES (?,?,?,?,?,?,?)',
+      [company_name, outcome, stage_reached || null, competitor || null, reason || null, deal_value || 0, created_at],
       function(err) { db.close(); if (err) return reject(err); resolve({ id: this.lastID }); }
     );
   });
@@ -185,8 +193,8 @@ async function getPerformanceSummary() {
   const callsThisWeek  = thisWeek.filter(a => a.type === 'call').length;
   const emailsThisWeek = thisWeek.filter(a => a.type === 'email').length;
 
-  // Demos booked KPI = funnel demoBooked (covers pipeline + activities + win_loss)
-  const demosBooked = funnel.demoBooked;
+  // Demos booked KPI = demos logged as activities THIS week (for weekly quota tracking)
+  const demosBooked = thisWeek.filter(a => a.type === 'demo').length;
 
   // Pipeline value: use actual won deal values when available, otherwise estimate from pipeline size
   const wonValue    = winloss.filter(r => r.outcome === 'won').reduce((s, r) => s + (r.deal_value || 0), 0);
