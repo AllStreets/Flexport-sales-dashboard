@@ -58,7 +58,8 @@ function logActivity({ type, prospect_id, company_name, date, notes }) {
   });
 }
 
-function getPipelineMetrics() {
+// Raw stage counts from pipeline table (for KPI calcs + byStage breakdown)
+function getPipelineStages() {
   return new Promise((resolve, reject) => {
     const db = getDb();
     db.all('SELECT stage, COUNT(*) as cnt FROM pipeline GROUP BY stage', [], (err, rows) => {
@@ -67,6 +68,72 @@ function getPipelineMetrics() {
       const byStage = {};
       rows.forEach(r => { byStage[r.stage] = r.cnt; });
       resolve(byStage);
+    });
+  });
+}
+
+// Funnel metrics — each stage is a UNION across pipeline, sdr_activities, and win_loss
+// so logging an activity or a win/loss always feeds the funnel.
+function getFunnelMetrics() {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    const result = {};
+
+    db.serialize(() => {
+      // Total unique companies in pipeline (de-duplicated)
+      db.get(
+        'SELECT COUNT(DISTINCT lower(company_name)) as cnt FROM pipeline WHERE company_name IS NOT NULL',
+        [],
+        (err, row) => { result.totalPipeline = row?.cnt || 0; }
+      );
+
+      // Contacted = pipeline 'called'+ OR any sdr_activity (any type counts as outreach)
+      db.get(
+        `SELECT COUNT(DISTINCT lower(company_name)) as cnt FROM (
+           SELECT company_name FROM pipeline
+             WHERE stage IN ('called','demo_booked','closed_won','closed_lost')
+             AND company_name IS NOT NULL
+           UNION
+           SELECT company_name FROM sdr_activities
+             WHERE company_name IS NOT NULL
+         )`,
+        [],
+        (err, row) => { result.calledPlus = row?.cnt || 0; }
+      );
+
+      // Demo Booked = pipeline at demo_booked/closed_won OR demo activities OR win_loss at demo stage
+      db.get(
+        `SELECT COUNT(DISTINCT lower(company_name)) as cnt FROM (
+           SELECT company_name FROM pipeline
+             WHERE stage IN ('demo_booked','closed_won')
+             AND company_name IS NOT NULL
+           UNION
+           SELECT company_name FROM sdr_activities
+             WHERE type = 'demo' AND company_name IS NOT NULL
+           UNION
+           SELECT company_name FROM win_loss
+             WHERE stage_reached IN ('demo_booked','demo') AND company_name IS NOT NULL
+         )`,
+        [],
+        (err, row) => { result.demoBooked = row?.cnt || 0; }
+      );
+
+      // Closed Won = pipeline 'closed_won' OR win_loss outcome='won'
+      db.get(
+        `SELECT COUNT(DISTINCT lower(company_name)) as cnt FROM (
+           SELECT company_name FROM pipeline
+             WHERE stage = 'closed_won' AND company_name IS NOT NULL
+           UNION
+           SELECT company_name FROM win_loss
+             WHERE outcome = 'won' AND company_name IS NOT NULL
+         )`,
+        [],
+        (err, row) => {
+          result.closedWon = row?.cnt || 0;
+          db.close();
+          if (err) reject(err); else resolve(result);
+        }
+      );
     });
   });
 }
@@ -105,8 +172,8 @@ function addWinLoss({ company_name, outcome, stage_reached, competitor, reason, 
 }
 
 async function getPerformanceSummary() {
-  const [activities, pipeline, prospects, winloss] = await Promise.all([
-    getActivities(), getPipelineMetrics(), getProspectCount(), getWinLoss()
+  const [activities, stages, funnel, prospects, winloss] = await Promise.all([
+    getActivities(), getPipelineStages(), getFunnelMetrics(), getProspectCount(), getWinLoss()
   ]);
 
   const now = new Date();
@@ -114,22 +181,29 @@ async function getPerformanceSummary() {
   weekStart.setDate(now.getDate() - now.getDay());
   const weekStartStr = weekStart.toISOString().slice(0, 10);
 
-  const thisWeek = activities.filter(a => a.date >= weekStartStr);
+  const thisWeek       = activities.filter(a => a.date >= weekStartStr);
   const callsThisWeek  = thisWeek.filter(a => a.type === 'call').length;
   const emailsThisWeek = thisWeek.filter(a => a.type === 'email').length;
-  const demosBooked    = (pipeline.demo_booked || 0) + (pipeline.closed_won || 0);
-  const pipelineValue  = Object.values(pipeline).reduce((s, v) => s + v, 0) * 72000; // ~$72k avg annual freight spend for Flexport mid-market SMB
+
+  // Demos booked KPI = funnel demoBooked (covers pipeline + activities + win_loss)
+  const demosBooked = funnel.demoBooked;
+
+  // Pipeline value: use actual won deal values when available, otherwise estimate from pipeline size
+  const wonValue    = winloss.filter(r => r.outcome === 'won').reduce((s, r) => s + (r.deal_value || 0), 0);
+  const pipelineValue = wonValue > 0
+    ? wonValue + funnel.totalPipeline * 72000
+    : funnel.totalPipeline * 72000;
 
   return {
     kpis: { callsThisWeek, emailsThisWeek, demosBooked, pipelineValue },
     activities,
     pipeline: {
       totalProspects: prospects,
-      totalPipeline:  Object.values(pipeline).reduce((s, v) => s + v, 0),
-      calledPlus:     (pipeline.called || 0) + (pipeline.demo_booked || 0) + (pipeline.closed_won || 0) + (pipeline.closed_lost || 0),
-      demoBooked:     pipeline.demo_booked || 0,
-      closedWon:      pipeline.closed_won  || 0,
-      byStage:        pipeline
+      totalPipeline:  funnel.totalPipeline,
+      calledPlus:     funnel.calledPlus,
+      demoBooked:     funnel.demoBooked,
+      closedWon:      funnel.closedWon,
+      byStage:        stages,
     },
     winLoss: winloss
   };
