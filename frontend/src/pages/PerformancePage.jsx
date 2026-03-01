@@ -734,14 +734,46 @@ const ACTIVITY_TYPE_META = {
   linkedin: { color: '#f59e0b', label: 'LinkedIn' },
 };
 
+function getTodayEST() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+}
+
+function getMsUntilMidnightEST() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false,
+  }).formatToParts(now);
+  const h = parseInt(parts.find(p => p.type === 'hour').value);
+  const m = parseInt(parts.find(p => p.type === 'minute').value);
+  const s = parseInt(parts.find(p => p.type === 'second').value);
+  const secsElapsed = h * 3600 + m * 60 + s;
+  return (86400 - secsElapsed) * 1000;
+}
+
 function RecentActivityFeed({ activities }) {
-  const sorted = [...activities].sort((a, b) => {
-    if (b.date !== a.date) return b.date.localeCompare(a.date);
-    return (b.id || 0) - (a.id || 0);
-  });
+  const [, tick] = useState(0);
+
+  // Re-render at midnight EST each day so the date filter resets automatically
+  useEffect(() => {
+    let timer;
+    function schedule() {
+      timer = setTimeout(() => {
+        tick(n => n + 1);
+        schedule(); // schedule next midnight
+      }, getMsUntilMidnightEST());
+    }
+    schedule();
+    return () => clearTimeout(timer);
+  }, []);
+
+  const todayEST = getTodayEST();
+  const sorted = activities
+    .filter(a => a.date === todayEST)
+    .sort((a, b) => (b.id || 0) - (a.id || 0));
 
   if (sorted.length === 0) {
-    return <div className="raf-empty">No activities logged yet — use Log Activity to get started</div>;
+    return <div className="raf-empty">No activities logged today — use Log Activity to get started</div>;
   }
 
   return (
@@ -1027,7 +1059,7 @@ export default function PerformancePage() {
           <div className="perf-card raf-card">
             <div className="panel-header">
               <span className="panel-title">Recent Activity</span>
-              <span className="panel-sub">{activities.length} logged</span>
+              <span className="panel-sub">today · resets midnight EST</span>
             </div>
             <RecentActivityFeed activities={activities} />
           </div>
