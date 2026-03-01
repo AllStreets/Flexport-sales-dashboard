@@ -16,7 +16,7 @@
   transition: color 0.15s;
 }
 .menu-toggle:hover { color: #f1f5f9; }
-.app-logo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: #2563EB; letter-spacing: 0.05em; }
+.app-logo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: #2563EB; letter-spacing: 0.05em; text-decoration: none; cursor: pointer; }
 .app-sub { font-size: 11px; color: #475569; }
 
 .ports-row { display: flex; gap: 14px; overflow-x: auto; flex: 1; align-items: center; }

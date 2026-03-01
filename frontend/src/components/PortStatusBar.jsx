@@ -1,5 +1,6 @@
 // frontend/src/components/PortStatusBar.jsx
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { RiSwordLine, RiKanbanView, RiMenuLine } from 'react-icons/ri';
 import './PortStatusBar.css';
 
@@ -22,7 +23,7 @@ export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onM
     <header className="port-status-bar">
       <div className="bar-left">
         <button className="menu-toggle" onClick={onMenuToggle} aria-label="Toggle sidebar"><RiMenuLine size={18} /></button>
-        <span className="app-logo">FLEXPORT SDR</span>
+        <Link to="/" className="app-logo">FLEXPORT SDR</Link>
         <span className="app-sub">Intelligence Hub</span>
       </div>
 
