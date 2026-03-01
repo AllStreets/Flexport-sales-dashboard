@@ -111,12 +111,20 @@
   letter-spacing: 0.05em;
 }
 
-/* ── ROW 2: Left (Heatmap+Cadence) | Right (FR+PV+QA) ───────────────────────── */
+/* ── ROW 2: Left (Heatmap+Cadence+Feed) | Right (FR+PV+QA) ──────────────────── */
 .row2-grid {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
+}
+
+/* Left column — flex column, stretches to match right column height */
+.perf-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
 }
 
 /* Right column container */
@@ -433,12 +441,7 @@
   cursor: not-allowed;
 }
 
-/* ── Left column stacker ─────────────────────────────────────────────────────── */
-.perf-left-col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* .perf-left-col defined above in row2-grid section */
 
 /* ── 7-Day Outreach Cadence Heatmap ──────────────────────────────────────────── */
 .och-wrap {
@@ -1139,4 +1142,108 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* ── Recent Activity Feed ────────────────────────────────────────────────────── */
+
+/* Card modifier — grows to fill remaining left-column height */
+.raf-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 140px;
+}
+
+.raf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.raf-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.raf-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.raf-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.raf-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.raf-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.raf-type {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.raf-company {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  color: #e2e8f0;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.raf-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #334155;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.raf-notes {
+  margin: 3px 0 0 0;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.raf-empty {
+  font-size: 11px;
+  color: #334155;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 16px 0;
+  text-align: center;
 }

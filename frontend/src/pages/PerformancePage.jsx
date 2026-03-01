@@ -726,6 +726,46 @@ function OutreachCadenceHeatmap({ activities }) {
   );
 }
 
+// ── Recent Activity Feed ──────────────────────────────────────────────────────
+const ACTIVITY_TYPE_META = {
+  call:     { color: '#00d4ff', label: 'Call' },
+  email:    { color: '#8b5cf6', label: 'Email' },
+  demo:     { color: '#10b981', label: 'Demo' },
+  linkedin: { color: '#f59e0b', label: 'LinkedIn' },
+};
+
+function RecentActivityFeed({ activities }) {
+  const sorted = [...activities].sort((a, b) => {
+    if (b.date !== a.date) return b.date.localeCompare(a.date);
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  if (sorted.length === 0) {
+    return <div className="raf-empty">No activities logged yet — use Log Activity to get started</div>;
+  }
+
+  return (
+    <div className="raf-list">
+      {sorted.map((a, i) => {
+        const meta = ACTIVITY_TYPE_META[a.type] || { color: '#64748b', label: a.type };
+        return (
+          <div key={i} className="raf-row">
+            <span className="raf-dot" style={{ background: meta.color }} />
+            <div className="raf-content">
+              <div className="raf-meta">
+                <span className="raf-type" style={{ color: meta.color }}>{meta.label}</span>
+                {a.company_name && <span className="raf-company">{a.company_name}</span>}
+                <span className="raf-date">{a.date}</span>
+              </div>
+              {a.notes?.trim() && <p className="raf-notes">{a.notes}</p>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Stage meta shared across both new tiles ───────────────────────────────────
 const STAGE_META = {
   new:          { label: 'New',          color: '#94a3b8' },
@@ -983,6 +1023,13 @@ export default function PerformancePage() {
               <span className="panel-sub">outreach by type · last 7 days</span>
             </div>
             <OutreachCadenceHeatmap activities={activities} />
+          </div>
+          <div className="perf-card raf-card">
+            <div className="panel-header">
+              <span className="panel-title">Recent Activity</span>
+              <span className="panel-sub">{activities.length} logged</span>
+            </div>
+            <RecentActivityFeed activities={activities} />
           </div>
         </div>
 
