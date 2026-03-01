@@ -978,9 +978,40 @@ export default function PerformancePage() {
           <OutreachStats activities={activities} winLossRecords={winLossRecords} />
         </div>
 
-        {/* Col 2: Win/Loss form */}
-        <div className="perf-card wl-form-card">
-          <WinLossForm onAdded={load} />
+        {/* Col 2: Quota Attainment */}
+        <div className="perf-card quota-panel">
+          <div className="panel-header">
+            <span className="panel-title">Quota Attainment</span>
+          </div>
+          <QuotaRing pct={attainment} />
+          <div className="quota-targets">
+            <div className="qt-row">
+              <span style={{ color: '#00d4ff' }}>Calls</span>
+              <div className="qt-bar-bg">
+                <div className="qt-bar" style={{ width: `${callPct}%`, background: '#00d4ff' }} />
+              </div>
+              <span className="qt-val">{kpis.callsThisWeek || 0}<span className="qt-max">/{QUOTA.calls}</span></span>
+            </div>
+            <div className="qt-row">
+              <span style={{ color: '#8b5cf6' }}>Emails</span>
+              <div className="qt-bar-bg">
+                <div className="qt-bar" style={{ width: `${emailPct}%`, background: '#8b5cf6' }} />
+              </div>
+              <span className="qt-val">{kpis.emailsThisWeek || 0}<span className="qt-max">/{QUOTA.emails}</span></span>
+            </div>
+            <div className="qt-row">
+              <span style={{ color: '#10b981' }}>Demos</span>
+              <div className="qt-bar-bg">
+                <div className="qt-bar" style={{ width: `${demoPct}%`, background: '#10b981' }} />
+              </div>
+              <span className="qt-val">{kpis.demosBooked || 0}<span className="qt-max">/{QUOTA.demos}</span></span>
+            </div>
+          </div>
+          <WeeklyTable activities={activities} />
+          <button className="btn-accent log-activity-btn" onClick={() => setShowLogModal(true)}>
+            <RiAddLine size={15} />
+            Log Activity
+          </button>
         </div>
 
         {/* Col 3: Win/Loss chart + records */}
@@ -1057,40 +1088,9 @@ export default function PerformancePage() {
           <ConversionFunnel pipeline={pipeline} />
         </div>
 
-        {/* Right — Quota + Weekly breakdown */}
-        <div className="perf-card quota-panel">
-          <div className="panel-header">
-            <span className="panel-title">Quota Attainment</span>
-          </div>
-          <QuotaRing pct={attainment} />
-          <div className="quota-targets">
-            <div className="qt-row">
-              <span style={{ color: '#00d4ff' }}>Calls</span>
-              <div className="qt-bar-bg">
-                <div className="qt-bar" style={{ width: `${callPct}%`, background: '#00d4ff' }} />
-              </div>
-              <span className="qt-val">{kpis.callsThisWeek || 0}<span className="qt-max">/{QUOTA.calls}</span></span>
-            </div>
-            <div className="qt-row">
-              <span style={{ color: '#8b5cf6' }}>Emails</span>
-              <div className="qt-bar-bg">
-                <div className="qt-bar" style={{ width: `${emailPct}%`, background: '#8b5cf6' }} />
-              </div>
-              <span className="qt-val">{kpis.emailsThisWeek || 0}<span className="qt-max">/{QUOTA.emails}</span></span>
-            </div>
-            <div className="qt-row">
-              <span style={{ color: '#10b981' }}>Demos</span>
-              <div className="qt-bar-bg">
-                <div className="qt-bar" style={{ width: `${demoPct}%`, background: '#10b981' }} />
-              </div>
-              <span className="qt-val">{kpis.demosBooked || 0}<span className="qt-max">/{QUOTA.demos}</span></span>
-            </div>
-          </div>
-          <WeeklyTable activities={activities} />
-          <button className="btn-accent log-activity-btn" onClick={() => setShowLogModal(true)}>
-            <RiAddLine size={15} />
-            Log Activity
-          </button>
+        {/* Right — Win/Loss form */}
+        <div className="perf-card wl-form-card">
+          <WinLossForm onAdded={load} />
         </div>
       </div>
 
