@@ -5,9 +5,9 @@ import './Sidebar.css';
 
 const NAV = [
   { to: '/',            Icon: RiGlobalLine,          label: 'Home'          },
-  { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intel'   },
-  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard' },
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'    },
+  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard' },
+  { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intel'   },
   { to: '/tariff',      Icon: RiPercentLine,          label: 'Tariff Calc'   },
 ];
 
