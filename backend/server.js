@@ -551,12 +551,20 @@ app.get('/api/fx-rates', async (req, res) => {
     const pairs = [
       { pair: 'USD/CNY', symbol: 'CNY', note: 'China Yuan' },
       { pair: 'USD/EUR', symbol: 'EUR', note: 'Euro' },
+      { pair: 'USD/CAD', symbol: 'CAD', note: 'Canadian Dollar' },
+      { pair: 'USD/MXN', symbol: 'MXN', note: 'Mexican Peso' },
+      { pair: 'USD/JPY', symbol: 'JPY', note: 'Japanese Yen' },
+      { pair: 'USD/KRW', symbol: 'KRW', note: 'Korean Won' },
       { pair: 'USD/VND', symbol: 'VND', note: 'Vietnam Dong' },
       { pair: 'USD/INR', symbol: 'INR', note: 'Indian Rupee' },
-      { pair: 'USD/MXN', symbol: 'MXN', note: 'Mexican Peso' },
-      { pair: 'USD/KRW', symbol: 'KRW', note: 'Korean Won' },
-      { pair: 'USD/JPY', symbol: 'JPY', note: 'Japanese Yen' },
+      { pair: 'USD/TWD', symbol: 'TWD', note: 'Taiwan Dollar' },
       { pair: 'USD/SGD', symbol: 'SGD', note: 'Singapore Dollar' },
+      { pair: 'USD/HKD', symbol: 'HKD', note: 'Hong Kong Dollar' },
+      { pair: 'USD/MYR', symbol: 'MYR', note: 'Malaysian Ringgit' },
+      { pair: 'USD/THB', symbol: 'THB', note: 'Thai Baht' },
+      { pair: 'USD/GBP', symbol: 'GBP', note: 'British Pound' },
+      { pair: 'USD/AUD', symbol: 'AUD', note: 'Australian Dollar' },
+      { pair: 'USD/BRL', symbol: 'BRL', note: 'Brazilian Real' },
     ];
 
     // Yesterday's date string for historical comparison
@@ -566,7 +574,7 @@ app.get('/api/fx-rates', async (req, res) => {
     // Fetch current rates (user key) + yesterday's rates (frankfurter, free, no key)
     const [todayRes, yestRes] = await Promise.allSettled([
       axios.get(`https://v6.exchangerate-api.com/v6/${key}/latest/USD`),
-      axios.get(`https://api.frankfurter.app/${yStr}?from=USD&to=CNY,EUR,INR,MXN,KRW,JPY,SGD`),
+      axios.get(`https://api.frankfurter.app/${yStr}?from=USD&to=CNY,EUR,CAD,MXN,JPY,KRW,INR,TWD,SGD,HKD,MYR,THB,GBP,AUD,BRL`),
     ]);
 
     const raw = todayRes.status === 'fulfilled' ? (todayRes.value.data.conversion_rates || {}) : {};

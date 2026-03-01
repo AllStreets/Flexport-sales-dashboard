@@ -69,10 +69,20 @@ const CONTAINER_RATES = [
 const FX_RATES = [
   { pair: 'USD/CNY', rate: 7.32,    pct: +0.12,  note: 'China Yuan' },
   { pair: 'USD/EUR', rate: 0.93,    pct: -0.08,  note: 'Euro' },
-  { pair: 'USD/VND', rate: 25_450,  pct: +0.22,  note: 'Vietnam Dong' },
-  { pair: 'USD/INR', rate: 84.2,    pct: +0.15,  note: 'Indian Rupee' },
+  { pair: 'USD/CAD', rate: 1.36,    pct: -0.05,  note: 'Canadian Dollar' },
   { pair: 'USD/MXN', rate: 20.4,    pct: -0.31,  note: 'Mexican Peso' },
+  { pair: 'USD/JPY', rate: 156.0,   pct: +0.04,  note: 'Japanese Yen' },
   { pair: 'USD/KRW', rate: 1_382,   pct: +0.09,  note: 'Korean Won' },
+  { pair: 'USD/VND', rate: 25_450,  pct: +0.00,  note: 'Vietnam Dong' },
+  { pair: 'USD/INR', rate: 84.2,    pct: +0.15,  note: 'Indian Rupee' },
+  { pair: 'USD/TWD', rate: 32.1,    pct: -0.02,  note: 'Taiwan Dollar' },
+  { pair: 'USD/SGD', rate: 1.34,    pct: -0.06,  note: 'Singapore Dollar' },
+  { pair: 'USD/HKD', rate: 7.82,    pct: +0.01,  note: 'Hong Kong Dollar' },
+  { pair: 'USD/MYR', rate: 4.71,    pct: +0.08,  note: 'Malaysian Ringgit' },
+  { pair: 'USD/THB', rate: 35.2,    pct: -0.11,  note: 'Thai Baht' },
+  { pair: 'USD/GBP', rate: 0.79,    pct: -0.03,  note: 'British Pound' },
+  { pair: 'USD/AUD', rate: 1.55,    pct: +0.07,  note: 'Australian Dollar' },
+  { pair: 'USD/BRL', rate: 5.12,    pct: +0.18,  note: 'Brazilian Real' },
 ];
 
 const IMPORT_ORIGINS = [
@@ -84,6 +94,16 @@ const IMPORT_ORIGINS = [
   { country: 'Vietnam',     pct: 3.9,  color: '#60a5fa' },
   { country: 'South Korea', pct: 3.8,  color: '#34d399' },
   { country: 'Taiwan',      pct: 3.4,  color: '#fb923c' },
+  { country: 'Ireland',     pct: 3.2,  color: '#2dd4bf' },
+  { country: 'India',       pct: 2.8,  color: '#f97316' },
+  { country: 'Italy',       pct: 2.2,  color: '#84cc16' },
+  { country: 'Switzerland', pct: 2.0,  color: '#94a3b8' },
+  { country: 'Malaysia',    pct: 2.0,  color: '#38bdf8' },
+  { country: 'Thailand',    pct: 1.8,  color: '#fbbf24' },
+  { country: 'France',      pct: 1.7,  color: '#818cf8' },
+  { country: 'UK',          pct: 1.6,  color: '#c084fc' },
+  { country: 'Indonesia',   pct: 1.4,  color: '#fb7185' },
+  { country: 'Brazil',      pct: 1.3,  color: '#4ade80' },
 ];
 
 const POLICY_CALENDAR = [

@@ -126,7 +126,7 @@
 /* ── Import origins ──────────────────────────────────────────────────────────── */
 .origins-list { display: flex; flex-direction: column; gap: 7px; }
 .origin-row { display: flex; align-items: center; gap: 8px; }
-.origin-country { font-size: 11px; color: #94a3b8; width: 82px; flex-shrink: 0; }
+.origin-country { font-size: 11px; color: #94a3b8; width: 96px; flex-shrink: 0; }
 .origin-bar-wrap {
   flex: 1; height: 5px; background: rgba(255,255,255,0.05);
   border-radius: 3px; overflow: hidden;
