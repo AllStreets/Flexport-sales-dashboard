@@ -796,7 +796,7 @@ function FollowupRadar({ refreshKey }) {
 }
 
 // ── Pipeline Velocity ─────────────────────────────────────────────────────────
-function PipelineVelocity() {
+function PipelineVelocity({ refreshKey }) {
   const [stages, setStages] = useState(null);
 
   useEffect(() => {
@@ -804,7 +804,7 @@ function PipelineVelocity() {
       .then(r => r.json())
       .then(setStages)
       .catch(() => setStages([]));
-  }, []);
+  }, [refreshKey]);
 
   if (!stages) return <div className="fr-empty">Loading...</div>;
 
@@ -962,7 +962,7 @@ export default function PerformancePage() {
             <span className="panel-title">Pipeline Velocity</span>
             <span className="panel-sub">avg days per stage</span>
           </div>
-          <PipelineVelocity />
+          <PipelineVelocity refreshKey={radarKey} />
         </div>
       </div>
 
