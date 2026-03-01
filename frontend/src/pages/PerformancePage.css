@@ -111,10 +111,25 @@
   letter-spacing: 0.05em;
 }
 
-/* ── Main 3-column ───────────────────────────────────────────────────────────── */
-.perf-main {
+/* ── ROW 2: Left (Heatmap+Cadence) | Right (FR+PV+QA) ───────────────────────── */
+.row2-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1.4fr 1.2fr;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Right column container */
+.perf-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Follow-up Radar + Pipeline Velocity side by side */
+.fr-pv-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
 }
@@ -516,13 +531,7 @@
   line-height: 1;
 }
 
-/* ── Mid Row (Follow-up Radar + Pipeline Velocity) ───────────────────────────── */
-.mid-row {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 16px;
-  align-items: start;
-}
+/* ── (legacy mid-row removed — FR+PV now in fr-pv-row inside row2-grid) ──────── */
 
 /* ── Follow-up Radar ─────────────────────────────────────────────────────────── */
 .fr-wrap {
@@ -792,10 +801,10 @@
   flex-shrink: 0;
 }
 
-/* ── Win/Loss Section ────────────────────────────────────────────────────────── */
-.winloss-section {
+/* ── ROW 3: Outreach Stats | Win/Loss Chart+Table | Log Win/Loss ─────────────── */
+.row3-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1.4fr 1.2fr;
+  grid-template-columns: 1fr 1.6fr 0.9fr;
   gap: 16px;
   align-items: start;
 }

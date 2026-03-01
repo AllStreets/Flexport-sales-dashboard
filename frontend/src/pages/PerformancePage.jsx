@@ -965,26 +965,85 @@ export default function PerformancePage() {
         />
       </div>
 
-      {/* ── Follow-up Radar + Pipeline Velocity ───────────────────────── */}
-      <div className="mid-row">
-        <div className="perf-card">
-          <div className="panel-header">
-            <span className="panel-title">Follow-up Radar</span>
-            <span className="panel-sub">pipeline companies overdue for contact</span>
+      {/* ── ROW 2: Heatmap+Cadence (left) | FR+PV+QA (right) ─────────── */}
+      <div className="row2-grid">
+
+        {/* Left: Activity Heatmap + 7-Day Cadence stacked */}
+        <div className="perf-left-col">
+          <div className="perf-card heatmap-panel">
+            <div className="panel-header">
+              <span className="panel-title">Activity Heatmap</span>
+              <span className="panel-sub">{activities.length} total logged</span>
+            </div>
+            <ActivityHeatmap activities={activities} />
           </div>
-          <FollowupRadar refreshKey={radarKey} />
+          <div className="perf-card">
+            <div className="panel-header">
+              <span className="panel-title">7-Day Cadence</span>
+              <span className="panel-sub">outreach by type · last 7 days</span>
+            </div>
+            <OutreachCadenceHeatmap activities={activities} />
+          </div>
         </div>
-        <div className="perf-card">
-          <div className="panel-header">
-            <span className="panel-title">Pipeline Velocity</span>
-            <span className="panel-sub">avg days per stage</span>
+
+        {/* Right: Follow-up Radar + Pipeline Velocity (top), Quota Attainment (bottom) */}
+        <div className="perf-right-col">
+          <div className="fr-pv-row">
+            <div className="perf-card">
+              <div className="panel-header">
+                <span className="panel-title">Follow-up Radar</span>
+                <span className="panel-sub">pipeline companies overdue for contact</span>
+              </div>
+              <FollowupRadar refreshKey={radarKey} />
+            </div>
+            <div className="perf-card">
+              <div className="panel-header">
+                <span className="panel-title">Pipeline Velocity</span>
+                <span className="panel-sub">avg days per stage</span>
+              </div>
+              <PipelineVelocity refreshKey={radarKey} />
+            </div>
           </div>
-          <PipelineVelocity refreshKey={radarKey} />
+
+          <div className="perf-card quota-panel">
+            <div className="panel-header">
+              <span className="panel-title">Quota Attainment</span>
+            </div>
+            <QuotaRing pct={attainment} />
+            <div className="quota-targets">
+              <div className="qt-row">
+                <span style={{ color: '#00d4ff' }}>Calls</span>
+                <div className="qt-bar-bg">
+                  <div className="qt-bar" style={{ width: `${callPct}%`, background: '#00d4ff' }} />
+                </div>
+                <span className="qt-val">{kpis.callsThisWeek || 0}<span className="qt-max">/{QUOTA.calls}</span></span>
+              </div>
+              <div className="qt-row">
+                <span style={{ color: '#8b5cf6' }}>Emails</span>
+                <div className="qt-bar-bg">
+                  <div className="qt-bar" style={{ width: `${emailPct}%`, background: '#8b5cf6' }} />
+                </div>
+                <span className="qt-val">{kpis.emailsThisWeek || 0}<span className="qt-max">/{QUOTA.emails}</span></span>
+              </div>
+              <div className="qt-row">
+                <span style={{ color: '#10b981' }}>Demos</span>
+                <div className="qt-bar-bg">
+                  <div className="qt-bar" style={{ width: `${demoPct}%`, background: '#10b981' }} />
+                </div>
+                <span className="qt-val">{kpis.demosBooked || 0}<span className="qt-max">/{QUOTA.demos}</span></span>
+              </div>
+            </div>
+            <WeeklyTable activities={activities} />
+            <button className="btn-accent log-activity-btn" onClick={() => setShowLogModal(true)}>
+              <RiAddLine size={15} />
+              Log Activity
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Win / Loss ────────────────────────────────────────────────── */}
-      <div className="winloss-section">
+      {/* ── ROW 3: Outreach Stats | Win/Loss Chart+Table | Log Win/Loss ── */}
+      <div className="row3-grid">
 
         {/* Col 1: Outreach Stats */}
         <div className="perf-card">
@@ -995,49 +1054,12 @@ export default function PerformancePage() {
           <OutreachStats activities={activities} winLossRecords={winLossRecords} />
         </div>
 
-        {/* Col 2: Quota Attainment */}
-        <div className="perf-card quota-panel">
-          <div className="panel-header">
-            <span className="panel-title">Quota Attainment</span>
-          </div>
-          <QuotaRing pct={attainment} />
-          <div className="quota-targets">
-            <div className="qt-row">
-              <span style={{ color: '#00d4ff' }}>Calls</span>
-              <div className="qt-bar-bg">
-                <div className="qt-bar" style={{ width: `${callPct}%`, background: '#00d4ff' }} />
-              </div>
-              <span className="qt-val">{kpis.callsThisWeek || 0}<span className="qt-max">/{QUOTA.calls}</span></span>
-            </div>
-            <div className="qt-row">
-              <span style={{ color: '#8b5cf6' }}>Emails</span>
-              <div className="qt-bar-bg">
-                <div className="qt-bar" style={{ width: `${emailPct}%`, background: '#8b5cf6' }} />
-              </div>
-              <span className="qt-val">{kpis.emailsThisWeek || 0}<span className="qt-max">/{QUOTA.emails}</span></span>
-            </div>
-            <div className="qt-row">
-              <span style={{ color: '#10b981' }}>Demos</span>
-              <div className="qt-bar-bg">
-                <div className="qt-bar" style={{ width: `${demoPct}%`, background: '#10b981' }} />
-              </div>
-              <span className="qt-val">{kpis.demosBooked || 0}<span className="qt-max">/{QUOTA.demos}</span></span>
-            </div>
-          </div>
-          <WeeklyTable activities={activities} />
-          <button className="btn-accent log-activity-btn" onClick={() => setShowLogModal(true)}>
-            <RiAddLine size={15} />
-            Log Activity
-          </button>
-        </div>
-
-        {/* Col 3: Win/Loss chart + records */}
+        {/* Col 2: Win/Loss chart + records */}
         <div className="perf-card wl-data-card">
           <div className="panel-header">
             <span className="panel-title">Win / Loss by Month</span>
           </div>
           <WinLossChart records={winLossRecords} />
-
           <div className="wl-table-wrap">
             <table className="wl-table">
               <thead>
@@ -1075,39 +1097,8 @@ export default function PerformancePage() {
             </table>
           </div>
         </div>
-      </div>
 
-      {/* ── Activity Heatmap · Funnel · Quota ─────────────────────────── */}
-      <div className="perf-main">
-
-        {/* Left — stacked: Annual Heatmap + 7-Day Cadence */}
-        <div className="perf-left-col">
-          <div className="perf-card heatmap-panel">
-            <div className="panel-header">
-              <span className="panel-title">Activity Heatmap</span>
-              <span className="panel-sub">{activities.length} total logged</span>
-            </div>
-            <ActivityHeatmap activities={activities} />
-          </div>
-
-          <div className="perf-card">
-            <div className="panel-header">
-              <span className="panel-title">7-Day Cadence</span>
-              <span className="panel-sub">outreach by type · last 7 days</span>
-            </div>
-            <OutreachCadenceHeatmap activities={activities} />
-          </div>
-        </div>
-
-        {/* Center — Funnel */}
-        <div className="perf-card funnel-panel">
-          <div className="panel-header">
-            <span className="panel-title">Conversion Funnel</span>
-          </div>
-          <ConversionFunnel pipeline={pipeline} />
-        </div>
-
-        {/* Right — Win/Loss form */}
+        {/* Col 3: Log Win/Loss form */}
         <div className="perf-card wl-form-card">
           <WinLossForm onAdded={load} />
         </div>
