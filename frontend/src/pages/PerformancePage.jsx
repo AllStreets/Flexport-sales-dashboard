@@ -618,6 +618,95 @@ function WeeklyTable({ activities }) {
   );
 }
 
+// ── Hex → rgb helper ──────────────────────────────────────────────────────────
+function hexRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `${r},${g},${b}`;
+}
+
+// ── 7-Day Outreach Cadence Heatmap ────────────────────────────────────────────
+function OutreachCadenceHeatmap({ activities }) {
+  const TYPES = [
+    { key: 'call',     label: 'Calls',    color: '#00d4ff' },
+    { key: 'email',    label: 'Emails',   color: '#8b5cf6' },
+    { key: 'demo',     label: 'Demos',    color: '#10b981' },
+    { key: 'linkedin', label: 'LinkedIn', color: '#f59e0b' },
+  ];
+
+  const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return { date: localDateStr(d), label: DAY_LABELS[d.getDay()], isToday: i === 6 };
+  });
+
+  // Build count matrix [type][date]
+  const matrix = {};
+  TYPES.forEach(t => {
+    matrix[t.key] = {};
+    days.forEach(d => { matrix[t.key][d.date] = 0; });
+  });
+  activities.forEach(a => {
+    if (matrix[a.type] && matrix[a.type][a.date] !== undefined) {
+      matrix[a.type][a.date]++;
+    }
+  });
+
+  // Weekly totals per type
+  const totals = {};
+  TYPES.forEach(t => {
+    totals[t.key] = days.reduce((s, d) => s + matrix[t.key][d.date], 0);
+  });
+
+  const maxCount = Math.max(1, ...TYPES.flatMap(t => days.map(d => matrix[t.key][d.date])));
+
+  return (
+    <div className="och-wrap">
+      <div className="och-grid">
+        {/* Header row */}
+        <div className="och-header-row">
+          <div className="och-corner" />
+          {days.map(d => (
+            <div key={d.date} className={`och-day-header${d.isToday ? ' och-today' : ''}`}>
+              {d.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Type rows */}
+        {TYPES.map(t => (
+          <div key={t.key} className="och-row-contents">
+            <div className="och-type-label" style={{ color: t.color }}>
+              {t.label}
+              <span className="och-type-total" style={{ color: t.color }}>{totals[t.key]}</span>
+            </div>
+            {days.map(d => {
+              const count = matrix[t.key][d.date];
+              const opacity = count === 0 ? 0.05 : 0.12 + (count / maxCount) * 0.76;
+              return (
+                <div
+                  key={d.date}
+                  className={`och-cell${d.isToday ? ' och-cell-today' : ''}`}
+                  style={{
+                    background: `rgba(${hexRgb(t.color)}, ${opacity})`,
+                    border: `1px solid rgba(${hexRgb(t.color)}, ${count > 0 ? 0.28 : 0.06})`,
+                  }}
+                  title={`${t.label} — ${d.date}: ${count}`}
+                >
+                  {count > 0 && <span className="och-count">{count}</span>}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Stage meta shared across both new tiles ───────────────────────────────────
 const STAGE_META = {
   new:          { label: 'New',          color: '#94a3b8' },
@@ -937,13 +1026,23 @@ export default function PerformancePage() {
       {/* ── Activity Heatmap · Funnel · Quota ─────────────────────────── */}
       <div className="perf-main">
 
-        {/* Left — Heatmap */}
-        <div className="perf-card heatmap-panel">
-          <div className="panel-header">
-            <span className="panel-title">Activity Heatmap</span>
-            <span className="panel-sub">{activities.length} total logged</span>
+        {/* Left — stacked: Annual Heatmap + 7-Day Cadence */}
+        <div className="perf-left-col">
+          <div className="perf-card heatmap-panel">
+            <div className="panel-header">
+              <span className="panel-title">Activity Heatmap</span>
+              <span className="panel-sub">{activities.length} total logged</span>
+            </div>
+            <ActivityHeatmap activities={activities} />
           </div>
-          <ActivityHeatmap activities={activities} />
+
+          <div className="perf-card">
+            <div className="panel-header">
+              <span className="panel-title">7-Day Cadence</span>
+              <span className="panel-sub">outreach by type · last 7 days</span>
+            </div>
+            <OutreachCadenceHeatmap activities={activities} />
+          </div>
         </div>
 
         {/* Center — Funnel */}
