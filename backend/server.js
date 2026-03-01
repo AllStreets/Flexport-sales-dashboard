@@ -349,12 +349,33 @@ app.post('/api/route-optimize', (req, res) => {
   const { origin, destination } = req.body;
   // Transit benchmarks based on 2024-2025 ocean freight data (days port-to-port)
   const ROUTES = {
-    'China-US West Coast':    { flexport: 16, industry: 21, costSave: 11, risk: 'medium' },
-    'China-US East Coast':    { flexport: 30, industry: 36, costSave: 9,  risk: 'medium' },
-    'SE Asia-US West Coast':  { flexport: 18, industry: 24, costSave: 13, risk: 'low' },
-    'India-US':               { flexport: 22, industry: 28, costSave: 10, risk: 'low' },
-    'Europe-US East Coast':   { flexport: 12, industry: 16, costSave: 8,  risk: 'low' },
-    'Vietnam-US West Coast':  { flexport: 17, industry: 22, costSave: 13, risk: 'low' },
+    // Trans-Pacific
+    'China-US West Coast':   { flexport: 16, industry: 21, costSave: 11, risk: 'medium' },
+    'China-US East Coast':   { flexport: 30, industry: 36, costSave: 9,  risk: 'medium' },
+    'Vietnam-US West':       { flexport: 17, industry: 22, costSave: 13, risk: 'low'    },
+    'Japan-US West':         { flexport: 12, industry: 16, costSave: 8,  risk: 'low'    },
+    'Korea-US West':         { flexport: 14, industry: 18, costSave: 9,  risk: 'low'    },
+    'Taiwan-US West':        { flexport: 14, industry: 19, costSave: 10, risk: 'low'    },
+    'SE Asia-US East':       { flexport: 25, industry: 31, costSave: 12, risk: 'medium' },
+    'HK-US East':            { flexport: 28, industry: 34, costSave: 9,  risk: 'medium' },
+    // Asia-Europe (Red Sea rerouting via Cape adds transit time)
+    'China-Rotterdam':       { flexport: 28, industry: 38, costSave: 10, risk: 'high'   },
+    'SE Asia-Europe':        { flexport: 25, industry: 34, costSave: 11, risk: 'high'   },
+    // South Asia
+    'India-US West':         { flexport: 22, industry: 28, costSave: 10, risk: 'low'    },
+    'India-US East':         { flexport: 28, industry: 34, costSave: 9,  risk: 'low'    },
+    // Atlantic
+    'Europe-US East':        { flexport: 12, industry: 16, costSave: 8,  risk: 'low'    },
+    'Turkey-Europe':         { flexport: 8,  industry: 12, costSave: 10, risk: 'medium' },
+    // Middle East / Africa
+    'Middle East-Europe':    { flexport: 14, industry: 19, costSave: 11, risk: 'high'   },
+    'Africa-Europe':         { flexport: 18, industry: 24, costSave: 9,  risk: 'medium' },
+    // Americas
+    'Mexico-US South':       { flexport: 4,  industry: 7,  costSave: 14, risk: 'low'    },
+    'Brazil-US East':        { flexport: 14, industry: 19, costSave: 10, risk: 'low'    },
+    'Peru-US West':          { flexport: 16, industry: 21, costSave: 9,  risk: 'low'    },
+    // Australia
+    'Australia-US West':     { flexport: 19, industry: 25, costSave: 10, risk: 'low'    },
   };
   const key = `${origin}-${destination}`;
   const route = ROUTES[key] || ROUTES['China-US West Coast'];

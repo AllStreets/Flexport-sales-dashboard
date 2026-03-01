@@ -108,8 +108,33 @@ const COMMODITIES = [
 ];
 
 const ROUTES = [
-  'China-US West Coast', 'China-US East Coast', 'SE Asia-US West Coast',
-  'India-US', 'Europe-US East Coast', 'Vietnam-US West Coast',
+  // Trans-Pacific
+  'China-US West Coast',
+  'China-US East Coast',
+  'Vietnam-US West',
+  'Japan-US West',
+  'Korea-US West',
+  'Taiwan-US West',
+  'SE Asia-US East',
+  'HK-US East',
+  // Asia-Europe
+  'China-Rotterdam',
+  'SE Asia-Europe',
+  // South Asia
+  'India-US West',
+  'India-US East',
+  // Atlantic
+  'Europe-US East',
+  'Turkey-Europe',
+  // Middle East / Africa
+  'Middle East-Europe',
+  'Africa-Europe',
+  // Americas
+  'Mexico-US South',
+  'Brazil-US East',
+  'Peru-US West',
+  // Australia
+  'Australia-US West',
 ];
 
 // ── Sub-components ────────────────────────────────────────────────────────────
