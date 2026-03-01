@@ -35,17 +35,24 @@ const PORT_REGISTRY = [
   { name: 'Guangzhou/Nansha',     lat: 22.74,  lng: 113.62,  baseline: 3, keywords: ['guangzhou', 'nansha', 'guangzhou port', 'nansha port'] },
   { name: 'Tianjin',              lat: 39.00,  lng: 117.73,  baseline: 3, keywords: ['tianjin', 'xingang', 'tianjin port'] },
   { name: 'Busan',                lat: 35.10,  lng: 129.04,  baseline: 2, keywords: ['busan', 'pusan'] },
-  { name: 'Singapore',            lat: 1.26,   lng: 103.82,  baseline: 3, keywords: ['singapore', 'psa', 'jurong'] },
-  { name: 'Port Klang',           lat: 3.00,   lng: 101.40,  baseline: 2, keywords: ['port klang', 'klang', 'westports', 'northport'] },
-  { name: 'Tanjung Pelepas',      lat: 1.37,   lng: 103.55,  baseline: 2, keywords: ['tanjung pelepas', 'ptp', 'johor'] },
+  // Singapore/Port Klang/Pelepas: massive volume surge as Cape-rerouted vessels concentrate here
+  { name: 'Singapore',            lat: 1.26,   lng: 103.82,  baseline: 6, keywords: ['singapore', 'psa', 'jurong'] },
+  { name: 'Port Klang',           lat: 3.00,   lng: 101.40,  baseline: 5, keywords: ['port klang', 'klang', 'westports', 'northport'] },
+  { name: 'Tanjung Pelepas',      lat: 1.37,   lng: 103.55,  baseline: 5, keywords: ['tanjung pelepas', 'ptp', 'johor'] },
   { name: 'Ho Chi Minh City',     lat: 10.77,  lng: 106.72,  baseline: 5, keywords: ['ho chi minh', 'saigon', 'cat lai', 'hcmc'] },
   { name: 'Hong Kong',            lat: 22.29,  lng: 114.17,  baseline: 3, keywords: ['hong kong', 'kwai tsing', 'stonecutters'] },
 
   // ── Middle East / Europe ───────────────────────────────────────────────────
-  // Jebel Ali: overflow from Red Sea rerouting via Cape; Piraeus: COSCO-driven growth pressure
+  // Jebel Ali: Strait of Hormuz tensions + heavy Cape-reroute call volume; now congested
+  // Aden: active Houthi conflict zone — effectively closed to commercial shipping since late 2023
+  // Salalah: key alternative waystation on Cape reroute, surge in vessel calls
+  // Colombo: critical Cape-reroute transshipment hub, volume surged since Red Sea closure
+  // Singapore/Klang/Pelepas: major bottlenecks — Cape reroute concentrates traffic here
   // Hamburg: labour disputes + low-water Elbe constraints; Felixstowe: chronic UK port congestion
-  { name: 'Jebel Ali',            lat: 25.01,  lng: 55.06,   baseline: 4, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza'] },
-  { name: 'Colombo',              lat: 6.94,   lng: 79.84,   baseline: 2, keywords: ['colombo', 'sri lanka port', 'jict', 'cict'] },
+  { name: 'Jebel Ali',            lat: 25.01,  lng: 55.06,   baseline: 6, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza', 'hormuz'] },
+  { name: 'Aden',                 lat: 12.77,  lng: 45.03,   baseline: 9, keywords: ['aden', 'yemen', 'bab el-mandeb', 'bab-el-mandeb', 'houthi', 'red sea attack'] },
+  { name: 'Salalah',              lat: 16.94,  lng: 54.00,   baseline: 5, keywords: ['salalah', 'oman port', 'pdsa'] },
+  { name: 'Colombo',              lat: 6.94,   lng: 79.84,   baseline: 5, keywords: ['colombo', 'sri lanka port', 'jict', 'cict'] },
   { name: 'Rotterdam',            lat: 51.95,  lng: 4.13,    baseline: 3, keywords: ['rotterdam', 'maasvlakte', 'europoort'] },
   { name: 'Antwerp',              lat: 51.26,  lng: 4.40,    baseline: 3, keywords: ['antwerp', 'port of antwerp', 'antwerp-bruges'] },
   { name: 'Hamburg',              lat: 53.54,  lng: 9.97,    baseline: 5, keywords: ['hamburg', 'burchardkai', 'tollerort'] },
@@ -53,11 +60,13 @@ const PORT_REGISTRY = [
   { name: 'Piraeus',              lat: 37.94,  lng: 23.63,   baseline: 4, keywords: ['piraeus', 'greece port', 'cosco piraeus', 'pct'] },
 
   // ── Africa ─────────────────────────────────────────────────────────────────
-  // Durban: Transnet infrastructure failures + labour strikes = persistent disruption
-  // Port Said: severe traffic spike from Red Sea diversions adding ~2M TEU/yr of rerouted volume
+  // Durban: Transnet infrastructure failures + massive volume surge from Cape reroutes
+  // Port Said: Suez Canal under Houthi threat — security disruption; commercial traffic
+  //   has dropped ~50–70% through canal since 2023. Disruption-level classification.
+  // Tangier Med: now busiest European transshipment hub for Cape-rerouted cargo
   { name: 'Durban',               lat: -29.87, lng: 31.03,   baseline: 8, keywords: ['durban', 'south africa port', 'transnet', 'pier 1'] },
-  { name: 'Tangier Med',          lat: 35.88,  lng: -5.50,   baseline: 2, keywords: ['tangier', 'tanger med', 'morocco port'] },
-  { name: 'Port Said',            lat: 31.26,  lng: 32.30,   baseline: 6, keywords: ['port said', 'suez canal', 'egypt port', 'sczone'] },
+  { name: 'Tangier Med',          lat: 35.88,  lng: -5.50,   baseline: 5, keywords: ['tangier', 'tanger med', 'morocco port'] },
+  { name: 'Port Said',            lat: 31.26,  lng: 32.30,   baseline: 8, keywords: ['port said', 'suez canal', 'egypt port', 'sczone', 'houthi', 'red sea'] },
 
   // ── South America ──────────────────────────────────────────────────────────
   // Santos: chronic dwell times 7–12 days, Brazil customs complexity

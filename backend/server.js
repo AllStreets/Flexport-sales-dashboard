@@ -53,32 +53,39 @@ app.get('/api/prospects/:id', async (req, res) => {
 // ── Globe Data ─────────────────────────────────────
 const SHIPPING_LANES = [
   // ── Trans-Pacific ────────────────────────────────────────────────────────────
-  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 33.7,  dst_lng: -118.2, label: 'China-US West Coast',   weight: 10 },
-  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 40.7,  dst_lng: -74.0,  label: 'China-US East Coast',   weight: 7  },
-  { src_lat: 10.8,  src_lng: 106.7, dst_lat: 33.7,  dst_lng: -118.2, label: 'Vietnam-US West',       weight: 6  },
-  { src_lat: 35.7,  src_lng: 139.7, dst_lat: 33.7,  dst_lng: -118.2, label: 'Japan-US West',         weight: 5  },
-  { src_lat: 35.1,  src_lng: 129.0, dst_lat: 33.7,  dst_lng: -118.2, label: 'Korea-US West',         weight: 5  },
-  { src_lat: 25.0,  src_lng: 121.5, dst_lat: 33.7,  dst_lng: -118.2, label: 'Taiwan-US West',        weight: 4  },
-  { src_lat: 1.35,  src_lng: 103.8, dst_lat: 40.7,  dst_lng: -74.0,  label: 'SE Asia-US East',       weight: 7  },
-  { src_lat: 22.3,  src_lng: 114.2, dst_lat: 40.7,  dst_lng: -74.0,  label: 'HK-US East',            weight: 4  },
+  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 33.7,  dst_lng: -118.2, label: 'China-US West Coast',              weight: 10 },
+  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 40.7,  dst_lng: -74.0,  label: 'China-US East Coast',              weight: 7  },
+  { src_lat: 10.8,  src_lng: 106.7, dst_lat: 33.7,  dst_lng: -118.2, label: 'Vietnam-US West',                  weight: 6  },
+  { src_lat: 35.7,  src_lng: 139.7, dst_lat: 33.7,  dst_lng: -118.2, label: 'Japan-US West',                    weight: 5  },
+  { src_lat: 35.1,  src_lng: 129.0, dst_lat: 33.7,  dst_lng: -118.2, label: 'Korea-US West',                    weight: 5  },
+  { src_lat: 25.0,  src_lng: 121.5, dst_lat: 33.7,  dst_lng: -118.2, label: 'Taiwan-US West',                   weight: 4  },
+  { src_lat: 1.35,  src_lng: 103.8, dst_lat: 40.7,  dst_lng: -74.0,  label: 'SE Asia-US East',                  weight: 7  },
+  { src_lat: 22.3,  src_lng: 114.2, dst_lat: 40.7,  dst_lng: -74.0,  label: 'HK-US East',                       weight: 4  },
   // ── Asia-Europe ──────────────────────────────────────────────────────────────
-  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 51.9,  dst_lng: 4.5,    label: 'China-Rotterdam',       weight: 8  },
-  { src_lat: 10.8,  src_lng: 106.7, dst_lat: 51.9,  dst_lng: 4.5,    label: 'SE Asia-Europe',        weight: 4  },
+  { src_lat: 31.2,  src_lng: 121.5, dst_lat: 51.9,  dst_lng: 4.5,    label: 'China-Rotterdam',                  weight: 8  },
+  { src_lat: 10.8,  src_lng: 106.7, dst_lat: 51.9,  dst_lng: 4.5,    label: 'SE Asia-Europe',                   weight: 4  },
+  // ── Cape of Good Hope Reroute (Red Sea / Suez avoided since Houthi attacks 2023–) ──
+  // Ships that previously transited the Red Sea now go Singapore → Cape → Rotterdam
+  // adding ~10-14 days transit. Split into 2 arcs to visually trace the route.
+  { src_lat: 1.35,  src_lng: 103.8, dst_lat: -34.4, dst_lng: 18.5,   label: 'Cape Reroute: Asia–Cape',          weight: 7  },
+  { src_lat: -34.4, src_lng: 18.5,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Cape Reroute: Cape–Europe',        weight: 7  },
+  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: -34.4, dst_lng: 18.5,   label: 'Cape Reroute: India–Cape',         weight: 5  },
   // ── South Asia-US ────────────────────────────────────────────────────────────
-  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: 33.7,  dst_lng: -118.2, label: 'India-US West',         weight: 5  },
-  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: 40.7,  dst_lng: -74.0,  label: 'India-US East',         weight: 4  },
+  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: 33.7,  dst_lng: -118.2, label: 'India-US West',                    weight: 5  },
+  { src_lat: 19.0,  src_lng: 72.8,  dst_lat: 40.7,  dst_lng: -74.0,  label: 'India-US East',                    weight: 4  },
   // ── Atlantic ─────────────────────────────────────────────────────────────────
-  { src_lat: 51.9,  src_lng: 4.5,   dst_lat: 40.7,  dst_lng: -74.0,  label: 'Europe-US East',        weight: 6  },
-  { src_lat: 41.0,  src_lng: 28.9,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Turkey-Europe',         weight: 3  },
+  { src_lat: 51.9,  src_lng: 4.5,   dst_lat: 40.7,  dst_lng: -74.0,  label: 'Europe-US East',                   weight: 6  },
+  { src_lat: 41.0,  src_lng: 28.9,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Turkey-Europe',                    weight: 3  },
   // ── Middle East / Africa ─────────────────────────────────────────────────────
-  { src_lat: 25.0,  src_lng: 55.1,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Middle East-Europe',    weight: 5  },
-  { src_lat: -29.9, src_lng: 31.0,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Africa-Europe',         weight: 3  },
+  // Middle East-Europe direct lane now at risk — Houthi attacks on Red Sea shipping
+  { src_lat: 25.0,  src_lng: 55.1,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Middle East-Europe (Red Sea Risk)', weight: 4  },
+  { src_lat: -29.9, src_lng: 31.0,  dst_lat: 51.9,  dst_lng: 4.5,    label: 'Africa-Europe',                    weight: 4  },
   // ── Americas ─────────────────────────────────────────────────────────────────
-  { src_lat: 19.4,  src_lng: -99.1, dst_lat: 29.7,  dst_lng: -95.0,  label: 'Mexico-US South',       weight: 5  },
-  { src_lat: -23.9, src_lng: -46.3, dst_lat: 40.7,  dst_lng: -74.0,  label: 'Brazil-US East',        weight: 3  },
-  { src_lat: -12.0, src_lng: -77.1, dst_lat: 33.7,  dst_lng: -118.2, label: 'Peru-US West',          weight: 3  },
+  { src_lat: 19.4,  src_lng: -99.1, dst_lat: 29.7,  dst_lng: -95.0,  label: 'Mexico-US South',                  weight: 5  },
+  { src_lat: -23.9, src_lng: -46.3, dst_lat: 40.7,  dst_lng: -74.0,  label: 'Brazil-US East',                   weight: 3  },
+  { src_lat: -12.0, src_lng: -77.1, dst_lat: 33.7,  dst_lng: -118.2, label: 'Peru-US West',                     weight: 3  },
   // ── Australia ────────────────────────────────────────────────────────────────
-  { src_lat: -33.9, src_lng: 151.2, dst_lat: 33.7,  dst_lng: -118.2, label: 'Australia-US West',     weight: 3  },
+  { src_lat: -33.9, src_lng: 151.2, dst_lat: 33.7,  dst_lng: -118.2, label: 'Australia-US West',                weight: 3  },
 ];
 
 app.get('/api/globe-data', async (req, res) => {
@@ -108,14 +115,21 @@ app.get('/api/globe-data', async (req, res) => {
         { name: 'Guangzhou/Nansha',      lat: 22.74,  lng: 113.62,  status: 'clear',      congestion: 3 },
         { name: 'Tianjin',               lat: 39.00,  lng: 117.73,  status: 'clear',      congestion: 3 },
         { name: 'Busan',                 lat: 35.10,  lng: 129.04,  status: 'clear',      congestion: 2 },
-        { name: 'Singapore',             lat: 1.26,   lng: 103.82,  status: 'clear',      congestion: 3 },
-        { name: 'Port Klang',            lat: 3.00,   lng: 101.40,  status: 'clear',      congestion: 2 },
-        { name: 'Tanjung Pelepas',       lat: 1.37,   lng: 103.55,  status: 'clear',      congestion: 2 },
+        // Singapore/Port Klang: major bottlenecks on Cape reroute; massive volume surge since Red Sea closure
+        { name: 'Singapore',             lat: 1.26,   lng: 103.82,  status: 'congestion', congestion: 6 },
+        { name: 'Port Klang',            lat: 3.00,   lng: 101.40,  status: 'congestion', congestion: 5 },
+        { name: 'Tanjung Pelepas',       lat: 1.37,   lng: 103.55,  status: 'congestion', congestion: 5 },
         { name: 'Ho Chi Minh City',      lat: 10.77,  lng: 106.72,  status: 'congestion', congestion: 5 },
         { name: 'Hong Kong',             lat: 22.29,  lng: 114.17,  status: 'clear',      congestion: 3 },
         // ── Middle East / Europe ──
-        { name: 'Jebel Ali',             lat: 25.01,  lng: 55.06,   status: 'clear',      congestion: 4 },
-        { name: 'Colombo',               lat: 6.94,   lng: 79.84,   status: 'clear',      congestion: 2 },
+        // Jebel Ali: elevated from Hormuz tensions + rerouting overflow as Cape-bound ships call Dubai
+        { name: 'Jebel Ali',             lat: 25.01,  lng: 55.06,   status: 'congestion', congestion: 6 },
+        // Aden: active conflict zone — Houthi attacks, port effectively closed to commercial traffic
+        { name: 'Aden',                  lat: 12.77,  lng: 45.03,   status: 'disruption', congestion: 9 },
+        // Salalah: key alternative hub on Cape reroute, surge in vessel calls since 2024
+        { name: 'Salalah',               lat: 16.94,  lng: 54.00,   status: 'congestion', congestion: 5 },
+        // Colombo: surge in Cape-reroute transshipment; became critical waystation
+        { name: 'Colombo',               lat: 6.94,   lng: 79.84,   status: 'congestion', congestion: 5 },
         { name: 'Rotterdam',             lat: 51.95,  lng: 4.13,    status: 'clear',      congestion: 3 },
         { name: 'Antwerp',               lat: 51.26,  lng: 4.40,    status: 'clear',      congestion: 3 },
         { name: 'Hamburg',               lat: 53.54,  lng: 9.97,    status: 'congestion', congestion: 5 },
@@ -123,8 +137,10 @@ app.get('/api/globe-data', async (req, res) => {
         { name: 'Piraeus',               lat: 37.94,  lng: 23.63,   status: 'clear',      congestion: 4 },
         // ── Africa ──
         { name: 'Durban',                lat: -29.87, lng: 31.03,   status: 'disruption', congestion: 8 },
-        { name: 'Tangier Med',           lat: 35.88,  lng: -5.50,   status: 'clear',      congestion: 2 },
-        { name: 'Port Said',             lat: 31.26,  lng: 32.30,   status: 'congestion', congestion: 6 },
+        // Tangier Med: surge from Cape-rerouted ships; now busiest European transshipment hub
+        { name: 'Tangier Med',           lat: 35.88,  lng: -5.50,   status: 'congestion', congestion: 5 },
+        // Port Said: Suez Canal traffic severely reduced by Houthi threat — security disruption
+        { name: 'Port Said',             lat: 31.26,  lng: 32.30,   status: 'disruption', congestion: 8 },
         // ── South America ──
         { name: 'Santos',                lat: -23.95, lng: -46.33,  status: 'congestion', congestion: 6 },
         { name: 'Callao',                lat: -12.04, lng: -77.14,  status: 'clear',      congestion: 4 },
