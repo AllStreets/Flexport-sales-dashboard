@@ -87,7 +87,7 @@ export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscr
                       <span className="hp-meta">{p.sector} · {p.hq_location}</span>
                     </div>
                     <div className="hp-right">
-                      <span className="hp-score">{p.opp_score}</span>
+                      <span className="hp-score"><span className="hp-score-label">OPP </span>{p.opp_score}</span>
                       {p.pipeline_stage && (
                         <span className="hp-stage" style={{ background: `${STAGE_COLORS[p.pipeline_stage] || '#2563eb'}22`, color: STAGE_COLORS[p.pipeline_stage] || '#2563eb', borderColor: `${STAGE_COLORS[p.pipeline_stage] || '#2563eb'}44` }}>
                           {p.pipeline_stage.replace('_', ' ')}
