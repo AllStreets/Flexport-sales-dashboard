@@ -7,6 +7,7 @@ import TradePage from './pages/TradePage';
 import Account360Page from './pages/Account360Page';
 import PerformancePage from './pages/PerformancePage';
 import MarketMapPage from './pages/MarketMapPage';
+import TariffCalculatorPage from './pages/TariffCalculatorPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
 import PipelineKanban from './components/PipelineKanban';
@@ -81,6 +82,7 @@ export default function App() {
             } />
             <Route path="/performance" element={<PerformancePage />} />
             <Route path="/market" element={<MarketMapPage />} />
+            <Route path="/tariff" element={<TariffCalculatorPage />} />
           </Routes>
         </main>
       </div>

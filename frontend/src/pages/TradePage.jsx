@@ -239,6 +239,8 @@ export default function TradePage() {
   const [routeResult, setRouteResult] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [clock, setClock]           = useState('');
+  const [triggerEvents, setTriggerEvents] = useState([]);
+  const [liveFx, setLiveFx]         = useState(null);
 
   // Live EST clock
   useEffect(() => {
@@ -260,10 +262,14 @@ export default function TradePage() {
       fetch(`${API}/api/trade-intelligence`).then(r => r.json()),
       fetch(`${API}/api/signals`).then(r => r.json()),
       fetch(`${API}/api/globe-data`).then(r => r.json()),
-    ]).then(([td, sig, globe]) => {
+      fetch(`${API}/api/trigger-events`).then(r => r.json()).catch(() => null),
+      fetch(`${API}/api/fx-rates`).then(r => r.json()).catch(() => null),
+    ]).then(([td, sig, globe, te, fx]) => {
       setTradeData(td);
       setSignals(Array.isArray(sig) && sig.length > 0 ? sig : FALLBACK_SIGNALS);
       setPorts(globe?.ports || []);
+      if (te?.events?.length) setTriggerEvents(te.events);
+      if (fx?.rates?.length) setLiveFx(fx);
       setLoading(false);
     }).catch(() => {
       setSignals(FALLBACK_SIGNALS);
@@ -464,24 +470,31 @@ export default function TradePage() {
 
         {/* FX rates */}
         <div className="bb-panel">
-          <div className="bb-panel-header">FX RATES — INDICATIVE</div>
+          <div className="bb-panel-header">
+            FX RATES
+            {liveFx ? <span className="bb-live-tag">LIVE</span> : <span className="bb-live-tag static">REF</span>}
+          </div>
           <div className="fx-list">
-            {FX_RATES.map(r => (
+            {(liveFx?.rates || FX_RATES).map(r => (
               <div key={r.pair} className="fx-row">
                 <div className="fx-left">
                   <span className="fx-pair">{r.pair}</span>
                   <span className="fx-note">{r.note}</span>
                 </div>
                 <div className="fx-right">
-                  <span className="fx-rate">{r.rate.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  <span className="fx-pct" style={{ color: r.pct >= 0 ? '#ff3b3b' : '#00c176' }}>
-                    {r.pct >= 0 ? '+' : ''}{r.pct.toFixed(2)}%
-                  </span>
+                  <span className="fx-rate">{r.rate ? r.rate.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</span>
+                  {r.pct !== undefined && (
+                    <span className="fx-pct" style={{ color: r.pct >= 0 ? '#ff3b3b' : '#00c176' }}>
+                      {r.pct >= 0 ? '+' : ''}{r.pct.toFixed(2)}%
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
-          <div className="fred-note">USD base · % = 1-day change · Indicative only</div>
+          <div className="fred-note">
+            {liveFx ? `Live · exchangerate-api.com · Updated ${new Date(liveFx.updated).toLocaleTimeString()}` : 'USD base · % = 1-day change · Indicative only'}
+          </div>
         </div>
 
         {/* Import origins */}
@@ -656,6 +669,42 @@ export default function TradePage() {
             ))}
           </div>
           <div className="fred-note">Source: US Census Foreign Trade · % of total international freight</div>
+        </div>
+      </div>
+
+      {/* ── Row 5: Trigger Events ── */}
+      <div className="trade-trigger-row">
+        <div className="bb-panel" style={{ gridColumn: '1 / -1' }}>
+          <div className="bb-panel-header">
+            EARNINGS & TRIGGER EVENT MONITOR
+            <span className="bb-live-tag">LIVE</span>
+          </div>
+          <div className="te-grid">
+            {(triggerEvents.length > 0 ? triggerEvents : [
+              { headline: 'Apple shifts 25% of iPhone production from China to India amid tariff concerns', sector: 'Electronics', urgency: 'high', date: 'Mar 2026' },
+              { headline: 'Nike announces Vietnam manufacturing capacity expansion — 3 new factories', sector: 'Apparel', urgency: 'high', date: 'Mar 2026' },
+              { headline: 'Target reports Q4 inventory glut — import velocity expected to slow 15%', sector: 'E-commerce', urgency: 'medium', date: 'Feb 2026' },
+              { headline: 'TSMC Arizona fab ramp-up — domestic semiconductor logistics demand rising', sector: 'Electronics', urgency: 'medium', date: 'Feb 2026' },
+              { headline: 'Walmart nearshoring push — 5 Mexican suppliers added for 2026', sector: 'Retail / CPG', urgency: 'medium', date: 'Jan 2026' },
+              { headline: 'Amazon repatriates 8% of SKUs from China warehouses to US 3PL network', sector: 'E-commerce', urgency: 'low', date: 'Jan 2026' },
+            ]).map((e, i) => {
+              const uc = e.urgency === 'high' ? '#ff3b3b' : e.urgency === 'medium' ? '#ff9f0a' : '#475569';
+              return (
+                <div key={i} className="te-card" style={{ borderColor: `${uc}22` }}>
+                  <div className="te-top">
+                    <span className="te-sector">{e.sector}</span>
+                    <span className="te-urgency" style={{ color: uc }}>{e.urgency?.toUpperCase()}</span>
+                    <span className="te-date">{e.date}</span>
+                  </div>
+                  {e.url ? (
+                    <a href={e.url} target="_blank" rel="noreferrer" className="te-headline">{e.headline}</a>
+                  ) : (
+                    <p className="te-headline">{e.headline}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

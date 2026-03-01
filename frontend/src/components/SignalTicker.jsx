@@ -8,10 +8,15 @@ export default function SignalTicker({ onOpenOutreach }) {
   const [signals, setSignals] = useState([]);
 
   useEffect(() => {
-    fetch(`${API}/api/signals`)
-      .then(r => r.json())
-      .then(d => setSignals(Array.isArray(d) ? d.slice(0, 12) : []))
-      .catch(() => {});
+    const load = () => {
+      fetch(`${API}/api/signals`)
+        .then(r => r.json())
+        .then(d => setSignals(Array.isArray(d) ? d.slice(0, 12) : []))
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 60 * 60 * 1000); // refresh every hour
+    return () => clearInterval(id);
   }, []);
 
   if (!signals.length) return null;

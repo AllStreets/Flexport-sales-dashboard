@@ -227,6 +227,35 @@
   font-weight: 700; color: #475569; width: 28px; text-align: right; flex-shrink: 0;
 }
 
+/* ── Live tag ──────────────────────────────────────────────────────────────── */
+.bb-live-tag {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  color: #10b981; border: 1px solid #10b981;
+  border-radius: 3px; padding: 1px 5px; margin-left: 8px; vertical-align: middle;
+  animation: pulse-badge 2s infinite;
+}
+.bb-live-tag.static { color: #475569; border-color: #475569; animation: none; }
+@keyframes pulse-badge { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ── Trigger Events row ─────────────────────────────────────────────────────── */
+.trade-trigger-row { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+.te-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.te-card {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px;
+  transition: background 0.15s;
+}
+.te-card:hover { background: rgba(255,255,255,0.04); }
+.te-top { display: flex; align-items: center; gap: 8px; }
+.te-sector { font-size: 10px; color: #00d4ff; font-family: 'JetBrains Mono', monospace; }
+.te-urgency { font-size: 9px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+.te-date { font-size: 9px; color: #475569; }
+.te-headline { font-size: 12px; color: #94a3b8; line-height: 1.5; text-decoration: none; display: block; }
+a.te-headline:hover { color: #f1f5f9; }
+
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 1400px) {
   .macro-tiles    { grid-template-columns: repeat(3, 1fr); }

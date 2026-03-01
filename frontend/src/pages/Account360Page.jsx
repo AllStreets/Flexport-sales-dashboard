@@ -243,6 +243,10 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
   const [showCallPrep, setShowCallPrep] = useState(false);
   const [pipelined, setPipelined] = useState(false);
   const [showMapPlan, setShowMapPlan] = useState(false);
+  const [callNotes, setCallNotes] = useState('');
+  const [callIntel, setCallIntel] = useState(null);
+  const [callIntelLoading, setCallIntelLoading] = useState(false);
+  const [callIntelOpen, setCallIntelOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true); setAnalysis(null); setData(null);
@@ -287,6 +291,19 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
     });
     setPipelined(true);
     onAddToPipeline?.();
+  };
+
+  const analyzeCall = async () => {
+    if (!callNotes.trim()) return;
+    setCallIntelLoading(true); setCallIntel(null);
+    try {
+      const r = await fetch(`${API}/api/call-intelligence`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: callNotes, companyName: data?.prospect?.name }),
+      });
+      setCallIntel(await r.json());
+    } catch { }
+    finally { setCallIntelLoading(false); }
   };
 
   const p = data?.prospect;
@@ -405,6 +422,75 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
 
           <ObjectionDrawer prospect={p} analysis={analysis} />
         </div>
+      </div>
+
+      {/* Call Intelligence Parser */}
+      <div className="glass-card ci-panel">
+        <button className="ci-toggle" onClick={() => setCallIntelOpen(o => !o)}>
+          <RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+          Call Intelligence Parser
+          <span className="ci-toggle-hint">{callIntelOpen ? '▲ collapse' : '▼ expand'}</span>
+        </button>
+        {callIntelOpen && (
+          <div className="ci-body">
+            <p className="ci-desc">Paste raw call notes below. AI extracts pain points, objections, signals, and next steps.</p>
+            <textarea
+              className="ci-textarea"
+              placeholder="Paste call notes here..."
+              value={callNotes}
+              onChange={e => setCallNotes(e.target.value)}
+              rows={5}
+            />
+            <button className="btn-primary ci-btn" onClick={analyzeCall} disabled={callIntelLoading || !callNotes.trim()}>
+              {callIntelLoading ? 'Analyzing...' : <><RiFlashlightLine size={12} style={{ verticalAlign: 'middle', marginRight: 5 }} />Analyze Call</>}
+            </button>
+            {callIntel && !callIntel.error && (
+              <div className="ci-results">
+                <div className="ci-result-grid">
+                  {callIntel.pain_points?.length > 0 && (
+                    <div className="ci-result-block">
+                      <div className="ci-result-label">Pain Points</div>
+                      <ul>{callIntel.pain_points.map((p, i) => <li key={i}>{p}</li>)}</ul>
+                    </div>
+                  )}
+                  {callIntel.signals?.length > 0 && (
+                    <div className="ci-result-block">
+                      <div className="ci-result-label">Buying Signals</div>
+                      <ul>{callIntel.signals.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                    </div>
+                  )}
+                  {callIntel.objections?.length > 0 && (
+                    <div className="ci-result-block">
+                      <div className="ci-result-label">Objections</div>
+                      <ul>{callIntel.objections.map((o, i) => <li key={i}>{o}</li>)}</ul>
+                    </div>
+                  )}
+                  {callIntel.next_steps?.length > 0 && (
+                    <div className="ci-result-block">
+                      <div className="ci-result-label">Next Steps</div>
+                      <ul>{callIntel.next_steps.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                    </div>
+                  )}
+                </div>
+                <div className="ci-meta-row">
+                  {callIntel.sentiment && (
+                    <span className="ci-meta-chip" style={{ color: callIntel.sentiment === 'positive' ? '#10b981' : callIntel.sentiment === 'negative' ? '#ef4444' : '#f59e0b' }}>
+                      Sentiment: {callIntel.sentiment}
+                    </span>
+                  )}
+                  {callIntel.deal_probability !== undefined && (
+                    <span className="ci-meta-chip" style={{ color: callIntel.deal_probability >= 60 ? '#10b981' : callIntel.deal_probability >= 30 ? '#f59e0b' : '#ef4444' }}>
+                      Deal probability: {callIntel.deal_probability}%
+                    </span>
+                  )}
+                  {callIntel.recommended_follow_up && (
+                    <span className="ci-followup">{callIntel.recommended_follow_up}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Call Prep Modal */}

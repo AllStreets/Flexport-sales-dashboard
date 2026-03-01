@@ -1,5 +1,6 @@
 // frontend/src/components/SignalFeed.jsx
 import { useState, useEffect } from 'react';
+import { RiSparklingLine } from 'react-icons/ri';
 import './SignalFeed.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -7,6 +8,9 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
   const [signals, setSignals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [matchSignal, setMatchSignal] = useState(null);
+  const [matchResult, setMatchResult] = useState(null);
+  const [matchLoading, setMatchLoading] = useState(false);
 
   useEffect(() => {
     fetch(`${API}/api/signals`)
@@ -14,6 +18,20 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
       .then(data => { setSignals(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  const runSignalMatch = async (signal) => {
+    setMatchSignal(signal);
+    setMatchResult(null);
+    setMatchLoading(true);
+    try {
+      const r = await fetch(`${API}/api/signal-match`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signal: signal.title || signal.headline }),
+      });
+      setMatchResult(await r.json());
+    } catch { setMatchResult({ error: 'Match failed' }); }
+    finally { setMatchLoading(false); }
+  };
 
   const urgencyColor = (score) => {
     if (score >= 8) return '#ef4444';
@@ -52,14 +70,58 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
                 {s.affected_sectors.map((sec, j) => <span key={j} className="signal-tag">{sec}</span>)}
               </div>
             )}
-            {onOpenOutreach && (
-              <button className="signal-outreach-btn" onClick={e => { e.preventDefault(); onOpenOutreach(selectedProspect, null); }}>
-                → Outreach
+            <div className="signal-actions">
+              {onOpenOutreach && (
+                <button className="signal-outreach-btn" onClick={e => { e.preventDefault(); onOpenOutreach(selectedProspect, null); }}>
+                  → Outreach
+                </button>
+              )}
+              <button className="signal-match-btn" onClick={e => { e.preventDefault(); runSignalMatch(s); }}>
+                <RiSparklingLine size={10} style={{ marginRight: 3 }} />AI Match
               </button>
-            )}
+            </div>
           </a>
         ))}
       </div>
+
+      {/* AI Signal Match Panel */}
+      {matchSignal && (
+        <div className="smp-panel">
+          <div className="smp-header">
+            <RiSparklingLine size={12} style={{ marginRight: 6 }} />
+            Signal Intelligence — AI Match
+            <button className="smp-close" onClick={() => { setMatchSignal(null); setMatchResult(null); }}>✕</button>
+          </div>
+          <div className="smp-signal">"{(matchSignal.title || matchSignal.headline)?.slice(0, 100)}..."</div>
+          {matchLoading && <div className="smp-loading">Analyzing signal...</div>}
+          {matchResult && !matchResult.error && (
+            <>
+              {matchResult.affected_sectors?.length > 0 && (
+                <div className="smp-row">
+                  <span className="smp-label">Affected Sectors</span>
+                  <div className="smp-chips">
+                    {matchResult.affected_sectors.map((s, i) => <span key={i} className="smp-chip">{s}</span>)}
+                  </div>
+                </div>
+              )}
+              {matchResult.flexport_angle && (
+                <div className="smp-row">
+                  <span className="smp-label">Flexport Angle</span>
+                  <p className="smp-angle">{matchResult.flexport_angle}</p>
+                </div>
+              )}
+              {matchResult.talking_points?.length > 0 && (
+                <div className="smp-row">
+                  <span className="smp-label">Talking Points</span>
+                  <ul className="smp-points">
+                    {matchResult.talking_points.map((pt, i) => <li key={i}>{pt}</li>)}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

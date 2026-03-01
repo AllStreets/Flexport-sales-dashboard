@@ -11,3 +11,24 @@
   z-index: 10;
 }
 .popup-close { color: #64748b; margin-left: 8px; }
+
+/* Hot Prospects panel */
+.hp-panel { margin-top: 0; }
+.hp-list { display: flex; flex-direction: column; gap: 4px; }
+.hp-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 9px; cursor: pointer;
+  transition: all 0.15s; animation: fadeSlideIn 0.3s both;
+}
+.hp-row:hover { background: rgba(37,99,235,0.1); border-color: rgba(37,99,235,0.25); transform: translateX(3px); }
+@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.hp-rank { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #475569; width: 16px; flex-shrink: 0; }
+.hp-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.hp-name { font-size: 13px; font-weight: 500; color: #e2e8f0; }
+.hp-meta { font-size: 10px; color: #475569; }
+.hp-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.hp-score { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #00d4ff; font-weight: 600; }
+.hp-stage { font-size: 9px; border: 1px solid; border-radius: 4px; padding: 2px 6px; text-transform: capitalize; }

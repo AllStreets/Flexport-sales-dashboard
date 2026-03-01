@@ -1,5 +1,6 @@
 // frontend/src/components/ProspectSearch.jsx
 import { useState, useEffect, useCallback } from 'react';
+import { RiSparklingLine } from 'react-icons/ri';
 import ICPBadge from './ICPBadge';
 import './ProspectSearch.css';
 
@@ -10,6 +11,10 @@ export default function ProspectSearch({ onSelect }) {
   const [sectors, setSectors] = useState([]);
   const [filters, setFilters] = useState({ search: '', sector: '', icp_min: '' });
   const [loading, setLoading] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiFilters, setAiFilters] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const fetchProspects = useCallback(async () => {
     setLoading(true);
@@ -25,30 +30,77 @@ export default function ProspectSearch({ onSelect }) {
     fetch(`${API}/api/prospects/sectors`).then(r => r.json()).then(setSectors).catch(console.error);
   }, []);
 
-  useEffect(() => { fetchProspects(); }, [fetchProspects]);
+  useEffect(() => { if (!aiMode) fetchProspects(); }, [fetchProspects, aiMode]);
+
+  const runAiSearch = async () => {
+    if (!aiQuery.trim()) return;
+    setAiLoading(true);
+    setAiFilters(null);
+    try {
+      const r = await fetch(`${API}/api/semantic-search`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: aiQuery }),
+      });
+      const data = await r.json();
+      setAiFilters(data.filters);
+      setProspects(Array.isArray(data.results) ? data.results : []);
+    } catch { }
+    finally { setAiLoading(false); }
+  };
 
   return (
     <div className="prospect-search">
-      <div className="search-controls">
-        <input
-          className="search-input"
-          placeholder="Search prospects..."
-          value={filters.search}
-          onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
-        />
-        <select className="filter-select" value={filters.sector} onChange={e => setFilters(f => ({ ...f, sector: e.target.value }))}>
-          <option value="">All Sectors</option>
-          {sectors.map(s => <option key={s.sector} value={s.sector}>{s.sector} ({s.count})</option>)}
-        </select>
-        <select className="filter-select" value={filters.icp_min} onChange={e => setFilters(f => ({ ...f, icp_min: e.target.value }))}>
-          <option value="">Any ICP</option>
-          <option value="90">90+ (Elite)</option>
-          <option value="80">80+ (Strong)</option>
-          <option value="70">70+ (Good)</option>
-        </select>
+      <div className="ps-mode-row">
+        <button className={`ps-mode-btn${!aiMode ? ' active' : ''}`} onClick={() => setAiMode(false)}>Filters</button>
+        <button className={`ps-mode-btn${aiMode ? ' active' : ''}`} onClick={() => setAiMode(true)}>
+          <RiSparklingLine size={11} style={{ marginRight: 4 }} />AI Search
+        </button>
       </div>
 
-      {loading && <div className="loading-row">Loading prospects...</div>}
+      {aiMode ? (
+        <div className="ai-search-wrap">
+          <div className="ai-search-row">
+            <input
+              className="search-input ai-search-input"
+              placeholder="e.g. Electronics importers from Asia with high ICP..."
+              value={aiQuery}
+              onChange={e => setAiQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && runAiSearch()}
+            />
+            <button className="ai-search-btn" onClick={runAiSearch} disabled={aiLoading || !aiQuery.trim()}>
+              {aiLoading ? '...' : <RiSparklingLine size={13} />}
+            </button>
+          </div>
+          {aiFilters && (
+            <div className="ai-filters-row">
+              {aiFilters.sector && <span className="ai-filter-chip">Sector: {aiFilters.sector}</span>}
+              {aiFilters.icp_min && <span className="ai-filter-chip">ICP {aiFilters.icp_min}+</span>}
+              {aiFilters.search && <span className="ai-filter-chip">"{aiFilters.search}"</span>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="search-controls">
+          <input
+            className="search-input"
+            placeholder="Search prospects..."
+            value={filters.search}
+            onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+          />
+          <select className="filter-select" value={filters.sector} onChange={e => setFilters(f => ({ ...f, sector: e.target.value }))}>
+            <option value="">All Sectors</option>
+            {sectors.map(s => <option key={s.sector} value={s.sector}>{s.sector} ({s.count})</option>)}
+          </select>
+          <select className="filter-select" value={filters.icp_min} onChange={e => setFilters(f => ({ ...f, icp_min: e.target.value }))}>
+            <option value="">Any ICP</option>
+            <option value="90">90+ (Elite)</option>
+            <option value="80">80+ (Strong)</option>
+            <option value="70">70+ (Good)</option>
+          </select>
+        </div>
+      )}
+
+      {(loading || aiLoading) && <div className="loading-row">{aiLoading ? 'AI searching...' : 'Loading prospects...'}</div>}
 
       <div className="prospect-list">
         {prospects.map((p, i) => (

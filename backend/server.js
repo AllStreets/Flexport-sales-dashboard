@@ -540,6 +540,165 @@ Return JSON: { "first_line": "..." }`;
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── FX Rates — live from exchangerate-api.com, 5-min cache ───────────────
+let _fxCache = null, _fxCacheAt = 0;
+app.get('/api/fx-rates', async (req, res) => {
+  if (_fxCache && Date.now() - _fxCacheAt < 5 * 60 * 1000) return res.json(_fxCache);
+  const key = process.env.EXCHANGE_RATE_API_KEY;
+  if (!key) return res.json({ source: 'static', rates: null });
+  try {
+    const axios = require('axios');
+    const r = await axios.get(`https://v6.exchangerate-api.com/v6/${key}/latest/USD`);
+    const raw = r.data.conversion_rates || {};
+    const pairs = [
+      { pair: 'USD/CNY', symbol: 'CNY', note: 'China Yuan' },
+      { pair: 'USD/EUR', symbol: 'EUR', note: 'Euro' },
+      { pair: 'USD/VND', symbol: 'VND', note: 'Vietnam Dong' },
+      { pair: 'USD/INR', symbol: 'INR', note: 'Indian Rupee' },
+      { pair: 'USD/MXN', symbol: 'MXN', note: 'Mexican Peso' },
+      { pair: 'USD/KRW', symbol: 'KRW', note: 'Korean Won' },
+      { pair: 'USD/JPY', symbol: 'JPY', note: 'Japanese Yen' },
+      { pair: 'USD/SGD', symbol: 'SGD', note: 'Singapore Dollar' },
+    ];
+    const rates = pairs.map(p => ({ pair: p.pair, rate: raw[p.symbol] || null, note: p.note, pct: 0 }));
+    _fxCache = { source: 'live', updated: new Date().toISOString(), rates };
+    _fxCacheAt = Date.now();
+    res.json(_fxCache);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Hot Prospects — opportunity-scored from SQLite ────────────────────────
+app.get('/api/hot-prospects', (req, res) => {
+  const db = getDb();
+  const sql = `
+    SELECT p.id, p.name, p.sector, p.hq_location, p.icp_score, p.shipping_volume_estimate,
+           pl.stage AS pipeline_stage,
+           p.icp_score + CASE pl.stage
+             WHEN 'demo_booked' THEN 20
+             WHEN 'called'      THEN 15
+             WHEN 'researched'  THEN 10
+             WHEN 'new'         THEN 5
+             ELSE 0
+           END AS opp_score
+    FROM prospects p
+    LEFT JOIN pipeline pl ON pl.prospect_id = p.id
+    WHERE p.icp_score >= 70
+    ORDER BY opp_score DESC
+    LIMIT 8`;
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+});
+
+// ── Trigger Events — NewsAPI supply chain news, 30-min cache ──────────────
+let _triggerCache = null, _triggerCacheAt = 0;
+const TRIGGER_FALLBACK = [
+  { headline: 'Apple shifts 25% of iPhone production from China to India amid tariff concerns', sector: 'Electronics', urgency: 'high', date: 'Mar 2026' },
+  { headline: 'Nike announces Vietnam manufacturing capacity expansion — 3 new factories', sector: 'Apparel', urgency: 'high', date: 'Mar 2026' },
+  { headline: 'Target reports Q4 inventory glut — import velocity expected to slow 15%', sector: 'E-commerce', urgency: 'medium', date: 'Feb 2026' },
+  { headline: 'TSMC Arizona fab ramp-up — domestic semiconductor logistics demand rising', sector: 'Electronics', urgency: 'medium', date: 'Feb 2026' },
+  { headline: 'Walmart nearshoring push — 5 Mexican suppliers added for 2026', sector: 'Retail / CPG', urgency: 'medium', date: 'Jan 2026' },
+  { headline: 'Amazon repatriates 8% of SKUs from China warehouses to US 3PL network', sector: 'E-commerce', urgency: 'low', date: 'Jan 2026' },
+];
+app.get('/api/trigger-events', async (req, res) => {
+  if (_triggerCache && Date.now() - _triggerCacheAt < 30 * 60 * 1000) return res.json(_triggerCache);
+  const key = process.env.NEWSAPI_KEY;
+  if (!key) return res.json({ source: 'static', events: TRIGGER_FALLBACK });
+  try {
+    const axios = require('axios');
+    const q = encodeURIComponent('supply chain sourcing manufacturing import freight logistics');
+    const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=8&apiKey=${key}`;
+    const r = await axios.get(url);
+    const articles = (r.data.articles || []).map(a => ({
+      headline: a.title,
+      sector: 'General',
+      urgency: 'medium',
+      date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '',
+      url: a.url,
+    }));
+    const result = { source: articles.length ? 'live' : 'static', events: articles.length ? articles : TRIGGER_FALLBACK };
+    _triggerCache = result;
+    _triggerCacheAt = Date.now();
+    res.json(result);
+  } catch (e) { res.json({ source: 'static', events: TRIGGER_FALLBACK }); }
+});
+
+// ── Semantic Prospect Search — GPT parses NL query → prospect filters ─────
+app.post('/api/semantic-search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: 'query required' });
+  try {
+    const axios = require('axios');
+    const prompt = `You are a sales intelligence assistant for Flexport. Parse this natural language prospect search query into structured filters.
+Query: "${query}"
+Return ONLY JSON: { "search": string, "sector": string, "icp_min": number }
+Sector options: Electronics, Apparel, Automotive, Pharma, Retail / CPG, E-commerce, Food & Beverage, Industrial
+Use empty string if no clear filter applies. Return valid JSON only.`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini', max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    const filters = m ? JSON.parse(m[0]) : {};
+    const { getProspects } = require('./services/prospectsService');
+    const results = await getProspects({ ...filters, limit: 20 });
+    res.json({ filters, results });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Signal-to-Prospect Matching — GPT maps signals to sectors + talking pts ─
+app.post('/api/signal-match', async (req, res) => {
+  const { signal } = req.body;
+  if (!signal) return res.status(400).json({ error: 'signal required' });
+  try {
+    const axios = require('axios');
+    const prompt = `You are a Flexport SDR assistant. A supply chain signal has been detected. Identify which prospect sectors are most affected and generate outreach talking points.
+Signal: "${signal}"
+Return JSON: {
+  "affected_sectors": ["Sector1", "Sector2"],
+  "talking_points": ["point 1", "point 2", "point 3"],
+  "urgency": "high|medium|low",
+  "flexport_angle": "how Flexport specifically helps with this signal"
+}`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini', max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    if (!m) return res.status(500).json({ error: 'parse failed' });
+    res.json(JSON.parse(m[0]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Call Intelligence Parser — GPT extracts structured data from call notes ─
+app.post('/api/call-intelligence', async (req, res) => {
+  const { notes, companyName } = req.body;
+  if (!notes) return res.status(400).json({ error: 'notes required' });
+  try {
+    const axios = require('axios');
+    const prompt = `You are a Flexport SDR assistant. Analyze these call notes and extract structured intelligence.
+Company: ${companyName || 'Unknown'}
+Call Notes: "${notes}"
+Return JSON: {
+  "pain_points": ["pain 1", "pain 2"],
+  "signals": ["signal 1", "signal 2"],
+  "objections": ["objection 1"],
+  "next_steps": ["step 1", "step 2"],
+  "sentiment": "positive|neutral|negative",
+  "deal_probability": number 0-100,
+  "recommended_follow_up": "brief recommendation"
+}`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini', max_tokens: 500,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    if (!m) return res.status(500).json({ error: 'parse failed' });
+    res.json(JSON.parse(m[0]));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Scheduled Jobs ─────────────────────────────────
 const cron = require('node-cron');
 

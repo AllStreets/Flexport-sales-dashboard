@@ -44,3 +44,34 @@
   cursor: pointer; transition: all 0.15s;
 }
 .signal-outreach-btn:hover { background: rgba(37,99,235,0.15); border-color: rgba(37,99,235,0.6); }
+
+.signal-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+.signal-match-btn {
+  display: flex; align-items: center;
+  background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25);
+  color: #a78bfa; font-size: 10px; padding: 3px 10px; border-radius: 5px;
+  cursor: pointer; transition: all 0.15s;
+}
+.signal-match-btn:hover { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); }
+
+/* Signal Match Panel */
+.smp-panel {
+  background: rgba(167,139,250,0.05); border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  animation: fadeSlideIn 0.3s both;
+}
+.smp-header {
+  display: flex; align-items: center; font-size: 11px; font-weight: 600;
+  color: #a78bfa; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.smp-close { margin-left: auto; background: none; border: none; color: #475569; cursor: pointer; font-size: 12px; }
+.smp-signal { font-size: 11px; color: #64748b; font-style: italic; line-height: 1.4; }
+.smp-loading { font-size: 12px; color: #475569; }
+.smp-row { display: flex; flex-direction: column; gap: 5px; }
+.smp-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.smp-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.smp-chip { font-size: 10px; background: rgba(167,139,250,0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.25); border-radius: 4px; padding: 2px 8px; }
+.smp-angle { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+.smp-points { padding-left: 14px; margin: 0; }
+.smp-points li { font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 3px; }

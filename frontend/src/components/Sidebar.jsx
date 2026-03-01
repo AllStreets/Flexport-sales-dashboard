@@ -1,6 +1,6 @@
 // frontend/src/components/Sidebar.jsx
 import { NavLink } from 'react-router-dom';
-import { RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine } from 'react-icons/ri';
+import { RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine } from 'react-icons/ri';
 import './Sidebar.css';
 
 const NAV = [
@@ -8,6 +8,7 @@ const NAV = [
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intel'   },
   { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard' },
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'    },
+  { to: '/tariff',      Icon: RiPercentLine,          label: 'Tariff Calc'   },
 ];
 
 export default function Sidebar({ collapsed }) {
