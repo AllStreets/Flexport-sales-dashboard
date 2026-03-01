@@ -23,7 +23,7 @@ const { getTradeData, refreshAllTradeCache } = require('./services/fredService')
 const { getPipeline, addToPipeline, updatePipeline, removeFromPipeline } = require('./services/pipelineService');
 const { aggregateCompanyData } = require('./services/dataAggregator');
 const { getTradeIntelligence } = require('./services/tradeIntelligenceService');
-const { getPerformanceSummary, logActivity, getWinLoss, addWinLoss } = require('./services/performanceService');
+const { initDb, getPerformanceSummary, logActivity, getWinLoss, addWinLoss } = require('./services/performanceService');
 const { getPortCongestion } = require('./services/portCongestionService');
 const { lookupHSCode } = require('./services/usitcService');
 
@@ -461,7 +461,9 @@ cron.schedule('0 0 * * *', () => {
 
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`Flexport SDR server on port ${PORT}`));
+  initDb()
+    .then(() => app.listen(PORT, () => console.log(`Flexport SDR server on port ${PORT}`)))
+    .catch(e => { console.error('DB init failed:', e.message); process.exit(1); });
 }
 
 module.exports = app;

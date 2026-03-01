@@ -421,8 +421,109 @@
 /* ── Win/Loss Section ────────────────────────────────────────────────────────── */
 .winloss-section {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 1.6fr 1.4fr 1.2fr;
   gap: 16px;
+  align-items: start;
+}
+
+/* ── Outreach Stats tile ─────────────────────────────────────────────────────── */
+.os-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.os-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.os-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.os-stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.os-stat-label {
+  font-size: 10px;
+  color: #475569;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.os-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.os-breakdown-label {
+  font-size: 10px;
+  color: #475569;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.os-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.os-bar-bg {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.os-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.os-bar-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #64748b;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.os-competitor {
+  font-size: 11px;
+  color: #64748b;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 8px 10px;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+  border-radius: 7px;
+}
+
+.os-empty {
+  font-size: 11px;
+  color: #334155;
+  font-family: 'Space Grotesk', sans-serif;
+  text-align: center;
+  padding: 8px;
 }
 
 .wl-form-title {

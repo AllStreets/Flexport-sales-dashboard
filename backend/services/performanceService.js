@@ -6,6 +6,36 @@ function getDb() {
   return new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db'));
 }
 
+function initDb() {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    db.serialize(() => {
+      db.run(`CREATE TABLE IF NOT EXISTS sdr_activities (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        type        TEXT    NOT NULL,
+        prospect_id INTEGER,
+        company_name TEXT,
+        date        TEXT    NOT NULL,
+        notes       TEXT,
+        created_at  TEXT    DEFAULT (datetime('now'))
+      )`);
+      db.run(`CREATE TABLE IF NOT EXISTS win_loss (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_name TEXT    NOT NULL,
+        outcome      TEXT    NOT NULL,
+        stage_reached TEXT,
+        competitor   TEXT,
+        reason       TEXT,
+        deal_value   REAL    DEFAULT 0,
+        created_at   TEXT    DEFAULT (datetime('now'))
+      )`, (err) => {
+        db.close();
+        if (err) reject(err); else resolve();
+      });
+    });
+  });
+}
+
 function getActivities() {
   return new Promise((resolve, reject) => {
     const db = getDb();
@@ -105,4 +135,4 @@ async function getPerformanceSummary() {
   };
 }
 
-module.exports = { getPerformanceSummary, logActivity, getWinLoss, addWinLoss };
+module.exports = { initDb, getPerformanceSummary, logActivity, getWinLoss, addWinLoss };

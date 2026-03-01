@@ -1,6 +1,8 @@
 // frontend/src/pages/PerformancePage.jsx
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import {
   RiPhoneLine, RiMailSendLine, RiCalendarCheckLine, RiMoneyDollarCircleLine,
@@ -268,7 +270,7 @@ function LogActivityModal({ onClose, onLogged }) {
     if (!form.company_name.trim()) return;
     setSaving(true);
     try {
-      await axios.post('/api/performance/activity', form);
+      await axios.post(`${API}/api/performance/activity`, form);
       onLogged();
       onClose();
     } catch {
@@ -335,6 +337,104 @@ function LogActivityModal({ onClose, onLogged }) {
   );
 }
 
+// ── Outreach Stats ────────────────────────────────────────────────────────────
+function OutreachStats({ activities, winLossRecords }) {
+  const won  = winLossRecords.filter(r => r.outcome === 'won');
+  const lost = winLossRecords.filter(r => r.outcome === 'lost');
+  const total   = won.length + lost.length;
+  const winRate = total > 0 ? Math.round((won.length / total) * 100) : 0;
+  const avgDeal = won.length > 0
+    ? Math.round(won.reduce((s, r) => s + (r.deal_value || 0), 0) / won.length)
+    : 0;
+
+  // Most common competitor from losses
+  const compMap = {};
+  lost.forEach(r => { if (r.competitor) compMap[r.competitor] = (compMap[r.competitor] || 0) + 1; });
+  const topComp = Object.entries(compMap).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  // Current active day streak (ending on most recent active day)
+  const activityDays = new Set(activities.map(a => a.date));
+  let streak = 0;
+  if (activityDays.size > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const sortedDays = Array.from(activityDays).sort().reverse();
+    const latest = sortedDays[0];
+    const daysDiff = Math.floor((new Date(today) - new Date(latest)) / 86400000);
+    if (daysDiff <= 1) {
+      let cursor = new Date(latest + 'T12:00:00');
+      while (activityDays.has(cursor.toISOString().slice(0, 10))) {
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+    }
+  }
+
+  // All-time activity breakdown
+  const byType = { call: 0, email: 0, demo: 0, linkedin: 0 };
+  activities.forEach(a => { if (a.type in byType) byType[a.type]++; });
+  const totalActs = Object.values(byType).reduce((s, v) => s + v, 0);
+
+  const TYPE_META = [
+    { key: 'call',     color: '#00d4ff', label: 'Calls' },
+    { key: 'email',    color: '#8b5cf6', label: 'Emails' },
+    { key: 'demo',     color: '#10b981', label: 'Demos' },
+    { key: 'linkedin', color: '#f59e0b', label: 'LinkedIn' },
+  ];
+
+  return (
+    <div className="os-wrap">
+      <div className="os-stat-grid">
+        <div className="os-stat">
+          <div className="os-stat-val" style={{ color: winRate >= 50 ? '#10b981' : '#f59e0b' }}>
+            {winRate}<span style={{ fontSize: 14 }}>%</span>
+          </div>
+          <div className="os-stat-label">Win Rate</div>
+        </div>
+        <div className="os-stat">
+          <div className="os-stat-val" style={{ color: '#00d4ff' }}>{total}</div>
+          <div className="os-stat-label">Deals Logged</div>
+        </div>
+        <div className="os-stat">
+          <div className="os-stat-val" style={{ color: '#10b981' }}>
+            {avgDeal >= 1000 ? `$${Math.round(avgDeal / 1000)}K` : avgDeal ? `$${avgDeal}` : '—'}
+          </div>
+          <div className="os-stat-label">Avg Deal Won</div>
+        </div>
+        <div className="os-stat">
+          <div className="os-stat-val" style={{ color: '#a78bfa' }}>{streak}</div>
+          <div className="os-stat-label">Day Streak</div>
+        </div>
+      </div>
+
+      <div className="os-breakdown">
+        <div className="os-breakdown-label">All-Time Breakdown</div>
+        {TYPE_META.map(({ key, color, label }) => {
+          const count = byType[key];
+          const pct   = totalActs > 0 ? (count / totalActs) * 100 : 0;
+          return (
+            <div key={key} className="os-bar-row">
+              <span style={{ color, fontFamily: 'Space Grotesk', fontSize: 11, width: 58 }}>{label}</span>
+              <div className="os-bar-bg">
+                <div className="os-bar" style={{ width: `${pct}%`, background: color }} />
+              </div>
+              <span className="os-bar-count">{count}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {topComp && (
+        <div className="os-competitor">
+          Top competitor lost to: <span style={{ color: '#ef4444', fontWeight: 600 }}>{topComp}</span>
+        </div>
+      )}
+      {!topComp && total === 0 && (
+        <div className="os-empty">Log wins and losses to see stats</div>
+      )}
+    </div>
+  );
+}
+
 // ── Win/Loss Log Form ─────────────────────────────────────────────────────────
 function WinLossForm({ onAdded }) {
   const [form, setForm] = useState({
@@ -348,7 +448,7 @@ function WinLossForm({ onAdded }) {
     if (!form.company_name.trim()) return;
     setSaving(true);
     try {
-      await axios.post('/api/win-loss', { ...form, deal_value: Number(form.deal_value) || 0 });
+      await axios.post(`${API}/api/win-loss`, { ...form, deal_value: Number(form.deal_value) || 0 });
       setForm({ company_name: '', outcome: 'won', stage_reached: '', competitor: '', reason: '', deal_value: '' });
       onAdded();
     } finally {
@@ -520,8 +620,8 @@ export default function PerformancePage() {
   async function load() {
     try {
       const [perfRes, wlRes] = await Promise.all([
-        axios.get('/api/performance'),
-        axios.get('/api/win-loss'),
+        axios.get(`${API}/api/performance`),
+        axios.get(`${API}/api/win-loss`),
       ]);
       setData(perfRes.data);
       setWinLossRecords(Array.isArray(wlRes.data) ? wlRes.data : (perfRes.data?.winLoss || []));
@@ -636,10 +736,22 @@ export default function PerformancePage() {
 
       {/* ── Win / Loss ────────────────────────────────────────────────── */}
       <div className="winloss-section">
+
+        {/* Col 1: Outreach Stats */}
+        <div className="perf-card">
+          <div className="panel-header">
+            <span className="panel-title">Outreach Stats</span>
+            <span className="panel-sub">{activities.length} activities</span>
+          </div>
+          <OutreachStats activities={activities} winLossRecords={winLossRecords} />
+        </div>
+
+        {/* Col 2: Win/Loss form */}
         <div className="perf-card wl-form-card">
           <WinLossForm onAdded={load} />
         </div>
 
+        {/* Col 3: Win/Loss chart + records */}
         <div className="perf-card wl-data-card">
           <div className="panel-header">
             <span className="panel-title">Win / Loss by Month</span>
