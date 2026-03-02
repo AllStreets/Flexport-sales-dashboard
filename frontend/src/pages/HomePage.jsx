@@ -39,7 +39,9 @@ function TodaysPlaybook({ hotProspects, navigate }) {
       id: f.id,
       name: f.company_name,
       action: 'Follow Up',
-      reason: `${f.days_since}d overdue · ${(f.stage || 'pipeline').replace('_', ' ')}`,
+      reason: f.days_since >= 999
+        ? `never contacted · ${(f.stage || 'pipeline').replace('_', ' ')}`
+        : `${f.days_since}d overdue · ${(f.stage || 'pipeline').replace('_', ' ')}`,
       color: '#ef4444',
     });
   }
