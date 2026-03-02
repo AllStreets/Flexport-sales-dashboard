@@ -161,7 +161,7 @@ app.post('/api/analyze', async (req, res) => {
     if (!companyName) return res.status(400).json({ error: 'companyName required' });
     const aggregated = await aggregateCompanyData(companyName);
     const prospect = prospectId ? await getProspectById(prospectId).catch(() => null) : null;
-    const analysis = await analyzeForFlexport(companyName, prospect, aggregated.news?.map(n => n.title), aggregated.searchResults);
+    const analysis = await analyzeForFlexport(companyName, prospect, aggregated.news?.map(n => n.title), aggregated.searchResults, req.body?.model || 'gpt-4.1-mini');
     res.json({ company: companyName, prospect_id: prospectId, ...analysis, timestamp: new Date().toISOString() });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -235,7 +235,7 @@ Context: ${JSON.stringify({ prospectData, analysisData })}
 Return JSON: {"touches": [{"type":"email|linkedin|call","subject":"...","body":"...","day":1}]}
 Each touch should reference Flexport value props and the company's specific supply chain situation.`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 1200,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 1200,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -385,6 +385,7 @@ app.get('/api/hs-lookup', async (req, res) => {
 
 // ── Follow-up Radar ────────────────────────────────
 app.get('/api/followup-radar', (req, res) => {
+  const days = Math.max(1, parseInt(req.query.days, 10) || 3);
   const db = getDb();
   db.all(`
     SELECT p.id, p.company_name, p.stage, pr.icp_score, pr.sector,
@@ -398,10 +399,10 @@ app.get('/api/followup-radar', (req, res) => {
     LEFT JOIN sdr_activities a ON lower(a.company_name) = lower(p.company_name)
     WHERE p.stage NOT IN ('closed_won', 'closed_lost')
     GROUP BY p.id
-    HAVING days_since >= 3
+    HAVING days_since >= ?
     ORDER BY pr.icp_score DESC, days_since DESC
     LIMIT 12
-  `, [], (err, rows) => {
+  `, [days], (err, rows) => {
     db.close();
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -410,12 +411,13 @@ app.get('/api/followup-radar', (req, res) => {
 
 // ── Pipeline Velocity ───────────────────────────────
 app.get('/api/pipeline-velocity', (req, res) => {
+  const staleDays = Math.max(1, parseInt(req.query.stale_days, 10) || 7);
   const db = getDb();
   db.all(`
     SELECT stage,
       COUNT(*) as count,
       ROUND(AVG(julianday('now', 'localtime') - julianday(updated_at)), 1) as avg_days,
-      COUNT(CASE WHEN julianday('now', 'localtime') - julianday(updated_at) > 7 THEN 1 END) as stuck_count
+      COUNT(CASE WHEN julianday('now', 'localtime') - julianday(updated_at) > ? THEN 1 END) as stuck_count
     FROM pipeline
     WHERE stage NOT IN ('closed_won', 'closed_lost')
     GROUP BY stage
@@ -423,7 +425,7 @@ app.get('/api/pipeline-velocity', (req, res) => {
       WHEN 'new' THEN 1 WHEN 'researched' THEN 2
       WHEN 'called' THEN 3 WHEN 'demo_booked' THEN 4
       ELSE 5 END
-  `, [], (err, rows) => {
+  `, [staleDays], (err, rows) => {
     db.close();
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -485,7 +487,7 @@ Return JSON: {
   "call_to_action": "Specific next step to propose"
 }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 800,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 800,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -504,7 +506,7 @@ Context: ${JSON.stringify(context || {})}
 Objection: "${objection}"
 Return JSON: { "response": "2-3 sentence counter", "follow_up_question": "Question to keep conversation going" }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 300,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 300,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -530,7 +532,7 @@ Return JSON: {
   "success_criteria": "What does success look like at 90 days"
 }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 600,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 600,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -548,7 +550,7 @@ Context: ${JSON.stringify({ prospectData, signal })}
 Rules: Under 25 words. Reference something specific (a lane, a recent event, their imports). No generic phrases.
 Return JSON: { "first_line": "..." }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 100,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 100,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -679,7 +681,7 @@ Return ONLY JSON: { "search": string, "sector": string, "icp_min": number }
 Sector options: Electronics, Apparel, Automotive, Pharma, Retail / CPG, E-commerce, Food & Beverage, Industrial
 Use empty string if no clear filter applies. Return valid JSON only.`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 150,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 150,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -705,7 +707,7 @@ Return JSON: {
   "flexport_angle": "how Flexport specifically helps with this signal"
 }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 400,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 400,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
@@ -733,7 +735,7 @@ Return JSON: {
   "recommended_follow_up": "brief recommendation"
 }`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4.1-mini', max_tokens: 500,
+      model: req.body?.model || 'gpt-4.1-mini', max_tokens: 500,
       messages: [{ role: 'user', content: prompt }]
     }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
     const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);

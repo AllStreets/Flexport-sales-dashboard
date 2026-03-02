@@ -12,6 +12,10 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
   const [matchResult, setMatchResult] = useState(null);
   const [matchLoading, setMatchLoading] = useState(false);
 
+  const signalAlertsOn = localStorage.getItem('sdr_notif_signals') !== 'false';
+  const aiEnabled = localStorage.getItem('sdr_ai_enabled') !== 'false';
+  const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
+
   useEffect(() => {
     fetch(`${API}/api/signals`)
       .then(r => r.json())
@@ -26,7 +30,7 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
     try {
       const r = await fetch(`${API}/api/signal-match`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signal: signal.title || signal.headline }),
+        body: JSON.stringify({ signal: signal.title || signal.headline, model: aiModel }),
       });
       setMatchResult(await r.json());
     } catch { setMatchResult({ error: 'Match failed' }); }
@@ -58,9 +62,11 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
         {signals.map((s, i) => (
           <a key={i} href={s.url} target="_blank" rel="noreferrer" className="signal-card" style={{ animationDelay: `${i * 60}ms` }}>
             <div className="signal-top">
-              <span className="urgency-badge" style={{ color: urgencyColor(s.urgency_score), borderColor: urgencyColor(s.urgency_score) }}>
-                {urgencyLabel(s.urgency_score)} {s.urgency_score}/10
-              </span>
+              {signalAlertsOn && (
+                <span className="urgency-badge" style={{ color: urgencyColor(s.urgency_score), borderColor: urgencyColor(s.urgency_score) }}>
+                  {urgencyLabel(s.urgency_score)} {s.urgency_score}/10
+                </span>
+              )}
               <span className="signal-source">{s.source || s.name}</span>
             </div>
             <p className="signal-headline">{s.title || s.headline}</p>
@@ -76,9 +82,11 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
                   → Outreach
                 </button>
               )}
-              <button className="signal-match-btn" onClick={e => { e.preventDefault(); runSignalMatch(s); }}>
-                <RiSparklingLine size={10} style={{ marginRight: 3 }} />AI Match
-              </button>
+              {aiEnabled && (
+                <button className="signal-match-btn" onClick={e => { e.preventDefault(); runSignalMatch(s); }}>
+                  <RiSparklingLine size={10} style={{ marginRight: 3 }} />AI Match
+                </button>
+              )}
             </div>
           </a>
         ))}

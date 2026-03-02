@@ -122,9 +122,10 @@ function ObjectionDrawer({ prospect, analysis }) {
   const handle = async (text) => {
     setLoading(true); setResponse(null);
     try {
+      const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
       const r = await fetch(`${API}/api/objection`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objection: text, companyName: prospect?.name, context: analysis })
+        body: JSON.stringify({ objection: text, companyName: prospect?.name, context: analysis, model: aiModel })
       });
       setResponse(await r.json());
     } catch { }
@@ -177,9 +178,10 @@ function MutualActionPlanModal({ prospect, onClose }) {
   const generate = async () => {
     setLoading(true);
     try {
+      const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
       const r = await fetch(`${API}/api/map-plan`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect }),
+        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect, model: aiModel }),
       });
       setPlan(await r.json());
     } catch { }
@@ -239,6 +241,8 @@ function MutualActionPlanModal({ prospect, onClose }) {
 export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const aiEnabled = localStorage.getItem('sdr_ai_enabled') !== 'false';
+  const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
   const [data, setData] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -274,7 +278,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
     try {
       const r = await fetch(`${API}/api/analyze`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName: data.prospect.name, prospectId: data.prospect.id })
+        body: JSON.stringify({ companyName: data.prospect.name, prospectId: data.prospect.id, model: aiModel })
       });
       setAnalysis(await r.json());
     } catch { }
@@ -287,7 +291,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
     try {
       const r = await fetch(`${API}/api/call-prep`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName: data.prospect.name, prospectData: data.prospect, analysisData: analysis })
+        body: JSON.stringify({ companyName: data.prospect.name, prospectData: data.prospect, analysisData: analysis, model: aiModel })
       });
       setCallPrep(await r.json());
       setShowCallPrep(true);
@@ -311,7 +315,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
     try {
       const r = await fetch(`${API}/api/call-intelligence`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: callNotes, companyName: data?.prospect?.name }),
+        body: JSON.stringify({ notes: callNotes, companyName: data?.prospect?.name, model: aiModel }),
       });
       setCallIntel(await r.json());
     } catch { }
@@ -359,10 +363,13 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
         {/* Left: AI analysis */}
         <div className="a360-col glass-card">
           <div className="a360-col-header">AI Intelligence</div>
-          {!analysis && (
+          {!analysis && aiEnabled && (
             <button className="btn-primary" onClick={runAnalysis} disabled={analysisLoading}>
               {analysisLoading ? 'Analyzing...' : <><RiFlashlightLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Run Full Analysis</>}
             </button>
+          )}
+          {!analysis && !aiEnabled && (
+            <p className="a360-empty">AI features disabled in Settings.</p>
           )}
           {analysis && (
             <div className="a360-analysis">
@@ -428,9 +435,11 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
 
           {/* Call prep */}
           <div className="a360-col-header" style={{ marginTop: 16 }}>Call Prep</div>
-          <button className="btn-secondary" onClick={generateCallPrep} disabled={callPrepLoading}>
-            {callPrepLoading ? 'Generating...' : <><RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Generate Call Prep Sheet</>}
-          </button>
+          {aiEnabled && (
+            <button className="btn-secondary" onClick={generateCallPrep} disabled={callPrepLoading}>
+              {callPrepLoading ? 'Generating...' : <><RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Generate Call Prep Sheet</>}
+            </button>
+          )}
 
           <ObjectionDrawer prospect={p} analysis={analysis} />
         </div>
@@ -453,9 +462,13 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
               onChange={e => setCallNotes(e.target.value)}
               rows={5}
             />
-            <button className="btn-primary ci-btn" onClick={analyzeCall} disabled={callIntelLoading || !callNotes.trim()}>
-              {callIntelLoading ? 'Analyzing...' : <><RiFlashlightLine size={12} style={{ verticalAlign: 'middle', marginRight: 5 }} />Analyze Call</>}
-            </button>
+            {aiEnabled ? (
+              <button className="btn-primary ci-btn" onClick={analyzeCall} disabled={callIntelLoading || !callNotes.trim()}>
+                {callIntelLoading ? 'Analyzing...' : <><RiFlashlightLine size={12} style={{ verticalAlign: 'middle', marginRight: 5 }} />Analyze Call</>}
+              </button>
+            ) : (
+              <p className="a360-empty" style={{ marginTop: 8 }}>AI features disabled in Settings.</p>
+            )}
             {callIntel && !callIntel.error && (
               <div className="ci-results">
                 <div className="ci-submitted-notes">

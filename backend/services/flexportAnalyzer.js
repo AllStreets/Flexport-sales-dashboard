@@ -2,7 +2,7 @@
 const axios = require('axios');
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
-async function analyzeForFlexport(companyName, prospectData, newsHeadlines, searchResults) {
+async function analyzeForFlexport(companyName, prospectData, newsHeadlines, searchResults, model = 'gpt-4.1-mini') {
   const system = `You are a Flexport sales intelligence analyst. Flexport is a global freight forwarder and logistics platform offering: real-time shipment visibility, customs clearance, duty deferral, bonded warehouses, and ocean/air/trucking coordination. Your role is to help SDRs understand import-dependent companies and craft compelling Flexport outreach.`;
 
   const user = `Analyze this company as a Flexport inbound sales prospect:
@@ -35,7 +35,7 @@ Return JSON with exactly these fields:
 }`;
 
   const response = await axios.post(OPENAI_URL, {
-    model: 'gpt-4.1-mini',
+    model,
     max_tokens: 800,
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
   }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' } });

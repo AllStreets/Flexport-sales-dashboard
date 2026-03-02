@@ -13,11 +13,12 @@ export default function OutreachSequenceModal({ prospect, analysis, isOpen, onCl
   const generate = async () => {
     setLoading(true);
     setTouches([]);
+    const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
     try {
       const r = await fetch(`${API}/api/generate-sequence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect, analysisData: analysis })
+        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect, analysisData: analysis, model: aiModel })
       });
       const data = await r.json();
       setTouches(data.touches || []);

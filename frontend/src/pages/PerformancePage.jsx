@@ -35,8 +35,10 @@ const HEATMAP_LEVELS = [
 
 // ── Count-up hook ─────────────────────────────────────────────────────────────
 function useCountUp(target, delay = 0) {
-  const [val, setVal] = useState(0);
+  const animate = localStorage.getItem('sdr_ui_animations') !== 'false';
+  const [val, setVal] = useState(animate ? 0 : target);
   useEffect(() => {
+    if (!animate) { setVal(target); return; }
     const t = setTimeout(() => {
       if (!target) return;
       let start = null;
@@ -51,7 +53,7 @@ function useCountUp(target, delay = 0) {
       requestAnimationFrame(tick);
     }, delay);
     return () => clearTimeout(t);
-  }, [target, delay]);
+  }, [target, delay, animate]);
   return val;
 }
 
@@ -815,6 +817,7 @@ const STAGE_META = {
 // ── Follow-up Radar ───────────────────────────────────────────────────────────
 function FollowupRadar({ refreshKey }) {
   const [items, setItems] = useState(null);
+  const alertsEnabled = localStorage.getItem('sdr_notif_radar') !== 'false';
 
   useEffect(() => {
     fetch(`${API}/api/followup-radar`)
@@ -824,6 +827,7 @@ function FollowupRadar({ refreshKey }) {
   }, [refreshKey]);
 
   function urgencyColor(days) {
+    if (!alertsEnabled) return '#475569';
     if (days >= 999) return '#ef4444';   // never contacted
     if (days >= 7)   return '#ef4444';   // red
     if (days >= 4)   return '#f59e0b';   // amber
@@ -845,6 +849,9 @@ function FollowupRadar({ refreshKey }) {
 
   return (
     <div className="fr-wrap">
+      {!alertsEnabled && (
+        <div className="fr-alerts-off">Follow-up alerts disabled in Settings</div>
+      )}
       {overdueCount === 0 ? (
         <div className="fr-all-clear">
           <RiCheckLine size={20} color="#10b981" />
@@ -852,17 +859,19 @@ function FollowupRadar({ refreshKey }) {
         </div>
       ) : (
         <>
-          <div className="fr-summary">
-            <span className="fr-summary-chip fr-chip-red">
-              <RiAlertLine size={11} />
-              {overdueCount} overdue
-            </span>
-            {neverCount > 0 && (
-              <span className="fr-summary-chip fr-chip-dark">
-                {neverCount} never touched
+          {alertsEnabled && (
+            <div className="fr-summary">
+              <span className="fr-summary-chip fr-chip-red">
+                <RiAlertLine size={11} />
+                {overdueCount} overdue
               </span>
-            )}
-          </div>
+              {neverCount > 0 && (
+                <span className="fr-summary-chip fr-chip-dark">
+                  {neverCount} never touched
+                </span>
+              )}
+            </div>
+          )}
           <div className="fr-list">
             {items.map((item, i) => {
               const sm = STAGE_META[item.stage] || { label: item.stage, color: '#64748b' };
@@ -893,13 +902,15 @@ function FollowupRadar({ refreshKey }) {
 // ── Pipeline Velocity ─────────────────────────────────────────────────────────
 function PipelineVelocity({ refreshKey }) {
   const [stages, setStages] = useState(null);
+  const staleDays = Math.max(1, parseInt(localStorage.getItem('sdr_notif_stale_days'), 10) || 7);
+  const staleAlertsOn = localStorage.getItem('sdr_notif_stale') !== 'false';
 
   useEffect(() => {
-    fetch(`${API}/api/pipeline-velocity`)
+    fetch(`${API}/api/pipeline-velocity?stale_days=${staleDays}`)
       .then(r => r.json())
       .then(setStages)
       .catch(() => setStages([]));
-  }, [refreshKey]);
+  }, [refreshKey, staleDays]);
 
   if (!stages) return <div className="fr-empty">Loading...</div>;
 
@@ -912,8 +923,8 @@ function PipelineVelocity({ refreshKey }) {
   const totalActive = stages.reduce((s, r) => s + (r.count || 0), 0);
 
   function velocityColor(days) {
-    if (days > 7)  return '#ef4444';
-    if (days > 3)  return '#f59e0b';
+    if (days > staleDays)       return '#ef4444';
+    if (days > staleDays * 0.4) return '#f59e0b';
     return '#10b981';
   }
 
@@ -925,10 +936,10 @@ function PipelineVelocity({ refreshKey }) {
           <span className="pv-summary-label">Active Deals</span>
         </div>
         <div className="pv-summary-stat">
-          <span className="pv-summary-val" style={{ color: totalStuck > 0 ? '#ef4444' : '#10b981' }}>
+          <span className="pv-summary-val" style={{ color: staleAlertsOn && totalStuck > 0 ? '#ef4444' : '#10b981' }}>
             {totalStuck}
           </span>
-          <span className="pv-summary-label">Stuck &gt;7d</span>
+          <span className="pv-summary-label">Stuck &gt;{staleDays}d</span>
         </div>
       </div>
 
@@ -944,7 +955,7 @@ function PipelineVelocity({ refreshKey }) {
                 <span className="pv-stage-dot" style={{ background: sm.color }} />
                 <span className="pv-stage-name">{sm.label}</span>
                 <span className="pv-stage-count">{s.count}</span>
-                {s.stuck_count > 0 && (
+                {staleAlertsOn && s.stuck_count > 0 && (
                   <span className="pv-stuck-badge">
                     <RiAlertLine size={9} />
                     {s.stuck_count} stuck
@@ -966,9 +977,9 @@ function PipelineVelocity({ refreshKey }) {
       </div>
 
       <div className="pv-legend">
-        <span className="pv-legend-item" style={{ color: '#10b981' }}><span className="pv-legend-dot" style={{ background: '#10b981' }} />Fast (&lt;3d)</span>
-        <span className="pv-legend-item" style={{ color: '#f59e0b' }}><span className="pv-legend-dot" style={{ background: '#f59e0b' }} />Moderate (3–7d)</span>
-        <span className="pv-legend-item" style={{ color: '#ef4444' }}><span className="pv-legend-dot" style={{ background: '#ef4444' }} />Slow (&gt;7d)</span>
+        <span className="pv-legend-item" style={{ color: '#10b981' }}><span className="pv-legend-dot" style={{ background: '#10b981' }} />Fast</span>
+        <span className="pv-legend-item" style={{ color: '#f59e0b' }}><span className="pv-legend-dot" style={{ background: '#f59e0b' }} />Moderate</span>
+        <span className="pv-legend-item" style={{ color: '#ef4444' }}><span className="pv-legend-dot" style={{ background: '#ef4444' }} />Slow (&gt;{staleDays}d)</span>
       </div>
     </div>
   );
@@ -1059,8 +1070,16 @@ export default function PerformancePage() {
   const demoPct   = Math.min(100, ((kpis.demosBooked    || 0) / QUOTA.demos)  * 100);
   const attainment = Math.round((callPct + emailPct + demoPct) / 3) || 0;
 
+  const profileName = localStorage.getItem('sdr_profile_name') || '';
+
   return (
     <div className="perf-page">
+      {/* ── Page Header ──────────────────────────────────────────────── */}
+      <div className="perf-page-header">
+        <span className="perf-page-title">SDR Dashboard</span>
+        {profileName && <span className="perf-page-name">{profileName}</span>}
+      </div>
+
       {/* ── KPI Bar ──────────────────────────────────────────────────── */}
       <div className="kpi-bar">
         <KpiTile

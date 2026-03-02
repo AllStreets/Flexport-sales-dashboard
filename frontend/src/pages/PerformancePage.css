@@ -9,6 +9,34 @@
   min-height: 100%;
 }
 
+.perf-page-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.perf-page-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.3px;
+}
+
+.perf-page-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.fr-alerts-off {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  color: #475569;
+  padding: 4px 0 6px;
+  font-style: italic;
+}
+
 .perf-loading {
   display: flex;
   flex-direction: column;

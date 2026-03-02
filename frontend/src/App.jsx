@@ -41,7 +41,9 @@ function Particles() {
 }
 
 export default function App() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => (localStorage.getItem('sdr_ui_sidebar_default') || 'collapsed') === 'collapsed'
+  );
   const [showPipeline, setShowPipeline] = useState(false);
   const [showBattleCards, setShowBattleCards] = useState(false);
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
