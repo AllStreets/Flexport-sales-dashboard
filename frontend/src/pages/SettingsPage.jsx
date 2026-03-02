@@ -298,7 +298,6 @@ const ACCENT_PRESETS = [
   { color: '#10b981', label: 'Emerald'         },
   { color: '#f59e0b', label: 'Amber'           },
   { color: '#ef4444', label: 'Red'             },
-  { color: '#fb923c', label: 'Orange'          },
 ];
 
 function AppearanceSection() {
