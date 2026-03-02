@@ -47,6 +47,21 @@
   color: #f87171;
 }
 
+/* ── Dashboard Density ─────────────────────────────────────────────────────── */
+[data-density="compact"] .perf-page  { padding: 12px; gap: 12px; }
+[data-density="compact"] .perf-card  { padding: 14px; }
+[data-density="compact"] .page-wrap  { padding: 12px; gap: 12px; }
+[data-density="compact"] .kpi-tile   { padding: 12px 14px; }
+[data-density="compact"] .row2-grid,
+[data-density="compact"] .row3-grid  { gap: 12px; }
+
+[data-density="spacious"] .perf-page { padding: 36px; gap: 28px; }
+[data-density="spacious"] .perf-card { padding: 28px; }
+[data-density="spacious"] .page-wrap { padding: 36px; gap: 28px; }
+[data-density="spacious"] .kpi-tile  { padding: 22px 26px; }
+[data-density="spacious"] .row2-grid,
+[data-density="spacious"] .row3-grid { gap: 24px; }
+
 /* Page wrapper */
 .page-wrap { padding: 24px; display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
 .page-title {

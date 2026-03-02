@@ -447,9 +447,9 @@
 }
 
 .btn-accent {
-  background: rgba(0, 212, 255, 0.12);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  color: #00d4ff;
+  background: rgba(var(--accent-rgb, 0, 212, 255), 0.12);
+  border: 1px solid rgba(var(--accent-rgb, 0, 212, 255), 0.3);
+  color: var(--accent, #00d4ff);
   border-radius: 8px;
   padding: 8px 16px;
   font-family: 'Space Grotesk', sans-serif;
@@ -460,8 +460,8 @@
 }
 
 .btn-accent:hover {
-  background: rgba(0, 212, 255, 0.2);
-  border-color: rgba(0, 212, 255, 0.5);
+  background: rgba(var(--accent-rgb, 0, 212, 255), 0.2);
+  border-color: rgba(var(--accent-rgb, 0, 212, 255), 0.5);
 }
 
 .btn-accent:disabled {

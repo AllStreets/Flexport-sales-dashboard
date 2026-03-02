@@ -310,11 +310,18 @@ function AppearanceSection() {
               className={`accent-swatch${accent === color ? ' selected' : ''}`}
               style={{ background: color }}
               title={label}
-              onClick={() => { setAccent(color); flash(); }}
+              onClick={() => {
+                setAccent(color);
+                flash();
+                const r = parseInt(color.slice(1, 3), 16) || 0;
+                const g = parseInt(color.slice(3, 5), 16) || 212;
+                const b = parseInt(color.slice(5, 7), 16) || 255;
+                document.documentElement.style.setProperty('--accent', color);
+                document.documentElement.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+              }}
             />
           ))}
         </div>
-        <div className="accent-note">Accent color is saved and will be applied in a future update.</div>
       </SettingCard>
 
       <SettingCard title="Layout">
@@ -332,7 +339,11 @@ function AppearanceSection() {
           <select
             className="setting-input setting-select"
             value={density}
-            onChange={e => { setDensity(e.target.value); flash(); }}
+            onChange={e => {
+              setDensity(e.target.value);
+              flash();
+              document.documentElement.setAttribute('data-density', e.target.value);
+            }}
           >
             <option value="compact">Compact</option>
             <option value="normal">Normal</option>

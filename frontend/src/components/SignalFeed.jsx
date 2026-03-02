@@ -19,7 +19,29 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
   useEffect(() => {
     fetch(`${API}/api/signals`)
       .then(r => r.json())
-      .then(data => { setSignals(Array.isArray(data) ? data : []); setLoading(false); })
+      .then(data => {
+        const list = Array.isArray(data) ? data : [];
+        setSignals(list);
+        setLoading(false);
+        if (localStorage.getItem('sdr_notif_sound') === 'true') {
+          const hasUrgent = list.some(s => s.urgency_score >= 8);
+          if (hasUrgent) {
+            try {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(880, ctx.currentTime);
+              gain.gain.setValueAtTime(0.25, ctx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+              osc.start(ctx.currentTime);
+              osc.stop(ctx.currentTime + 0.4);
+            } catch { /* AudioContext not available */ }
+          }
+        }
+      })
       .catch(() => setLoading(false));
   }, []);
 

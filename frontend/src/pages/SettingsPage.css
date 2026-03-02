@@ -61,9 +61,9 @@
 }
 
 .settings-nav-item.active {
-  color: #00d4ff;
-  background: rgba(0, 212, 255, 0.06);
-  border-left-color: #00d4ff;
+  color: var(--accent, #00d4ff);
+  background: rgba(var(--accent-rgb, 0, 212, 255), 0.06);
+  border-left-color: var(--accent, #00d4ff);
 }
 
 .settings-nav-icon {
@@ -293,8 +293,8 @@
 }
 
 .setting-toggle.on {
-  background: rgba(0, 212, 255, 0.25);
-  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(var(--accent-rgb, 0, 212, 255), 0.25);
+  border-color: rgba(var(--accent-rgb, 0, 212, 255), 0.4);
 }
 
 .setting-toggle-thumb {
@@ -310,7 +310,7 @@
 
 .setting-toggle.on .setting-toggle-thumb {
   left: 21px;
-  background: #00d4ff;
+  background: var(--accent, #00d4ff);
 }
 
 /* ── Accent swatches ─────────────────────────────────────────────────────────── */

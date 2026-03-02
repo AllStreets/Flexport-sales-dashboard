@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import PortStatusBar from './components/PortStatusBar';
 import Sidebar from './components/Sidebar';
@@ -49,6 +49,26 @@ export default function App() {
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
   const [pipelineRefresh, setPipelineRefresh] = useState(0);
   const [globeFullscreen, setGlobeFullscreen] = useState(false);
+
+  // Apply accent color + density from settings on mount and on cross-tab storage changes
+  useEffect(() => {
+    function applyAppearance() {
+      const accent = localStorage.getItem('sdr_ui_accent') || '#00d4ff';
+      const r = parseInt(accent.slice(1, 3), 16) || 0;
+      const g = parseInt(accent.slice(3, 5), 16) || 212;
+      const b = parseInt(accent.slice(5, 7), 16) || 255;
+      document.documentElement.style.setProperty('--accent', accent);
+      document.documentElement.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+      const density = localStorage.getItem('sdr_ui_density') || 'normal';
+      document.documentElement.setAttribute('data-density', density);
+    }
+    applyAppearance();
+    const handler = (e) => {
+      if (e?.key === 'sdr_ui_accent' || e?.key === 'sdr_ui_density') applyAppearance();
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
 
   const handleAddToPipeline = () => { setPipelineRefresh(r => r + 1); setShowPipeline(true); };
   const handleOpenOutreach = (prospect, analysis) => setOutreachState({ open: true, prospect, analysis });

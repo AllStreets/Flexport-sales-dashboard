@@ -41,9 +41,9 @@
 }
 
 .sidebar-item.active {
-  color: #00d4ff;
-  background: rgba(0, 212, 255, 0.06);
-  border-left-color: #00d4ff;
+  color: var(--accent, #00d4ff);
+  background: rgba(var(--accent-rgb, 0, 212, 255), 0.06);
+  border-left-color: var(--accent, #00d4ff);
 }
 
 .sidebar-icon {

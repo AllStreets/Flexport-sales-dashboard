@@ -7,7 +7,8 @@
   --surface:   rgba(255,255,255,0.04);
   --border:    rgba(255,255,255,0.08);
   --primary:   #2563EB;
-  --accent:    #00d4ff;
+  --accent:     #00d4ff;
+  --accent-rgb: 0, 212, 255;
   --success:   #10b981;
   --warning:   #f59e0b;
   --danger:    #ef4444;

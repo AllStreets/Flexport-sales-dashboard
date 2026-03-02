@@ -753,7 +753,7 @@ app.get('/api/settings/health', (req, res) => {
     env: {
       openai:       !!process.env.OPENAI_API_KEY,
       fred:         !!process.env.FRED_API_KEY,
-      newsapi:      !!process.env.NEWSAPI_KEY,
+      newsapi:      !!(process.env.NEWSAPI_KEY || process.env.NEWS_API_KEY),
       exchangeRate: !!process.env.EXCHANGE_RATE_API_KEY,
       serper:       !!process.env.SERPER_API_KEY,
     },
