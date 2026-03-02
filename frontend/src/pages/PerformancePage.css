@@ -537,9 +537,21 @@
 /* ── (legacy mid-row removed — FR+PV now in fr-pv-row inside row2-grid) ──────── */
 
 /* ── Follow-up Radar ─────────────────────────────────────────────────────────── */
+
+/* Card modifier — height locked to PV card via JS; enables inner scroll */
+.fr-pv-fr-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
 .fr-wrap {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   gap: 12px;
 }
 
@@ -576,7 +588,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 260px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;

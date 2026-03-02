@@ -991,6 +991,21 @@ export default function PerformancePage() {
     return () => ro.disconnect();
   }, [loading]); // re-runs when loading flips false and real DOM is in place
 
+  // Sync Follow-up Radar card height to Pipeline Velocity card height so the
+  // FR list scrolls rather than the card growing taller than PV.
+  const pvCardRef = useRef(null);
+  const frCardRef = useRef(null);
+  useLayoutEffect(() => {
+    const pvEl = pvCardRef.current;
+    const frEl = frCardRef.current;
+    if (!pvEl || !frEl) return;
+    function sync() { frEl.style.height = pvEl.offsetHeight + 'px'; }
+    const ro = new ResizeObserver(sync);
+    ro.observe(pvEl);
+    sync();
+    return () => ro.disconnect();
+  }, [loading]);
+
   async function load() {
     try {
       const [perfRes, wlRes] = await Promise.all([
@@ -1083,14 +1098,14 @@ export default function PerformancePage() {
         {/* Right: Follow-up Radar + Pipeline Velocity (top), Quota Attainment (bottom) */}
         <div className="perf-right-col" ref={rightColRef}>
           <div className="fr-pv-row">
-            <div className="perf-card">
+            <div className="perf-card fr-pv-fr-card" ref={frCardRef}>
               <div className="panel-header">
                 <span className="panel-title">Follow-up Radar</span>
                 <span className="panel-sub">pipeline companies overdue for contact</span>
               </div>
               <FollowupRadar refreshKey={radarKey} />
             </div>
-            <div className="perf-card">
+            <div className="perf-card" ref={pvCardRef}>
               <div className="panel-header">
                 <span className="panel-title">Pipeline Velocity</span>
                 <span className="panel-sub">avg days per stage</span>
