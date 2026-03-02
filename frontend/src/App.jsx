@@ -104,6 +104,13 @@ export default function App() {
         return;
       }
 
+      // Ctrl+Shift+L — Open Live Call
+      if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+        e.preventDefault();
+        setLiveCallState(s => s.open ? s : { open: true, prospect: null });
+        return;
+      }
+
       // Escape — close topmost open modal/overlay
       if (e.key === 'Escape') {
         if (liveCallState.open) { setLiveCallState({ open: false, prospect: null }); return; }

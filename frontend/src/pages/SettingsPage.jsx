@@ -643,6 +643,7 @@ const SHORTCUTS = [
   { keys: ['Escape'],          action: 'Close modal/overlay'},
   { keys: ['Ctrl', 'Shift', 'P'], action: 'Open Pipeline'  },
   { keys: ['Ctrl', 'Shift', 'B'], action: 'Open Battle Cards'},
+  { keys: ['Ctrl', 'Shift', 'L'], action: 'Open Live Call Mode'},
 ];
 
 function AboutSection({ health, onTestHealth, healthLoading }) {
