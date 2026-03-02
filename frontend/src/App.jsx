@@ -74,6 +74,45 @@ export default function App() {
   const handleAddToPipeline = () => { setPipelineRefresh(r => r + 1); setShowPipeline(true); };
   const handleOpenOutreach = (prospect, analysis) => setOutreachState({ open: true, prospect, analysis });
 
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e) => {
+      // Ignore when typing in an input/textarea/select
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      // Ctrl+/ — Toggle sidebar
+      if (e.ctrlKey && !e.shiftKey && e.key === '/') {
+        e.preventDefault();
+        setSidebarCollapsed(c => !c);
+        return;
+      }
+
+      // Ctrl+Shift+P — Open Pipeline
+      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+        e.preventDefault();
+        setShowPipeline(p => { if (!p) setPipelineRefresh(r => r + 1); return true; });
+        return;
+      }
+
+      // Ctrl+Shift+B — Open Battle Cards
+      if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+        e.preventDefault();
+        setShowBattleCards(true);
+        return;
+      }
+
+      // Escape — close topmost open modal/overlay
+      if (e.key === 'Escape') {
+        if (outreachState.open) { setOutreachState({ open: false, prospect: null, analysis: null }); return; }
+        if (showBattleCards)   { setShowBattleCards(false); return; }
+        if (showPipeline)      { setShowPipeline(false); setPipelineRefresh(r => r + 1); return; }
+        if (globeFullscreen)   { setGlobeFullscreen(false); return; }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [outreachState.open, showBattleCards, showPipeline, globeFullscreen]);
+
   return (
     <div className="app-root">
       <Particles />
