@@ -10,8 +10,8 @@ const NAV = [
   { to: '/',            Icon: RiGlobalLine,          label: 'Home'                },
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'          },
   { to: '/tariff',      Icon: RiPercentLine,          label: 'Tariff Calculator'   },
-  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
+  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
 ];
 
 function SidebarLink({ to, Icon, label, end = false }) {
