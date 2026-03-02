@@ -455,10 +455,10 @@ function OutreachStats({ activities, winLossRecords }) {
       {activities.filter(a => a.notes?.trim()).length > 0 && (
         <div className="os-notes-log">
           <div className="os-breakdown-label" style={{ marginTop: 12 }}>Recent Activity Notes</div>
-          {activities.filter(a => a.notes?.trim()).slice(-5).reverse().map((a, i) => (
+          {activities.filter(a => a.notes?.trim()).slice(-20).reverse().map((a, i) => (
             <div key={i} className="os-note-row">
               <div className="os-note-meta">
-                <span style={{ color: '#00d4ff', textTransform: 'capitalize' }}>{a.type}</span>
+                <span style={{ color: ACTIVITY_TYPE_META[a.type]?.color || '#64748b', textTransform: 'capitalize' }}>{a.type}</span>
                 {a.company_name && <span style={{ color: '#64748b' }}> · {a.company_name}</span>}
                 <span style={{ color: '#334155' }}> · {a.date}</span>
               </div>

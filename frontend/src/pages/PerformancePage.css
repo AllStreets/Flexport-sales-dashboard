@@ -952,7 +952,7 @@
   border-radius: 7px;
 }
 
-.os-notes-log { display: flex; flex-direction: column; gap: 6px; }
+.os-notes-log { display: flex; flex-direction: column; gap: 6px; max-height: 138px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 .os-note-row { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 7px; padding: 8px 10px; }
 .os-note-meta { font-size: 10px; font-family: 'Space Grotesk', sans-serif; margin-bottom: 3px; }
 .os-note-text { font-size: 11px; color: #94a3b8; line-height: 1.5; margin: 0; white-space: pre-wrap; }
