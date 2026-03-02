@@ -28,7 +28,10 @@ function initDb() {
         reason       TEXT,
         deal_value   REAL    DEFAULT 0,
         created_at   TEXT    DEFAULT (datetime('now'))
-      )`, (err) => {
+      )`);
+      // Safe migration — silently ignored if the column already exists
+      db.run(`ALTER TABLE pipeline ADD COLUMN deal_value REAL DEFAULT 0`, () => {});
+      db.run('SELECT 1', (err) => {
         db.close();
         if (err) reject(err); else resolve();
       });
@@ -36,10 +39,18 @@ function initDb() {
   });
 }
 
-function getActivities() {
+function getActivities(retentionDays) {
   return new Promise((resolve, reject) => {
     const db = getDb();
-    db.all('SELECT * FROM sdr_activities ORDER BY date DESC', [], (err, rows) => {
+    let sql = 'SELECT * FROM sdr_activities';
+    const params = [];
+    if (retentionDays && retentionDays !== 'all') {
+      const days = Math.max(1, parseInt(retentionDays, 10) || 365);
+      sql += " WHERE date >= date('now', ?)";
+      params.push(`-${days} days`);
+    }
+    sql += ' ORDER BY date DESC';
+    db.all(sql, params, (err, rows) => {
       db.close();
       if (err) return reject(err);
       resolve(rows);
@@ -179,16 +190,36 @@ function addWinLoss({ company_name, outcome, stage_reached, competitor, reason, 
   });
 }
 
-async function getPerformanceSummary() {
-  const [activities, stages, funnel, prospects, winloss] = await Promise.all([
-    getActivities(), getPipelineStages(), getFunnelMetrics(), getProspectCount(), getWinLoss()
+// Sum of actual deal_value from active pipeline deals (excludes closed_lost)
+function getPipelineDealValue() {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    db.get(
+      "SELECT COALESCE(SUM(deal_value), 0) as total FROM pipeline WHERE stage NOT IN ('closed_lost')",
+      [],
+      (err, row) => {
+        db.close();
+        if (err) return reject(err);
+        resolve(row?.total || 0);
+      }
+    );
+  });
+}
+
+async function getPerformanceSummary(retentionDays) {
+  const [activities, stages, funnel, prospects, winloss, dealValueSum] = await Promise.all([
+    getActivities(retentionDays), getPipelineStages(), getFunnelMetrics(),
+    getProspectCount(), getWinLoss(), getPipelineDealValue()
   ]);
 
   const now = new Date();
   const weekStart = new Date(now);
   const dowOffset = now.getDay() === 0 ? 6 : now.getDay() - 1;
   weekStart.setDate(now.getDate() - dowOffset);
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
+  // Use local date to avoid UTC midnight shifting the week boundary
+  const weekStartStr = weekStart.getFullYear() + '-' +
+    String(weekStart.getMonth() + 1).padStart(2, '0') + '-' +
+    String(weekStart.getDate()).padStart(2, '0');
 
   const thisWeek       = activities.filter(a => a.date >= weekStartStr);
   const callsThisWeek  = thisWeek.filter(a => a.type === 'call').length;
@@ -197,10 +228,10 @@ async function getPerformanceSummary() {
   // Demos booked KPI = demos logged as activities THIS week (for weekly quota tracking)
   const demosBooked = thisWeek.filter(a => a.type === 'demo').length;
 
-  // Pipeline value: use actual won deal values when available, otherwise estimate from pipeline size
-  const wonValue    = winloss.filter(r => r.outcome === 'won').reduce((s, r) => s + (r.deal_value || 0), 0);
-  const pipelineValue = wonValue > 0
-    ? wonValue + funnel.totalPipeline * 72000
+  // Pipeline value: use actual deal_value sum when any deals have values entered,
+  // otherwise fall back to count × $72K estimate
+  const pipelineValue = dealValueSum > 0
+    ? dealValueSum
     : funnel.totalPipeline * 72000;
 
   return {

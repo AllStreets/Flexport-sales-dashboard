@@ -29,6 +29,13 @@
   color: #64748b;
 }
 
+.perf-page-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #334155;
+  letter-spacing: 0.02em;
+}
+
 .fr-alerts-off {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;

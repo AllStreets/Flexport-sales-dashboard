@@ -20,9 +20,10 @@ function localDateStr(d = new Date()) {
 // ── Quota targets — reads from Settings localStorage, falls back to defaults ──
 function readQuota() {
   return {
-    calls:  parseInt(localStorage.getItem('sdr_quota_calls'),  10) || 50,
-    emails: parseInt(localStorage.getItem('sdr_quota_emails'), 10) || 100,
-    demos:  parseInt(localStorage.getItem('sdr_quota_demos'),  10) || 5,
+    calls:   parseInt(localStorage.getItem('sdr_quota_calls'),    10) || 50,
+    emails:  parseInt(localStorage.getItem('sdr_quota_emails'),   10) || 100,
+    demos:   parseInt(localStorage.getItem('sdr_quota_demos'),    10) || 5,
+    revenue: parseInt(localStorage.getItem('sdr_quota_revenue'),  10) || 0,
   };
 }
 const HEATMAP_LEVELS = [
@@ -235,11 +236,13 @@ function ConversionFunnel({ pipeline }) {
 
 // ── Quota Ring ────────────────────────────────────────────────────────────────
 function QuotaRing({ pct }) {
-  const [drawn, setDrawn] = useState(0);
+  const animate = localStorage.getItem('sdr_ui_animations') !== 'false';
+  const [drawn, setDrawn] = useState(animate ? 0 : pct);
   useEffect(() => {
+    if (!animate) { setDrawn(pct); return; }
     const t = setTimeout(() => setDrawn(pct), 400);
     return () => clearTimeout(t);
-  }, [pct]);
+  }, [pct, animate]);
 
   const R = 54;
   const CIRC = 2 * Math.PI * R;
@@ -258,7 +261,7 @@ function QuotaRing({ pct }) {
           strokeLinecap="round"
           strokeDasharray={`${dash} ${CIRC}`}
           transform="rotate(-90 65 65)"
-          style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.34,1.56,0.64,1)', filter: `drop-shadow(0 0 6px ${color})` }}
+          style={{ transition: animate ? 'stroke-dasharray 1.2s cubic-bezier(0.34,1.56,0.64,1)' : 'none', filter: `drop-shadow(0 0 6px ${color})` }}
         />
         <text x={65} y={60} textAnchor="middle" fill={color} fontSize={22} fontFamily="'JetBrains Mono', monospace" fontWeight={700}>
           {Math.round(drawn)}%
@@ -818,13 +821,14 @@ const STAGE_META = {
 function FollowupRadar({ refreshKey }) {
   const [items, setItems] = useState(null);
   const alertsEnabled = localStorage.getItem('sdr_notif_radar') !== 'false';
+  const radarDays = Math.max(1, parseInt(localStorage.getItem('sdr_notif_radar_days'), 10) || 3);
 
   useEffect(() => {
-    fetch(`${API}/api/followup-radar`)
+    fetch(`${API}/api/followup-radar?days=${radarDays}`)
       .then(r => r.json())
       .then(setItems)
       .catch(() => setItems([]));
-  }, [refreshKey]);
+  }, [refreshKey, radarDays]);
 
   function urgencyColor(days) {
     if (!alertsEnabled) return '#475569';
@@ -855,7 +859,7 @@ function FollowupRadar({ refreshKey }) {
       {overdueCount === 0 ? (
         <div className="fr-all-clear">
           <RiCheckLine size={20} color="#10b981" />
-          <span>All pipeline companies contacted within 3 days</span>
+          <span>All pipeline companies contacted within {radarDays} day{radarDays !== 1 ? 's' : ''}</span>
         </div>
       ) : (
         <>
@@ -1033,9 +1037,11 @@ export default function PerformancePage() {
   }, [loading]);
 
   async function load() {
+    const retention = localStorage.getItem('sdr_data_retention') || 'all';
+    const retentionParam = retention !== 'all' ? `?retention_days=${retention}` : '';
     try {
       const [perfRes, wlRes] = await Promise.all([
-        axios.get(`${API}/api/performance`),
+        axios.get(`${API}/api/performance${retentionParam}`),
         axios.get(`${API}/api/win-loss`),
       ]);
       setData(perfRes.data);
@@ -1064,13 +1070,20 @@ export default function PerformancePage() {
   const pipeline = data?.pipeline || {};
   const activities = data?.activities || [];
 
-  // Quota attainment (composite of calls + emails toward weekly targets)
-  const callPct   = Math.min(100, ((kpis.callsThisWeek  || 0) / QUOTA.calls)  * 100);
-  const emailPct  = Math.min(100, ((kpis.emailsThisWeek || 0) / QUOTA.emails) * 100);
-  const demoPct   = Math.min(100, ((kpis.demosBooked    || 0) / QUOTA.demos)  * 100);
-  const attainment = Math.round((callPct + emailPct + demoPct) / 3) || 0;
+  // Quota attainment (composite of calls + emails + demos, + pipeline if revenue target set)
+  const callPct    = Math.min(100, ((kpis.callsThisWeek  || 0) / QUOTA.calls)    * 100);
+  const emailPct   = Math.min(100, ((kpis.emailsThisWeek || 0) / QUOTA.emails)   * 100);
+  const demoPct    = Math.min(100, ((kpis.demosBooked    || 0) / QUOTA.demos)    * 100);
+  const revenuePct = QUOTA.revenue > 0 ? Math.min(100, ((kpis.pipelineValue || 0) / QUOTA.revenue) * 100) : null;
+  const _quotaDims = [callPct, emailPct, demoPct, ...(revenuePct !== null ? [revenuePct] : [])];
+  const attainment = Math.round(_quotaDims.reduce((a, b) => a + b, 0) / _quotaDims.length) || 0;
 
-  const profileName = localStorage.getItem('sdr_profile_name') || '';
+  const profileName      = localStorage.getItem('sdr_profile_name')      || '';
+  const profileTitle     = localStorage.getItem('sdr_profile_title')     || '';
+  const profileTerritory = localStorage.getItem('sdr_profile_territory') || '';
+  const profileTeam      = localStorage.getItem('sdr_profile_team')      || '';
+
+  const subParts = [profileTitle, profileTerritory, profileTeam].filter(Boolean);
 
   return (
     <div className="perf-page">
@@ -1078,6 +1091,9 @@ export default function PerformancePage() {
       <div className="perf-page-header">
         <span className="perf-page-title">SDR Dashboard</span>
         {profileName && <span className="perf-page-name">{profileName}</span>}
+        {subParts.length > 0 && (
+          <span className="perf-page-sub">{subParts.join(' · ')}</span>
+        )}
       </div>
 
       {/* ── KPI Bar ──────────────────────────────────────────────────── */}
@@ -1175,6 +1191,21 @@ export default function PerformancePage() {
                 </div>
                 <span className="qt-val">{kpis.demosBooked || 0}<span className="qt-max">/{QUOTA.demos}</span></span>
               </div>
+              {QUOTA.revenue > 0 && (() => {
+                const pipeVal = kpis.pipelineValue || 0;
+                const revPct  = Math.min(100, (pipeVal / QUOTA.revenue) * 100);
+                const fmtVal  = pipeVal >= 1000000 ? `$${(pipeVal/1000000).toFixed(1)}M` : pipeVal >= 1000 ? `$${Math.round(pipeVal/1000)}K` : `$${pipeVal}`;
+                const fmtTgt  = QUOTA.revenue >= 1000000 ? `$${(QUOTA.revenue/1000000).toFixed(1)}M` : QUOTA.revenue >= 1000 ? `$${Math.round(QUOTA.revenue/1000)}K` : `$${QUOTA.revenue}`;
+                return (
+                  <div className="qt-row">
+                    <span style={{ color: '#f59e0b' }}>Pipeline</span>
+                    <div className="qt-bar-bg">
+                      <div className="qt-bar" style={{ width: `${revPct}%`, background: '#f59e0b' }} />
+                    </div>
+                    <span className="qt-val">{fmtVal}<span className="qt-max">/{fmtTgt}</span></span>
+                  </div>
+                );
+              })()}
             </div>
             <WeeklyTable activities={activities} />
             <button className="btn-accent log-activity-btn" onClick={() => setShowLogModal(true)}>

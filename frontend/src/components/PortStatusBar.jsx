@@ -6,12 +6,20 @@ import './PortStatusBar.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onMenuToggle }) {
+export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onMenuToggle, pipelineRefresh }) {
   const [ports, setPorts] = useState([]);
+  const [pipelineCount, setPipelineCount] = useState(null);
 
   useEffect(() => {
     fetch(`${API}/api/globe-data`).then(r => r.json()).then(d => setPorts(d.ports || [])).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetch(`${API}/api/pipeline/count`)
+      .then(r => r.json())
+      .then(d => setPipelineCount(d.count ?? null))
+      .catch(() => {});
+  }, [pipelineRefresh]);
 
   const statusColor = (status) => {
     if (status === 'disruption') return '#ef4444';
@@ -38,7 +46,10 @@ export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onM
 
       <div className="bar-right">
         <button className="bar-btn" onClick={onBattleCardsClick}><RiSwordLine size={14} /> Battle Cards</button>
-        <button className="bar-btn primary" onClick={onPipelineClick}><RiKanbanView size={14} /> Pipeline</button>
+        <button className="bar-btn primary" onClick={onPipelineClick}>
+          <RiKanbanView size={14} /> Pipeline
+          {pipelineCount > 0 && <span className="pipeline-count-badge">{pipelineCount}</span>}
+        </button>
       </div>
     </header>
   );

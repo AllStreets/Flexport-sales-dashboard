@@ -280,7 +280,20 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyName: data.prospect.name, prospectId: data.prospect.id, model: aiModel })
       });
-      setAnalysis(await r.json());
+      const result = await r.json();
+      setAnalysis(result);
+      // Auto-save to database if enabled in Settings → Data & Privacy
+      if (localStorage.getItem('sdr_data_autosave') !== 'false') {
+        fetch(`${API}/api/analyses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prospectId: data.prospect.id,
+            companyName: data.prospect.name,
+            analysisData: result,
+          }),
+        }).catch(() => {}); // fire-and-forget; don't block the UI
+      }
     } catch { }
     finally { setAnalysisLoading(false); }
   };

@@ -14,11 +14,18 @@ export default function OutreachSequenceModal({ prospect, analysis, isOpen, onCl
     setLoading(true);
     setTouches([]);
     const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
+    const sdrIdentity = {
+      name:  localStorage.getItem('sdr_profile_name')  || '',
+      email: localStorage.getItem('sdr_profile_email') || '',
+      phone: localStorage.getItem('sdr_profile_phone') || '',
+      title: localStorage.getItem('sdr_profile_title') || 'SDR',
+      team:  localStorage.getItem('sdr_profile_team')  || '',
+    };
     try {
       const r = await fetch(`${API}/api/generate-sequence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect, analysisData: analysis, model: aiModel })
+        body: JSON.stringify({ companyName: prospect.name, prospectData: prospect, analysisData: analysis, model: aiModel, sdrIdentity })
       });
       const data = await r.json();
       setTouches(data.touches || []);

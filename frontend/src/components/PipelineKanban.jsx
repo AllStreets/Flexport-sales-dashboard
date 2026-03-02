@@ -19,9 +19,10 @@ const STAGES = [
 
 const STAGE_KEYS = STAGES.map(s => s.key);
 
-function PipelineCard({ item, isDragging, onDelete }) {
+function PipelineCard({ item, isDragging, onDelete, onDealValueChange }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  const [dealValue, setDealValue] = useState(item.deal_value > 0 ? item.deal_value : '');
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="pipeline-card">
@@ -41,11 +42,24 @@ function PipelineCard({ item, isDragging, onDelete }) {
         {item.sector && <span className="card-sector">{item.sector}</span>}
       </div>
       {item.next_action && <div className="card-action">→ {item.next_action}</div>}
+      <input
+        className="card-deal-input"
+        type="number"
+        placeholder="Deal $"
+        value={dealValue}
+        onPointerDown={e => e.stopPropagation()}
+        onChange={e => setDealValue(e.target.value)}
+        onBlur={e => {
+          const v = parseFloat(e.target.value) || 0;
+          onDealValueChange(item.id, v);
+        }}
+        title="Deal value"
+      />
     </div>
   );
 }
 
-function DroppableColumn({ stage, items, activeId, onDelete }) {
+function DroppableColumn({ stage, items, activeId, onDelete, onDealValueChange }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.key });
 
   return (
@@ -58,7 +72,13 @@ function DroppableColumn({ stage, items, activeId, onDelete }) {
       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
         <div className="column-body" ref={setNodeRef}>
           {items.map(item => (
-            <PipelineCard key={item.id} item={item} isDragging={activeId === item.id} onDelete={onDelete} />
+            <PipelineCard
+              key={item.id}
+              item={item}
+              isDragging={activeId === item.id}
+              onDelete={onDelete}
+              onDealValueChange={onDealValueChange}
+            />
           ))}
         </div>
       </SortableContext>
@@ -122,6 +142,24 @@ export default function PipelineKanban({ isOpen, onClose, refreshTrigger }) {
     await fetch(`${API}/api/pipeline/${id}`, { method: 'DELETE' }).catch(console.error);
   };
 
+  const handleDealValueChange = async (id, value) => {
+    await fetch(`${API}/api/pipeline/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deal_value: value }),
+    }).catch(console.error);
+    // Update local state so the KPI reflects new value on next load
+    setPipeline(prev => {
+      const updated = { ...prev };
+      for (const stage of Object.keys(updated)) {
+        updated[stage] = updated[stage].map(item =>
+          item.id === id ? { ...item, deal_value: value } : item
+        );
+      }
+      return updated;
+    });
+  };
+
   const totalMoved = (pipeline.demo_booked?.length || 0) + (pipeline.closed_won?.length || 0);
 
   if (!isOpen) return null;
@@ -144,6 +182,7 @@ export default function PipelineKanban({ isOpen, onClose, refreshTrigger }) {
                 items={pipeline[stage.key] || []}
                 activeId={activeId}
                 onDelete={handleDelete}
+                onDealValueChange={handleDealValueChange}
               />
             ))}
           </div>

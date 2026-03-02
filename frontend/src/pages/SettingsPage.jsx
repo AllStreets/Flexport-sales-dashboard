@@ -15,7 +15,7 @@ import {
 } from 'react-icons/ri';
 import './SettingsPage.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ── localStorage hook ────────────────────────────────────────────────────────
 function useSetting(key, defaultValue) {
@@ -239,12 +239,13 @@ function QuotaSection() {
 }
 
 function NotificationsSection() {
-  const [radar,    setRadar]    = useSetting('sdr_notif_radar',       true);
-  const [stale,    setStale]    = useSetting('sdr_notif_stale',       true);
-  const [staleDays,setStaleDays]= useSetting('sdr_notif_stale_days',  7);
-  const [signals,  setSignals]  = useSetting('sdr_notif_signals',     true);
-  const [sound,    setSound]    = useSetting('sdr_notif_sound',       false);
-  const [saved,    setSaved]    = useState(false);
+  const [radar,     setRadar]     = useSetting('sdr_notif_radar',       true);
+  const [radarDays, setRadarDays] = useSetting('sdr_notif_radar_days',  3);
+  const [stale,     setStale]     = useSetting('sdr_notif_stale',       true);
+  const [staleDays, setStaleDays] = useSetting('sdr_notif_stale_days',  7);
+  const [signals,   setSignals]   = useSetting('sdr_notif_signals',     true);
+  const [sound,     setSound]     = useSetting('sdr_notif_sound',       false);
+  const [saved,     setSaved]     = useState(false);
 
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
   const tog = (setter) => (v) => { setter(v); flash(); };
@@ -255,6 +256,16 @@ function NotificationsSection() {
         <SettingRow label="Follow-up Radar Alerts" description="Flag pipeline companies overdue for contact" icon={RiAlertLine}>
           <SettingToggle value={radar} onChange={tog(setRadar)} />
         </SettingRow>
+        {radar && (
+          <SettingRow label="Follow-up threshold" description="Days since last contact before a deal is flagged">
+            <input
+              className="setting-input setting-number"
+              type="number" min="1" max="30"
+              value={radarDays}
+              onChange={e => { setRadarDays(Math.max(1, parseInt(e.target.value, 10) || 3)); flash(); }}
+            />
+          </SettingRow>
+        )}
         <SettingRow label="Pipeline Stale Alerts" description="Warn when deals are stuck beyond threshold" icon={RiTimeLine}>
           <SettingToggle value={stale} onChange={tog(setStale)} />
         </SettingRow>
@@ -329,7 +340,11 @@ function AppearanceSection() {
           <select
             className="setting-input setting-select"
             value={sidebar}
-            onChange={e => { setSidebar(e.target.value); flash(); }}
+            onChange={e => {
+              setSidebar(e.target.value);
+              flash();
+              window.dispatchEvent(new StorageEvent('storage', { key: 'sdr_ui_sidebar_default', newValue: e.target.value }));
+            }}
           >
             <option value="collapsed">Collapsed</option>
             <option value="expanded">Expanded</option>
@@ -578,9 +593,9 @@ function DataSection() {
               <div className="setting-desc">Removes all deals from the pipeline board</div>
             </div>
             <DangerButton label="Clear Pipeline" onConfirm={async () => {
-              const res = await fetch(`${API}/api/pipeline`).then(r => r.json()).catch(() => []);
-              const deals = Array.isArray(res) ? res : res.deals || [];
-              await Promise.all(deals.map(d => fetch(`${API}/api/pipeline/${d.id}`, { method: 'DELETE' })));
+              const res = await fetch(`${API}/api/pipeline`).then(r => r.json()).catch(() => ({}));
+              const allDeals = Object.values(res || {}).flat().filter(d => d?.id);
+              await Promise.all(allDeals.map(d => fetch(`${API}/api/pipeline/${d.id}`, { method: 'DELETE' })));
             }} />
           </div>
         </div>
@@ -605,9 +620,10 @@ const API_ROUTES = [
   { method: 'GET',  path: '/api/trigger-events',          desc: 'Earnings + supply chain events'       },
   { method: 'GET',  path: '/api/performance',             desc: 'SDR KPI summary'                      },
   { method: 'POST', path: '/api/performance/activity',    desc: 'Log an SDR activity'                  },
-  { method: 'GET',  path: '/api/pipeline',                desc: 'Full pipeline'                        },
+  { method: 'GET',  path: '/api/pipeline',                desc: 'Full pipeline grouped by stage'       },
+  { method: 'GET',  path: '/api/pipeline/count',          desc: 'Active deal count (excl. closed)'     },
   { method: 'POST', path: '/api/pipeline',                desc: 'Add deal'                             },
-  { method: 'PUT',  path: '/api/pipeline/:id',            desc: 'Update deal stage / notes'            },
+  { method: 'PUT',  path: '/api/pipeline/:id',            desc: 'Update stage / notes / deal value'    },
   { method: 'DELETE',path: '/api/pipeline/:id',           desc: 'Remove deal'                          },
   { method: 'GET',  path: '/api/win-loss',                desc: 'Win/loss records'                     },
   { method: 'POST', path: '/api/win-loss',                desc: 'Log a win or loss'                    },

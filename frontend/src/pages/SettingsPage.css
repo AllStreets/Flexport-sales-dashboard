@@ -335,8 +335,9 @@
 }
 
 .accent-swatch.selected {
-  border-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 2px #0d1626, 0 0 0 4px var(--accent, #00d4ff);
+  transform: scale(1.15);
 }
 
 .accent-note {

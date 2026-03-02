@@ -79,3 +79,19 @@
 .card-icp { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #10b981; }
 .card-sector { font-size: 10px; color: #475569; }
 .card-action { font-size: 10px; color: #60a5fa; }
+.card-deal-input {
+  width: 100%; box-sizing: border-box;
+  margin-top: 6px;
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.15);
+  border-radius: 4px;
+  color: #10b981;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 6px;
+  outline: none;
+  cursor: text;
+  transition: border-color 0.15s;
+}
+.card-deal-input::placeholder { color: rgba(16,185,129,0.35); }
+.card-deal-input:focus { border-color: rgba(16,185,129,0.45); }

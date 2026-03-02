@@ -22,22 +22,40 @@ function getPipeline() {
   });
 }
 
-function addToPipeline({ prospect_id, company_name, stage = 'new', notes, next_action, next_action_date }) {
+function getPipelineCount() {
   return new Promise((resolve, reject) => {
     const db = getDb();
-    db.run(`INSERT INTO pipeline (prospect_id, company_name, stage, notes, next_action, next_action_date) VALUES (?,?,?,?,?,?)`,
-      [prospect_id, company_name, stage, notes, next_action, next_action_date],
+    db.get(
+      "SELECT COUNT(*) as cnt FROM pipeline WHERE stage NOT IN ('closed_won', 'closed_lost')",
+      [],
+      (err, row) => {
+        db.close();
+        if (err) return reject(err);
+        resolve(row?.cnt || 0);
+      }
+    );
+  });
+}
+
+function addToPipeline({ prospect_id, company_name, stage = 'new', notes, next_action, next_action_date, deal_value }) {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    db.run(`INSERT INTO pipeline (prospect_id, company_name, stage, notes, next_action, next_action_date, deal_value) VALUES (?,?,?,?,?,?,?)`,
+      [prospect_id, company_name, stage, notes, next_action, next_action_date, deal_value || 0],
       function(err) { db.close(); if (err) return reject(err); resolve({ id: this.lastID, company_name, stage }); }
     );
   });
 }
 
-function updatePipeline(id, { stage, notes, next_action, next_action_date }) {
+function updatePipeline(id, { stage, notes, next_action, next_action_date, deal_value }) {
   return new Promise((resolve, reject) => {
     if (stage && !VALID_STAGES.includes(stage)) return reject(new Error(`Invalid stage: ${stage}`));
     const db = getDb();
-    db.run(`UPDATE pipeline SET stage=COALESCE(?,stage), notes=COALESCE(?,notes), next_action=COALESCE(?,next_action), next_action_date=COALESCE(?,next_action_date), updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-      [stage, notes, next_action, next_action_date, id],
+    // deal_value: pass null to keep existing value, pass a number to update
+    const dvParam = (deal_value !== undefined && deal_value !== null) ? Number(deal_value) : null;
+    db.run(
+      `UPDATE pipeline SET stage=COALESCE(?,stage), notes=COALESCE(?,notes), next_action=COALESCE(?,next_action), next_action_date=COALESCE(?,next_action_date), deal_value=COALESCE(?,deal_value), updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [stage ?? null, notes ?? null, next_action ?? null, next_action_date ?? null, dvParam, id],
       function(err) { db.close(); if (err) return reject(err); if (this.changes === 0) return reject(new Error('Not found')); resolve({ id, stage }); }
     );
   });
@@ -52,4 +70,4 @@ function removeFromPipeline(id) {
   });
 }
 
-module.exports = { getPipeline, addToPipeline, updatePipeline, removeFromPipeline };
+module.exports = { getPipeline, getPipelineCount, addToPipeline, updatePipeline, removeFromPipeline };

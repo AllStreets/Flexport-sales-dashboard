@@ -65,6 +65,7 @@ export default function App() {
     applyAppearance();
     const handler = (e) => {
       if (e?.key === 'sdr_ui_accent' || e?.key === 'sdr_ui_density') applyAppearance();
+      if (e?.key === 'sdr_ui_sidebar_default') setSidebarCollapsed(e.newValue === 'collapsed');
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
@@ -81,6 +82,7 @@ export default function App() {
         onPipelineClick={() => setShowPipeline(true)}
         onBattleCardsClick={() => setShowBattleCards(true)}
         onMenuToggle={() => setSidebarCollapsed(c => !c)}
+        pipelineRefresh={pipelineRefresh}
       />
 
       <div className="app-body">
@@ -111,7 +113,7 @@ export default function App() {
         </main>
       </div>
 
-      <PipelineKanban isOpen={showPipeline} onClose={() => setShowPipeline(false)} refreshTrigger={pipelineRefresh} />
+      <PipelineKanban isOpen={showPipeline} onClose={() => { setShowPipeline(false); setPipelineRefresh(r => r + 1); }} refreshTrigger={pipelineRefresh} />
 
       <OutreachSequenceModal
         isOpen={outreachState.open}

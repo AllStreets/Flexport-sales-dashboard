@@ -20,7 +20,7 @@ const { saveAnalysis, getAllAnalyses, toggleFavorite, deleteAnalysis } = require
 const { analyzeForFlexport } = require('./services/flexportAnalyzer');
 const { fetchAndScoreSignals } = require('./services/signalsService');
 const { getTradeData, refreshAllTradeCache } = require('./services/fredService');
-const { getPipeline, addToPipeline, updatePipeline, removeFromPipeline } = require('./services/pipelineService');
+const { getPipeline, getPipelineCount, addToPipeline, updatePipeline, removeFromPipeline } = require('./services/pipelineService');
 const { aggregateCompanyData } = require('./services/dataAggregator');
 const { getTradeIntelligence } = require('./services/tradeIntelligenceService');
 const { initDb, getPerformanceSummary, logActivity, getWinLoss, addWinLoss } = require('./services/performanceService');
@@ -209,6 +209,11 @@ app.get('/api/pipeline', async (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/pipeline/count', async (req, res) => {
+  try { res.json({ count: await getPipelineCount() }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/pipeline', async (req, res) => {
   try { res.status(201).json(await addToPipeline(req.body)); }
   catch (e) { res.status(500).json({ error: e.message }); }
@@ -226,14 +231,18 @@ app.delete('/api/pipeline/:id', async (req, res) => {
 
 // ── Outreach & Battle Cards ────────────────────────
 app.post('/api/generate-sequence', async (req, res) => {
-  const { companyName, prospectData, analysisData } = req.body;
+  const { companyName, prospectData, analysisData, sdrIdentity } = req.body;
   if (!companyName) return res.status(400).json({ error: 'companyName required' });
   try {
     const axios = require('axios');
+    const sdrCtx = sdrIdentity?.name
+      ? `SDR: ${sdrIdentity.name}${sdrIdentity.title ? `, ${sdrIdentity.title}` : ''}${sdrIdentity.team ? ` (${sdrIdentity.team})` : ''}${sdrIdentity.email ? ` — ${sdrIdentity.email}` : ''}${sdrIdentity.phone ? ` / ${sdrIdentity.phone}` : ''}.`
+      : 'SDR: Flexport sales representative.';
     const prompt = `Generate a 4-touch outreach sequence for a Flexport SDR targeting ${companyName}.
+${sdrCtx}
 Context: ${JSON.stringify({ prospectData, analysisData })}
 Return JSON: {"touches": [{"type":"email|linkedin|call","subject":"...","body":"...","day":1}]}
-Each touch should reference Flexport value props and the company's specific supply chain situation.`;
+Each touch should reference Flexport value props and the company's specific supply chain situation. Sign emails with the SDR's name if provided.`;
     const r = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: req.body?.model || 'gpt-4.1-mini', max_tokens: 1200,
       messages: [{ role: 'user', content: prompt }]
@@ -269,7 +278,7 @@ app.get('/api/account360/:id', async (req, res) => {
 
 // ── Performance ────────────────────────────────────
 app.get('/api/performance', async (req, res) => {
-  try { res.json(await getPerformanceSummary()); }
+  try { res.json(await getPerformanceSummary(req.query.retention_days)); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
