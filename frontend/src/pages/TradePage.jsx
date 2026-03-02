@@ -316,12 +316,18 @@ export default function TradePage() {
     const tb   = tradeData.trade_balance?.sparkline  || [];
     const cg   = tradeData.capital_goods?.sparkline  || [];
     const cons = tradeData.consumer_goods?.sparkline || [];
-    return tb.map((pt, i) => ({
-      d:        pt.d?.slice(0, 7),
-      balance:  pt.v,
-      capital:  cg[i]?.v   ?? null,
-      consumer: cons[i]?.v ?? null,
-    }));
+    // Date-keyed maps so mismatched FRED release calendars still align correctly
+    const cgByDate   = Object.fromEntries(cg.map(p => [p.d?.slice(0, 7), p.v]));
+    const consByDate = Object.fromEntries(cons.map(p => [p.d?.slice(0, 7), p.v]));
+    return tb.map(pt => {
+      const mo = pt.d?.slice(0, 7);
+      return {
+        d:        mo,
+        balance:  pt.v,
+        capital:  cgByDate[mo]   ?? null,
+        consumer: consByDate[mo] ?? null,
+      };
+    });
   })();
 
   const urgencyColor = s => s >= 8 ? '#ff3b3b' : s >= 5 ? '#ff9f0a' : '#00c176';
