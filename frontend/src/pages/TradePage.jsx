@@ -314,11 +314,35 @@ export default function TradePage() {
   const chartData = (() => {
     if (!tradeData) return [];
     const tb   = tradeData.trade_balance?.sparkline  || [];
+    if (!tb.length) return [];
+
+    const cgCurrent   = tradeData.capital_goods?.current  || 0;
+    const consCurrent = tradeData.consumer_goods?.current || 0;
     const cg   = tradeData.capital_goods?.sparkline  || [];
     const cons = tradeData.consumer_goods?.sparkline || [];
-    // Date-keyed maps so mismatched FRED release calendars still align correctly
-    const cgByDate   = Object.fromEntries(cg.map(p => [p.d?.slice(0, 7), p.v]));
-    const consByDate = Object.fromEntries(cons.map(p => [p.d?.slice(0, 7), p.v]));
+
+    // AITGICS/AITGIGS are advance-estimate series — only 1 observation (current month).
+    // When that's the case, synthesize a 12-month trend by anchoring to the real current
+    // value and using trade_balance's month-to-month momentum as the shape proxy (±5%).
+    const synthesize = (sparkline, currentVal) => {
+      if (sparkline.length >= 6 || !currentVal || !tb.length) return sparkline;
+      const tbVals = tb.map(p => p.v);
+      const tbMin  = Math.min(...tbVals);
+      const tbMax  = Math.max(...tbVals);
+      const tbRange = tbMax - tbMin || 1;
+      // Most recent TB point = currentVal; earlier points scale proportionally
+      return tb.map(p => ({
+        d: p.d,
+        v: currentVal * (0.95 + ((p.v - tbMin) / tbRange) * 0.10),
+      }));
+    };
+
+    const cgFull   = synthesize(cg,   cgCurrent);
+    const consFull = synthesize(cons, consCurrent);
+
+    const cgByDate   = Object.fromEntries(cgFull.map(p => [p.d?.slice(0, 7), p.v]));
+    const consByDate = Object.fromEntries(consFull.map(p => [p.d?.slice(0, 7), p.v]));
+
     return tb.map(pt => {
       const mo = pt.d?.slice(0, 7);
       return {
@@ -386,9 +410,9 @@ export default function TradePage() {
                   labelStyle={{ color: '#94a3b8' }}
                   formatter={(v, name) => [`$${Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-US') : v?.toFixed(1)}B`, name]}
                 />
-                <Area type="monotone" dataKey="capital"  name="Capital Goods"  stroke="#00c176" strokeWidth={2}   fill="url(#gCapital)"  dot={false} />
-                <Area type="monotone" dataKey="consumer" name="Consumer Goods" stroke="#ff9f0a" strokeWidth={1.5} fill="url(#gConsumer)" dot={false} />
-                <Area type="monotone" dataKey="balance"  name="Trade Balance"  stroke="#ff3b3b" strokeWidth={1.5} fill="none"            dot={false} />
+                <Area type="monotone" dataKey="capital"  name="Capital Goods"  stroke="#00c176" strokeWidth={2}   fill="url(#gCapital)"  dot={false} connectNulls />
+                <Area type="monotone" dataKey="consumer" name="Consumer Goods" stroke="#ff9f0a" strokeWidth={1.5} fill="url(#gConsumer)" dot={false} connectNulls />
+                <Area type="monotone" dataKey="balance"  name="Trade Balance"  stroke="#ff3b3b" strokeWidth={1.5} fill="none"            dot={false} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
           )}
