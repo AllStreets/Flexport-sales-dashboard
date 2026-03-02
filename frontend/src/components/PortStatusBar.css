@@ -30,6 +30,8 @@
 .bar-btn:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
 .bar-btn.primary { background: rgba(37,99,235,0.2); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
 .bar-btn.primary:hover { background: rgba(37,99,235,0.35); }
+.bar-btn.call { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: #10b981; }
+.bar-btn.call:hover { background: rgba(16,185,129,0.22); }
 
 .pipeline-count-badge {
   background: rgba(37,99,235,0.7);

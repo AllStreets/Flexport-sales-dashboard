@@ -1,12 +1,12 @@
 // frontend/src/components/PortStatusBar.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { RiSwordLine, RiKanbanView, RiMenuLine } from 'react-icons/ri';
+import { RiSwordLine, RiKanbanView, RiMenuLine, RiPhoneLine } from 'react-icons/ri';
 import './PortStatusBar.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onMenuToggle, pipelineRefresh }) {
+export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onMenuToggle, onLiveCallClick, pipelineRefresh }) {
   const [ports, setPorts] = useState([]);
   const [pipelineCount, setPipelineCount] = useState(null);
 
@@ -36,7 +36,7 @@ export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onM
       </div>
 
       <div className="ports-row">
-        {ports.map((port, i) => (
+        {ports.slice(0, ports.length > 1 ? ports.length - 1 : ports.length).map((port, i) => (
           <div key={i} className="port-indicator" title={`${port.name}: Congestion ${port.congestion}/10`}>
             <span className="port-dot" style={{ background: statusColor(port.status) }} />
             <span className="port-name">{port.name}</span>
@@ -45,6 +45,7 @@ export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onM
       </div>
 
       <div className="bar-right">
+        <button className="bar-btn call" onClick={onLiveCallClick}><RiPhoneLine size={14} /> Live Call</button>
         <button className="bar-btn" onClick={onBattleCardsClick}><RiSwordLine size={14} /> Battle Cards</button>
         <button className="bar-btn primary" onClick={onPipelineClick}>
           <RiKanbanView size={14} /> Pipeline

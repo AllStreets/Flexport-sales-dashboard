@@ -12,6 +12,7 @@ import SettingsPage from './pages/SettingsPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
 import PipelineKanban from './components/PipelineKanban';
+import LiveCallModal from './components/LiveCallModal';
 import './App.css';
 
 // Generate particle field
@@ -49,6 +50,7 @@ export default function App() {
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
   const [pipelineRefresh, setPipelineRefresh] = useState(0);
   const [globeFullscreen, setGlobeFullscreen] = useState(false);
+  const [liveCallState, setLiveCallState] = useState({ open: false, prospect: null });
 
   // Apply accent color + density from settings on mount and on cross-tab storage changes
   useEffect(() => {
@@ -73,6 +75,7 @@ export default function App() {
 
   const handleAddToPipeline = () => { setPipelineRefresh(r => r + 1); setShowPipeline(true); };
   const handleOpenOutreach = (prospect, analysis) => setOutreachState({ open: true, prospect, analysis });
+  const handleStartLiveCall = (prospect = null) => setLiveCallState({ open: true, prospect });
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -103,6 +106,7 @@ export default function App() {
 
       // Escape — close topmost open modal/overlay
       if (e.key === 'Escape') {
+        if (liveCallState.open) { setLiveCallState({ open: false, prospect: null }); return; }
         if (outreachState.open) { setOutreachState({ open: false, prospect: null, analysis: null }); return; }
         if (showBattleCards)   { setShowBattleCards(false); return; }
         if (showPipeline)      { setShowPipeline(false); setPipelineRefresh(r => r + 1); return; }
@@ -111,7 +115,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [outreachState.open, showBattleCards, showPipeline, globeFullscreen]);
+  }, [liveCallState.open, outreachState.open, showBattleCards, showPipeline, globeFullscreen]);
 
   return (
     <div className="app-root">
@@ -121,6 +125,7 @@ export default function App() {
         onPipelineClick={() => setShowPipeline(true)}
         onBattleCardsClick={() => setShowBattleCards(true)}
         onMenuToggle={() => setSidebarCollapsed(c => !c)}
+        onLiveCallClick={() => handleStartLiveCall(null)}
         pipelineRefresh={pipelineRefresh}
       />
 
@@ -135,6 +140,7 @@ export default function App() {
                 onOpenOutreach={handleOpenOutreach}
                 globeFullscreen={globeFullscreen}
                 onEnterFullscreen={() => setGlobeFullscreen(true)}
+                onStartLiveCall={handleStartLiveCall}
               />
             } />
             <Route path="/trade" element={<TradePage />} />
@@ -142,6 +148,7 @@ export default function App() {
               <Account360Page
                 onAddToPipeline={handleAddToPipeline}
                 onOpenOutreach={handleOpenOutreach}
+                onStartLiveCall={handleStartLiveCall}
               />
             } />
             <Route path="/performance" element={<PerformancePage />} />
@@ -161,6 +168,14 @@ export default function App() {
         onClose={() => setOutreachState({ open: false, prospect: null, analysis: null })}
       />
       <BattleCardsModal isOpen={showBattleCards} onClose={() => setShowBattleCards(false)} />
+
+      <LiveCallModal
+        isOpen={liveCallState.open}
+        initialProspect={liveCallState.prospect}
+        onClose={() => setLiveCallState({ open: false, prospect: null })}
+        onAddToPipeline={handleAddToPipeline}
+        onOpenOutreach={handleOpenOutreach}
+      />
 
       {globeFullscreen && (
         <button className="globe-close-btn" onClick={() => setGlobeFullscreen(false)} aria-label="Exit fullscreen">✕</button>

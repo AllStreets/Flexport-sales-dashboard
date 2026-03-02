@@ -12,6 +12,29 @@
 }
 .popup-close { color: #64748b; margin-left: 8px; }
 
+/* Today's Playbook panel */
+.playbook-panel { margin-top: 0; }
+.playbook-list { display: flex; flex-direction: column; gap: 4px; }
+.playbook-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 9px; cursor: pointer;
+  transition: all 0.15s; animation: fadeSlideIn 0.3s both;
+}
+.playbook-row:hover { background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.2); transform: translateX(3px); }
+.playbook-pill {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; border: 1px solid; border-radius: 5px;
+  padding: 2px 7px; white-space: nowrap; flex-shrink: 0;
+}
+.playbook-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.playbook-name { font-size: 13px; font-weight: 500; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playbook-reason { font-size: 10px; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playbook-arrow { font-size: 13px; color: #334155; flex-shrink: 0; transition: color 0.15s; }
+.playbook-row:hover .playbook-arrow { color: #00d4ff; }
+
 /* Hot Prospects panel */
 .hp-panel { margin-top: 0; }
 .hp-list { display: flex; flex-direction: column; gap: 4px; }

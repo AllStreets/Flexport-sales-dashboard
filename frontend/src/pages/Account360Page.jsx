@@ -1,7 +1,7 @@
 // frontend/src/pages/Account360Page.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RiFileTextLine, RiMailSendLine, RiBoxingLine, RiLightbulbLine, RiFlashlightLine, RiRoadMapLine, RiCloseCircleLine } from 'react-icons/ri';
+import { RiFileTextLine, RiMailSendLine, RiBoxingLine, RiLightbulbLine, RiFlashlightLine, RiRoadMapLine, RiCloseCircleLine, RiPhoneLine } from 'react-icons/ri';
 import ICPBadge from '../components/ICPBadge';
 import './Account360Page.css';
 
@@ -238,7 +238,7 @@ function MutualActionPlanModal({ prospect, onClose }) {
   );
 }
 
-export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
+export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStartLiveCall }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const aiEnabled = localStorage.getItem('sdr_ai_enabled') !== 'false';
@@ -592,6 +592,11 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach }) {
 
       {/* Footer action bar */}
       <div className="a360-footer glass-card">
+        {onStartLiveCall && (
+          <button className="btn-live-call" onClick={() => onStartLiveCall(p)}>
+            <RiPhoneLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Start Live Call
+          </button>
+        )}
         {onOpenOutreach && (
           <button className="btn-primary" onClick={() => onOpenOutreach(p, analysis)}><RiMailSendLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Outreach Sequence</button>
         )}
