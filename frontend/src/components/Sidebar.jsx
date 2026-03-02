@@ -8,8 +8,8 @@ import './Sidebar.css';
 
 const NAV = [
   { to: '/',            Icon: RiGlobalLine,          label: 'Home'                },
-  { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'          },
   { to: '/tariff',      Icon: RiPercentLine,          label: 'Tariff Calculator'   },
+  { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'          },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
   { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
 ];
