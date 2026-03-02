@@ -17,8 +17,14 @@ function localDateStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// ── Quota targets ─────────────────────────────────────────────────────────────
-const QUOTA = { calls: 50, emails: 100, demos: 5 };
+// ── Quota targets — reads from Settings localStorage, falls back to defaults ──
+function readQuota() {
+  return {
+    calls:  parseInt(localStorage.getItem('sdr_quota_calls'),  10) || 50,
+    emails: parseInt(localStorage.getItem('sdr_quota_emails'), 10) || 100,
+    demos:  parseInt(localStorage.getItem('sdr_quota_demos'),  10) || 5,
+  };
+}
 const HEATMAP_LEVELS = [
   'rgba(255,255,255,0.05)',
   'rgba(0,212,255,0.18)',
@@ -970,11 +976,20 @@ function PipelineVelocity({ refreshKey }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PerformancePage() {
+  const [QUOTA, setQUOTA] = useState(readQuota);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogModal, setShowLogModal] = useState(false);
   const [winLossRecords, setWinLossRecords] = useState([]);
   const [radarKey, setRadarKey] = useState(0);
+
+  // Re-read quota when user navigates back from Settings (storage event fires cross-tab;
+  // same-tab navigation remounts the component so useState(readQuota) handles it).
+  useEffect(() => {
+    const handler = (e) => { if (e?.key?.startsWith('sdr_quota_')) setQUOTA(readQuota()); };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
 
   // Mirror right column height → left column so raf-list scrolls at the right boundary.
   // useLayoutEffect with [loading] ensures we run after the real layout renders (not the spinner).

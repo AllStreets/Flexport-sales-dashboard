@@ -742,6 +742,22 @@ Return JSON: {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Settings Health ────────────────────────────────
+app.get('/api/settings/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    env: {
+      openai:       !!process.env.OPENAI_API_KEY,
+      fred:         !!process.env.FRED_API_KEY,
+      newsapi:      !!process.env.NEWSAPI_KEY,
+      exchangeRate: !!process.env.EXCHANGE_RATE_API_KEY,
+      serper:       !!process.env.SERPER_API_KEY,
+    },
+  });
+});
+
 // ── Scheduled Jobs ─────────────────────────────────
 const cron = require('node-cron');
 

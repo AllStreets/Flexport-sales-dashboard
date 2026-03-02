@@ -1,6 +1,9 @@
 // frontend/src/components/Sidebar.jsx
 import { NavLink } from 'react-router-dom';
-import { RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine } from 'react-icons/ri';
+import {
+  RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine,
+  RiSettings3Line,
+} from 'react-icons/ri';
 import './Sidebar.css';
 
 const NAV = [
@@ -11,21 +14,31 @@ const NAV = [
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
 ];
 
+function SidebarLink({ to, Icon, label, end = false }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
+      title={label}
+    >
+      <span className="sidebar-icon"><Icon size={18} /></span>
+      <span className="sidebar-label">{label}</span>
+    </NavLink>
+  );
+}
+
 export default function Sidebar({ collapsed }) {
   return (
     <nav className={`sidebar${collapsed ? ' collapsed' : ''}`}>
-      {NAV.map(({ to, Icon, label }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={to === '/'}
-          className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
-          title={label}
-        >
-          <span className="sidebar-icon"><Icon size={18} /></span>
-          <span className="sidebar-label">{label}</span>
-        </NavLink>
-      ))}
+      <div className="sidebar-main-nav">
+        {NAV.map(({ to, Icon, label }) => (
+          <SidebarLink key={to} to={to} Icon={Icon} label={label} end={to === '/'} />
+        ))}
+      </div>
+      <div className="sidebar-bottom-nav">
+        <SidebarLink to="/settings" Icon={RiSettings3Line} label="Settings" />
+      </div>
     </nav>
   );
 }
