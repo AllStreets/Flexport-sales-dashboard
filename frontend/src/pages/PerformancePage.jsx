@@ -93,21 +93,26 @@ function ActivityHeatmap({ activities }) {
     countMap[a.date] = (countMap[a.date] || 0) + 1;
   });
 
-  // Build 364-day grid (52 full weeks, starting from Monday 52 weeks ago)
-  const gridStart = new Date(today);
-  gridStart.setDate(today.getDate() - 363);
-  // Shift back to Monday
+  // Exactly 365 days ending today (day 0 = today - 364, day 364 = today)
+  const rangeStart = new Date(today);
+  rangeStart.setDate(today.getDate() - 364);
+
+  // Align grid to the Monday on or before rangeStart (for week-column layout)
+  const gridStart = new Date(rangeStart);
   const dow = gridStart.getDay();
   gridStart.setDate(gridStart.getDate() - (dow === 0 ? 6 : dow - 1));
 
+  // Build columns until we've passed today
   const weeks = [];
   let cursor = new Date(gridStart);
-  for (let w = 0; w < 53; w++) {
+  while (cursor <= today) {
     const week = [];
     for (let d = 0; d < 7; d++) {
       const iso = localDateStr(cursor);
       const count = countMap[iso] || 0;
-      week.push({ date: iso, count, future: cursor > today });
+      // inRange: within the exact 365-day window
+      const inRange = cursor >= rangeStart && cursor <= today;
+      week.push({ date: iso, count, inRange });
       cursor.setDate(cursor.getDate() + 1);
     }
     weeks.push(week);
@@ -124,14 +129,25 @@ function ActivityHeatmap({ activities }) {
   }
 
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  // Month labels: figure out which week each month starts
-  const monthLabels = [];
+  // Month labels: one per month, only for weeks that fall within the 365-day range.
+  // Deduplicate: if the same label appears more than once (e.g. both Mar 2025 and Mar 2026),
+  // keep only the last occurrence so the opening month is never repeated.
+  const rawLabels = [];
   weeks.forEach((week, wi) => {
     const firstDay = new Date(week[0].date);
-    if (firstDay.getDate() <= 7) {
-      monthLabels.push({ wi, label: MONTHS[firstDay.getMonth()] });
+    if (firstDay.getDate() <= 7 && week.some(c => c.inRange)) {
+      rawLabels.push({ wi, label: MONTHS[firstDay.getMonth()] });
     }
   });
+  // Keep only the last occurrence of each label
+  const seen = new Set();
+  const monthLabels = [];
+  for (let i = rawLabels.length - 1; i >= 0; i--) {
+    if (!seen.has(rawLabels[i].label)) {
+      seen.add(rawLabels[i].label);
+      monthLabels.unshift(rawLabels[i]);
+    }
+  }
 
   const DAYS = ['M','T','W','T','F','S','S'];
 
@@ -154,10 +170,10 @@ function ActivityHeatmap({ activities }) {
                   key={cell.date}
                   className="heatmap-cell"
                   style={{
-                    background: cell.future ? 'transparent' : HEATMAP_LEVELS[getLevel(cell.count)],
-                    border: cell.future ? '1px dashed rgba(255,255,255,0.04)' : `1px solid rgba(0,212,255,${getLevel(cell.count) * 0.08})`,
+                    background: cell.inRange ? HEATMAP_LEVELS[getLevel(cell.count)] : 'transparent',
+                    border: cell.inRange ? `1px solid rgba(0,212,255,${getLevel(cell.count) * 0.08})` : 'none',
                   }}
-                  onMouseEnter={e => !cell.future && setTooltip({ x: e.clientX, y: e.clientY, ...cell })}
+                  onMouseEnter={e => cell.inRange && setTooltip({ x: e.clientX, y: e.clientY, ...cell })}
                   onMouseLeave={() => setTooltip(null)}
                 />
               ))}
