@@ -899,16 +899,16 @@ function FollowupRadar({ refreshKey }) {
               const color = urgencyColor(item.days_since);
               return (
                 <div key={item.id} className="fr-row" style={{ animationDelay: `${i * 40}ms` }}>
-                  <span className="fr-stage-dot" style={{ background: sm.color }} />
                   <span className="fr-name">{item.company_name}</span>
-                  <span className="fr-stage-label" style={{ color: sm.color }}>{sm.label}</span>
-                  {icp > 0 && (
-                    <span className="fr-icp">ICP {icp}</span>
-                  )}
-                  <span className="fr-days" style={{ color }}>
-                    <RiTimeLine size={10} />
-                    {daysLabel(item.days_since)}
-                  </span>
+                  <div className="fr-meta">
+                    <span className="fr-stage-dot" style={{ background: sm.color }} />
+                    <span className="fr-stage-label" style={{ color: sm.color }}>{sm.label}</span>
+                    {icp > 0 && <span className="fr-icp">ICP {icp}</span>}
+                    <span className="fr-days" style={{ color }}>
+                      <RiTimeLine size={10} />
+                      {daysLabel(item.days_since)}
+                    </span>
+                  </div>
                 </div>
               );
             })}

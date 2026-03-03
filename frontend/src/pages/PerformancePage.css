@@ -632,14 +632,20 @@
 
 .fr-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   transition: background 0.15s, border-color 0.15s;
   animation: fr-slide-in 0.3s ease both;
+}
+
+.fr-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 @keyframes fr-slide-in {
@@ -661,14 +667,9 @@
 
 .fr-name {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: #e2e8f0;
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .fr-stage-label {
