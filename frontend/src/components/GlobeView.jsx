@@ -39,12 +39,25 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   // Close port popup when exiting fullscreen
   useEffect(() => { if (!fullscreen) setPortDetail(null); }, [fullscreen]);
 
+  // Derive the best globe POV from a prospect's primary_lanes
+  function lanesPOV(prospect) {
+    const lanes = (prospect?.primary_lanes || []).join(' ').toLowerCase();
+    const east  = lanes.includes('east coast') || lanes.includes('trans-atlantic');
+    const west  = lanes.includes('west coast') || lanes.includes('trans-pacific');
+    const gulf  = lanes.includes('gulf');
+    if (east && !west)  return { lat: 38.5,  lng: -72.0,  altitude: 1.5 }; // NY/NJ + Savannah
+    if (west && !east)  return { lat: 33.7,  lng: -118.2, altitude: 1.5 }; // LA/Long Beach
+    if (gulf && !east)  return { lat: 29.7,  lng: -90.0,  altitude: 1.5 }; // Gulf Coast
+    if (east && west)   return { lat: 37.0,  lng: -95.0,  altitude: 2.2 }; // both coasts — pull back
+    return { lat: 37.7749, lng: -122.4194, altitude: 1.5 };                 // fallback West Coast
+  }
+
   useEffect(() => {
     const g = globeRef.current;
     if (!g) return;
     if (selectedProspect) {
       g.controls().autoRotate = false;
-      g.pointOfView({ lat: 37.7749, lng: -122.4194, altitude: 1.5 }, 1000);
+      g.pointOfView(lanesPOV(selectedProspect), 1000);
     } else {
       g.controls().autoRotate = true;
       g.controls().autoRotateSpeed = 0.4;
