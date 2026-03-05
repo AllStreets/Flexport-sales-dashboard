@@ -51,6 +51,7 @@ export default function App() {
   const [pipelineRefresh, setPipelineRefresh] = useState(0);
   const [globeFullscreen, setGlobeFullscreen] = useState(false);
   const [liveCallState, setLiveCallState] = useState({ open: false, prospect: null });
+  const [lastCallData, setLastCallData] = useState(null);
 
   // Apply accent color + density from settings on mount and on cross-tab storage changes
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function App() {
   const handleAddToPipeline = () => { setPipelineRefresh(r => r + 1); setShowPipeline(true); };
   const handleOpenOutreach = (prospect, analysis) => setOutreachState({ open: true, prospect, analysis });
   const handleStartLiveCall = (prospect = null) => setLiveCallState({ open: true, prospect });
+  const handleEndCall = (callData) => setLastCallData(callData);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -156,6 +158,7 @@ export default function App() {
                 onAddToPipeline={handleAddToPipeline}
                 onOpenOutreach={handleOpenOutreach}
                 onStartLiveCall={handleStartLiveCall}
+                lastCallData={lastCallData}
               />
             } />
             <Route path="/performance" element={<PerformancePage />} />
@@ -182,6 +185,7 @@ export default function App() {
         onClose={() => setLiveCallState({ open: false, prospect: null })}
         onAddToPipeline={handleAddToPipeline}
         onOpenOutreach={handleOpenOutreach}
+        onEndCall={handleEndCall}
       />
 
       {globeFullscreen && (

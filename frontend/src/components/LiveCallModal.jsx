@@ -21,7 +21,7 @@ function formatTime(s) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export default function LiveCallModal({ isOpen, onClose, initialProspect = null, onAddToPipeline, onOpenOutreach }) {
+export default function LiveCallModal({ isOpen, onClose, initialProspect = null, onAddToPipeline, onOpenOutreach, onEndCall }) {
   const navigate = useNavigate();
 
   const [mode, setMode] = useState('search');
@@ -148,6 +148,9 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
 
   const endCall = () => {
     setTimerRunning(false);
+    if (onEndCall && prospect && notes.trim()) {
+      onEndCall({ prospectId: prospect.id, notes: notes.trim(), timestamp: Date.now() });
+    }
     onClose();
   };
 

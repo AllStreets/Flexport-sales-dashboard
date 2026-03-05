@@ -1,5 +1,5 @@
 // frontend/src/pages/Account360Page.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RiFileTextLine, RiMailSendLine, RiBoxingLine, RiLightbulbLine, RiFlashlightLine, RiRoadMapLine, RiCloseCircleLine, RiPhoneLine } from 'react-icons/ri';
 import ICPBadge from '../components/ICPBadge';
@@ -238,7 +238,7 @@ function MutualActionPlanModal({ prospect, onClose }) {
   );
 }
 
-export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStartLiveCall }) {
+export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStartLiveCall, lastCallData }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const aiEnabled = localStorage.getItem('sdr_ai_enabled') !== 'false';
@@ -256,6 +256,8 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
   const [callIntel, setCallIntel] = useState(null);
   const [callIntelLoading, setCallIntelLoading] = useState(false);
   const [callIntelOpen, setCallIntelOpen] = useState(false);
+  const [liveCallTimestamp, setLiveCallTimestamp] = useState(null);
+  const liveCallApplied = useRef(false);
 
   useEffect(() => {
     setLoading(true); setAnalysis(null); setData(null);
@@ -263,6 +265,8 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
     setCallNotes('');
     setCallIntel(null);
     setCallIntelOpen(false);
+    setLiveCallTimestamp(null);
+    liveCallApplied.current = false;
     setCallPrep(null);
     setShowCallPrep(false);
     setShowMapPlan(false);
@@ -322,18 +326,33 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
     onAddToPipeline?.();
   };
 
-  const analyzeCall = async () => {
-    if (!callNotes.trim()) return;
+  const analyzeCall = useCallback(async (notesOverride) => {
+    const notes = notesOverride !== undefined ? notesOverride : callNotes;
+    if (!notes.trim()) return;
     setCallIntelLoading(true); setCallIntel(null);
     try {
       const r = await fetch(`${API}/api/call-intelligence`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: callNotes, companyName: data?.prospect?.name, model: aiModel }),
+        body: JSON.stringify({ notes, companyName: data?.prospect?.name, model: aiModel }),
       });
       setCallIntel(await r.json());
     } catch { }
     finally { setCallIntelLoading(false); }
-  };
+  }, [callNotes, data, aiModel]);
+
+  // Auto-populate CI parser when live call data arrives for this account
+  useEffect(() => {
+    if (!lastCallData?.notes || liveCallApplied.current) return;
+    if (String(lastCallData.prospectId) !== String(id)) return;
+    if (!data) return; // wait for account data to load
+    liveCallApplied.current = true;
+    const notes = lastCallData.notes;
+    setCallNotes(notes);
+    setCallIntelOpen(true);
+    const ts = new Date(lastCallData.timestamp);
+    setLiveCallTimestamp(ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setTimeout(() => analyzeCall(notes), 150);
+  }, [lastCallData, id, data, analyzeCall]);
 
   const p = data?.prospect;
 
@@ -463,6 +482,9 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
         <button className="ci-toggle" onClick={() => setCallIntelOpen(o => !o)}>
           <RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
           Call Intelligence Parser
+          {liveCallTimestamp && (
+            <span className="ci-live-badge">Live call · {liveCallTimestamp}</span>
+          )}
           <span className="ci-toggle-hint">{callIntelOpen ? '▲ collapse' : '▼ expand'}</span>
         </button>
         {callIntelOpen && (
