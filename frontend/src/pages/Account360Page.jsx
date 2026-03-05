@@ -40,11 +40,23 @@ function StreamText({ text, speed = 4, delay = 18 }) {
   return <span>{displayed || <span className="stream-cursor">▊</span>}</span>;
 }
 
+function usPortFromLanes(lanes = []) {
+  const l = lanes.join(' ').toLowerCase();
+  const east = l.includes('east coast') || l.includes('trans-atlantic') || l.includes('south america');
+  const west = l.includes('west coast') || l.includes('trans-pacific');
+  const gulf = l.includes('gulf');
+  if (east && west) return 'Multiple US Ports';
+  if (east) return 'NY / NJ · Savannah';
+  if (gulf) return 'Houston · NO';
+  return 'LA / Long Beach';
+}
+
 function SupplyChainDiagram({ origins = [], lanes = [] }) {
   const svgH = Math.max(160, origins.length * 44 + 40);
   const svgW = 520;
   const cx = 340, cy = svgH / 2;
   const usX = 470, usY = svgH / 2;
+  const portName = usPortFromLanes(lanes);
 
   return (
     <div className="supply-chain-wrap">
@@ -86,7 +98,7 @@ function SupplyChainDiagram({ origins = [], lanes = [] }) {
         {/* Port node */}
         <circle cx={cx} cy={cy} r={28} fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.4)" strokeWidth="2" filter="url(#glow)" />
         <text x={cx} y={cy - 4} textAnchor="middle" fill="#00d4ff" fontSize="10" fontFamily="JetBrains Mono" fontWeight="700">PORT</text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fill="#475569" fontSize="9" fontFamily="Inter">LA / Long Beach</text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fill="#475569" fontSize="9" fontFamily="Inter">{portName}</text>
 
         {/* Port to US */}
         <line x1={cx + 28} y1={cy} x2={usX - 22} y2={usY} stroke="rgba(16,185,129,0.5)" strokeWidth="2" strokeDasharray="6 3" className="flow-line" markerEnd="url(#arrow)" />
