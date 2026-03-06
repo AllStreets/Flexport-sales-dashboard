@@ -648,6 +648,7 @@ app.get('/api/hot-prospects', (req, res) => {
 // ── Trigger Events — NewsAPI supply chain news, 30-min cache ──────────────
 let _triggerCache = null, _triggerCacheAt = 0;
 const TRIGGER_FALLBACK = [
+  { headline: 'US-Iran naval standoff closes Strait of Hormuz — Lloyd\'s war-risk surcharges active, carriers rerouting via Cape of Good Hope', sector: 'Global Freight', urgency: 'high', date: 'Mar 2026' },
   { headline: 'Apple shifts 25% of iPhone production from China to India amid tariff concerns', sector: 'Electronics', urgency: 'high', date: 'Mar 2026' },
   { headline: 'Nike announces Vietnam manufacturing capacity expansion — 3 new factories', sector: 'Apparel', urgency: 'high', date: 'Mar 2026' },
   { headline: 'Target reports Q4 inventory glut — import velocity expected to slow 15%', sector: 'E-commerce', urgency: 'medium', date: 'Feb 2026' },

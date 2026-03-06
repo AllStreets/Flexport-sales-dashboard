@@ -731,6 +731,7 @@ export default function TradePage() {
           </div>
           <div className="te-grid">
             {(triggerEvents.length > 0 ? triggerEvents : [
+              { headline: 'US-Iran naval standoff closes Strait of Hormuz — Lloyd\'s war-risk surcharges active, carriers rerouting via Cape of Good Hope', sector: 'Global Freight', urgency: 'high', date: 'Mar 2026' },
               { headline: 'Apple shifts 25% of iPhone production from China to India amid tariff concerns', sector: 'Electronics', urgency: 'high', date: 'Mar 2026' },
               { headline: 'Nike announces Vietnam manufacturing capacity expansion — 3 new factories', sector: 'Apparel', urgency: 'high', date: 'Mar 2026' },
               { headline: 'Target reports Q4 inventory glut — import velocity expected to slow 15%', sector: 'E-commerce', urgency: 'medium', date: 'Feb 2026' },
