@@ -737,7 +737,6 @@ export default function TradePage() {
               { headline: 'Target reports Q4 inventory glut — import velocity expected to slow 15%', sector: 'E-commerce', urgency: 'medium', date: 'Feb 2026' },
               { headline: 'TSMC Arizona fab ramp-up — domestic semiconductor logistics demand rising', sector: 'Electronics', urgency: 'medium', date: 'Feb 2026' },
               { headline: 'Walmart nearshoring push — 5 Mexican suppliers added for 2026', sector: 'Retail / CPG', urgency: 'medium', date: 'Jan 2026' },
-              { headline: 'Amazon repatriates 8% of SKUs from China warehouses to US 3PL network', sector: 'E-commerce', urgency: 'low', date: 'Jan 2026' },
             ]).map((e, i) => {
               const uc = e.urgency === 'high' ? '#ff3b3b' : e.urgency === 'medium' ? '#ff9f0a' : '#475569';
               return (
