@@ -122,8 +122,8 @@ app.get('/api/globe-data', async (req, res) => {
         { name: 'Ho Chi Minh City',      lat: 10.77,  lng: 106.72,  status: 'congestion', congestion: 5 },
         { name: 'Hong Kong',             lat: 22.29,  lng: 114.17,  status: 'clear',      congestion: 3 },
         // ── Middle East / Europe ──
-        // Jebel Ali: elevated from Hormuz tensions + rerouting overflow as Cape-bound ships call Dubai
-        { name: 'Jebel Ali',             lat: 25.01,  lng: 55.06,   status: 'congestion', congestion: 6 },
+        // Jebel Ali: Strait of Hormuz disruption — Iran vessel seizures + US-Iran tensions, carriers diverting via Cape
+        { name: 'Jebel Ali',             lat: 25.01,  lng: 55.06,   status: 'disruption', congestion: 9 },
         // Aden: active conflict zone — Houthi attacks, port effectively closed to commercial traffic
         { name: 'Aden',                  lat: 12.77,  lng: 45.03,   status: 'disruption', congestion: 9 },
         // Salalah: key alternative hub on Cape reroute, surge in vessel calls since 2024

@@ -37,33 +37,33 @@ const FALLBACK_SIGNALS = [
 
 // ── Static reference data ─────────────────────────────────────────────────────
 const CONTAINER_RATES = [
-  // Trans-Pacific
-  { route: 'China-US West Coast',   lane: 'Shanghai → Los Angeles',      feu: 1_850, change: -4.2 },
-  { route: 'China-US East Coast',   lane: 'Shanghai → New York',         feu: 2_800, change: +5.4 },
-  { route: 'Vietnam-US West',       lane: 'Ho Chi Minh → Los Angeles',   feu: 1_950, change: +3.1 },
-  { route: 'Japan-US West',         lane: 'Tokyo → Los Angeles',         feu: 1_420, change: -1.2 },
-  { route: 'Korea-US West',         lane: 'Busan → Los Angeles',         feu: 1_380, change: -0.9 },
-  { route: 'Taiwan-US West',        lane: 'Kaohsiung → Los Angeles',     feu: 1_490, change: +0.7 },
-  { route: 'SE Asia-US East',       lane: 'Singapore → New York',        feu: 2_650, change: +4.2 },
-  { route: 'HK-US East',            lane: 'Hong Kong → New York',        feu: 2_750, change: +3.8 },
-  // Asia-Europe
-  { route: 'China-Rotterdam',       lane: 'Shanghai → Rotterdam',        feu: 1_650, change: -2.8 },
-  { route: 'SE Asia-Europe',        lane: 'Singapore → Rotterdam',       feu: 1_520, change: -1.4 },
+  // Trans-Pacific — elevated by tariff front-running and inventory pull-forward
+  { route: 'China-US West Coast',   lane: 'Shanghai → Los Angeles',      feu: 2_480, change: +8.4 },
+  { route: 'China-US East Coast',   lane: 'Shanghai → New York',         feu: 3_350, change: +9.1 },
+  { route: 'Vietnam-US West',       lane: 'Ho Chi Minh → Los Angeles',   feu: 2_190, change: +5.6 },
+  { route: 'Japan-US West',         lane: 'Tokyo → Los Angeles',         feu: 1_460, change: -0.8 },
+  { route: 'Korea-US West',         lane: 'Busan → Los Angeles',         feu: 1_420, change: -0.4 },
+  { route: 'Taiwan-US West',        lane: 'Kaohsiung → Los Angeles',     feu: 1_550, change: +2.1 },
+  { route: 'SE Asia-US East',       lane: 'Singapore → New York',        feu: 2_950, change: +6.3 },
+  { route: 'HK-US East',            lane: 'Hong Kong → New York',        feu: 3_100, change: +5.9 },
+  // Asia-Europe — still elevated from Red Sea/Cape rerouting
+  { route: 'China-Rotterdam',       lane: 'Shanghai → Rotterdam',        feu: 1_920, change: +2.4 },
+  { route: 'SE Asia-Europe',        lane: 'Singapore → Rotterdam',       feu: 1_780, change: +1.8 },
   // South Asia
-  { route: 'India-US West',         lane: 'Mumbai → Los Angeles',        feu: 2_100, change: +1.8 },
-  { route: 'India-US East',         lane: 'Mumbai → New York',           feu: 2_280, change: +2.3 },
+  { route: 'India-US West',         lane: 'Mumbai → Los Angeles',        feu: 2_240, change: +2.9 },
+  { route: 'India-US East',         lane: 'Mumbai → New York',           feu: 2_480, change: +3.5 },
   // Atlantic
-  { route: 'Europe-US East',        lane: 'Rotterdam → New York',        feu: 1_350, change: -1.5 },
-  { route: 'Turkey-Europe',         lane: 'Istanbul → Rotterdam',        feu:   980, change: -0.6 },
-  // Middle East / Africa
-  { route: 'Middle East-Europe',    lane: 'Dubai → Rotterdam',           feu: 1_150, change: +1.1 },
-  { route: 'Africa-Europe',         lane: 'Durban → Rotterdam',          feu: 1_320, change: -2.1 },
+  { route: 'Europe-US East',        lane: 'Rotterdam → New York',        feu: 1_390, change: -0.9 },
+  { route: 'Turkey-Europe',         lane: 'Istanbul → Rotterdam',        feu: 1_040, change: +1.2 },
+  // Middle East / Africa — Hormuz closure premium driving sharp increases
+  { route: 'Middle East-Europe',    lane: 'Dubai → Rotterdam',           feu: 2_650, change: +18.4 },
+  { route: 'Africa-Europe',         lane: 'Durban → Rotterdam',          feu: 1_580, change: +3.2 },
   // Americas
-  { route: 'Mexico-US South',       lane: 'Manzanillo → Houston',        feu:   750, change: -3.4 },
-  { route: 'Brazil-US East',        lane: 'Santos → New York',           feu: 1_680, change: +2.7 },
-  { route: 'Peru-US West',          lane: 'Callao → Los Angeles',        feu: 1_450, change: +1.5 },
+  { route: 'Mexico-US South',       lane: 'Manzanillo → Houston',        feu:   810, change: -1.8 },
+  { route: 'Brazil-US East',        lane: 'Santos → New York',           feu: 1_750, change: +3.1 },
+  { route: 'Peru-US West',          lane: 'Callao → Los Angeles',        feu: 1_490, change: +1.8 },
   // Australia
-  { route: 'Australia-US West',     lane: 'Melbourne → Los Angeles',     feu: 2_050, change: +0.9 },
+  { route: 'Australia-US West',     lane: 'Melbourne → Los Angeles',     feu: 2_120, change: +1.4 },
 ];
 
 const FX_RATES = [
@@ -107,12 +107,12 @@ const IMPORT_ORIGINS = [
 ];
 
 const POLICY_CALENDAR = [
-  { date: 'Ongoing',  event: 'Section 301 China — 4-year statutory review',           urgency: 'high'   },
-  { date: 'Jul 2026', event: 'USMCA joint review — tariff-free status re-evaluation', urgency: 'medium' },
-  { date: 'Q2 2025',  event: 'ITC §201 solar cells — annual duty rate review',        urgency: 'medium' },
-  { date: 'Quarterly', event: 'DOC antidumping/CVD administrative reviews',           urgency: 'low'    },
-  { date: 'Ongoing',  event: 'India bilateral trade deal negotiations',               urgency: 'low'    },
-  { date: 'Ongoing',  event: 'EU-US Trade & Technology Council quarterly sessions',   urgency: 'low'    },
+  { date: 'Ongoing',  event: 'Section 301 China — 4-year statutory review; additional tariff layers under review', urgency: 'high'   },
+  { date: 'Ongoing',  event: 'US reciprocal tariff regime — country-specific rates 10–145% active',               urgency: 'high'   },
+  { date: 'Jul 2026', event: 'USMCA joint review — tariff-free status re-evaluation across all three parties',    urgency: 'medium' },
+  { date: 'Ongoing',  event: 'Strait of Hormuz — US-Iran naval standoff; Lloyd\'s war-risk surcharges active',   urgency: 'high'   },
+  { date: 'Quarterly', event: 'DOC antidumping/CVD administrative reviews — steel, aluminum, solar derivatives',  urgency: 'low'    },
+  { date: 'Ongoing',  event: 'India bilateral trade deal negotiations — Phase 2 talks',                           urgency: 'low'    },
 ];
 
 const SECTION_301 = [
@@ -502,7 +502,7 @@ export default function TradePage() {
 
         {/* Container rates */}
         <div className="bb-panel">
-          <div className="bb-panel-header">CONTAINER RATES — 40FT FEU SPOT · 2025</div>
+          <div className="bb-panel-header">CONTAINER RATES — 40FT FEU SPOT · 2026</div>
           <div className="container-rate-list">
             {CONTAINER_RATES.map(r => (
               <div key={r.route} className="cr-row">
@@ -606,7 +606,7 @@ export default function TradePage() {
         </div>
 
         <div className="bb-panel tariff-info-panel">
-          <div className="bb-panel-header">KEY TARIFF RATES — CHINA ORIGIN · 2025</div>
+          <div className="bb-panel-header">KEY TARIFF RATES — CHINA ORIGIN · 2026</div>
           <div className="tariff-table">
             {[
               { code: '8471', desc: 'Computers & peripherals', rate: '0% + 25% §301' },

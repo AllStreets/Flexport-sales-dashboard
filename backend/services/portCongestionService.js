@@ -43,13 +43,14 @@ const PORT_REGISTRY = [
   { name: 'Hong Kong',            lat: 22.29,  lng: 114.17,  baseline: 3, keywords: ['hong kong', 'kwai tsing', 'stonecutters'] },
 
   // ── Middle East / Europe ───────────────────────────────────────────────────
-  // Jebel Ali: Strait of Hormuz tensions + heavy Cape-reroute call volume; now congested
+  // Jebel Ali: Strait of Hormuz effectively closed — Iran IRGC vessel seizures and US-Iran tensions
+  //   have made transiting the strait extremely high-risk. Most carriers diverting via Cape of Good Hope.
+  //   Commercial traffic through the Strait has dropped sharply. Disruption-level classification.
   // Aden: active Houthi conflict zone — effectively closed to commercial shipping since late 2023
   // Salalah: key alternative waystation on Cape reroute, surge in vessel calls
   // Colombo: critical Cape-reroute transshipment hub, volume surged since Red Sea closure
-  // Singapore/Klang/Pelepas: major bottlenecks — Cape reroute concentrates traffic here
   // Hamburg: labour disputes + low-water Elbe constraints; Felixstowe: chronic UK port congestion
-  { name: 'Jebel Ali',            lat: 25.01,  lng: 55.06,   baseline: 6, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza', 'hormuz'] },
+  { name: 'Jebel Ali',            lat: 25.01,  lng: 55.06,   baseline: 9, keywords: ['jebel ali', 'dubai port', 'dp world', 'jafza', 'hormuz', 'strait of hormuz', 'iran'] },
   { name: 'Aden',                 lat: 12.77,  lng: 45.03,   baseline: 9, keywords: ['aden', 'yemen', 'bab el-mandeb', 'bab-el-mandeb', 'houthi', 'red sea attack'] },
   { name: 'Salalah',              lat: 16.94,  lng: 54.00,   baseline: 5, keywords: ['salalah', 'oman port', 'pdsa'] },
   { name: 'Colombo',              lat: 6.94,   lng: 79.84,   baseline: 5, keywords: ['colombo', 'sri lanka port', 'jict', 'cict'] },
