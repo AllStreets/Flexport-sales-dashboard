@@ -12,9 +12,17 @@ const DISRUPTION_ZONES = [
 
 const HOME_POV = { lat: 20, lng: 10, altitude: 2.2 };
 
-function vesselColor(type = '') {
-  if (type.includes('Tanker')) return 'rgba(245,158,11,0.9)';
-  if (type.includes('Bulk'))   return 'rgba(167,139,250,0.9)';
+function vesselColor(type) {
+  // AIS live data uses numeric type codes (70=Cargo, 80=Tanker); sim data uses strings
+  let t = '';
+  if (typeof type === 'number') {
+    if (type >= 80 && type < 90) t = 'Tanker';
+    else if (type >= 70 && type < 80) t = 'Container';
+  } else {
+    t = String(type || '');
+  }
+  if (t.includes('Tanker')) return 'rgba(245,158,11,0.9)';
+  if (t.includes('Bulk'))   return 'rgba(167,139,250,0.9)';
   return 'rgba(0,212,255,0.9)';
 }
 
@@ -207,8 +215,9 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
+  // Cap at 60 vessels for arcs — 500 animated TubeGeometry objects exhaust WebGL memory
   const trailData = useMemo(() =>
-    vessels.flatMap(v => portToPortArcs(v)), [vessels]);
+    vessels.slice(0, 60).flatMap(v => portToPortArcs(v)), [vessels]);
 
   // Port rings from live data (disrupted/congested ports)
   const portRings = useMemo(() => ports
@@ -272,6 +281,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         arcDashAnimateTime={d => d.part === 'remaining' ? 0 : 3500}
         arcStroke={d => d.part === 'remaining' ? 0.12 : 0.22}
         arcAltitudeAutoScale={0.15}
+        arcCurveResolution={20}
         ringsData={allRings}
         ringColor="color"
         ringMaxRadius="maxRadius"
