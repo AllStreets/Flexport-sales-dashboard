@@ -55,13 +55,16 @@ OPENAI_API_KEY=sk-...                      # Required — all AI features (GPT-4
 FRED_API_KEY=your_fred_key                 # Optional — FRED macro data charts
 NEWS_API_KEY=your_newsapi_key              # Optional — live signal feed + trigger events
 SERPER_API_KEY=your_serper_key             # Optional — prospect web enrichment
-EXCHANGE_RATE_API_KEY=your_key            # Optional — live FX rates
-MARINETRAFFIC_API_KEY=your_key            # Optional — live port congestion data
-FRONTEND_URL=https://your-app.vercel.app  # Required — CORS allowlist
+EXCHANGE_RATE_API_KEY=your_key             # Optional — live FX rates
+AISSTREAM_API_KEY=your_key                 # Optional — live AIS vessel positions on Ocean Command
+TERMINAL49_API_KEY=your_key                # Optional — container tracking on Ocean Command
+FRONTEND_URL=https://your-app.vercel.app   # Required — CORS allowlist
 PORT=                                      # Set automatically by Railway — do not set
 ```
 
 `FRONTEND_URL` is used by the CORS allowlist. All `*.vercel.app` subdomains are automatically allowed, so Vercel preview deployments work without changes.
+
+`AISSTREAM_API_KEY` — free tier at [aisstream.io](https://aisstream.io). Without it, Ocean Command shows 250 simulated vessels on real trade routes. With it, up to 200 live vessel positions stream via WebSocket.
 
 Subsequent deploys happen automatically on push to `main`.
 
@@ -104,11 +107,12 @@ VITE_API_URL=http://localhost:5001
 ## Verifying a Production Deployment
 
 1. Open the Vercel URL — globe and port ticker load within 2–3 seconds.
-2. Navigate to Market Map — sector nodes render with pipeline stage colors.
-3. Open any Account 360 → click **Run Full Analysis** — AI text streams in.
-4. Open Trade Intelligence → macro tiles show FRED data; FX Rates panel shows **LIVE** badge.
-5. Open Live Call Mode (`Ctrl+Shift+L`) — search returns prospects from the seeded database.
-6. DevTools → Network tab — all `/api/*` calls return 200 from your Railway URL, not localhost.
+2. Navigate to **Ocean Command** (`/vessels`) — animated route arcs appear within 3 seconds. Header badge shows **LIVE AIS** if `AISSTREAM_API_KEY` is set, otherwise **SIMULATED**. Clicking the badge toggles between modes.
+3. Navigate to Market Map — sector nodes render with pipeline stage colors.
+4. Open any Account 360 → click **Run Full Analysis** — AI text streams in.
+5. Open Trade Intelligence → macro tiles show FRED data; FX Rates panel shows **LIVE** badge.
+6. Open Live Call Mode (`Ctrl+Shift+L`) — search returns prospects from the seeded database.
+7. DevTools → Network tab — all `/api/*` calls return 200 from your Railway URL, not localhost.
 
 ---
 
@@ -120,6 +124,8 @@ VITE_API_URL=http://localhost:5001
 | API calls going to `localhost` | Set `VITE_API_URL` on Vercel to your Railway URL and redeploy |
 | Globe renders blank | Browser needs hardware acceleration — check WebGL in DevTools console |
 | AI features return 500 | Verify `OPENAI_API_KEY` on Railway is valid and has credits |
+| Ocean Command shows SIMULATED only | `AISSTREAM_API_KEY` not set or invalid — add to Railway variables |
+| Container tracker returns 503 | `TERMINAL49_API_KEY` not set — add to Railway variables |
 | FX Rates shows "REF" badge | `EXCHANGE_RATE_API_KEY` not set — add to Railway variables |
 | Macro tiles show `—` | `FRED_API_KEY` not set — data falls back to cache; add key to fix |
 | Signal feed shows static signals | `NEWS_API_KEY` not set — static fallback signals display |

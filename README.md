@@ -1,6 +1,6 @@
 # Flexport SDR Intelligence Hub
 
-A full-stack sales intelligence platform built for Flexport SDRs. Combines live prospect data, AI-generated insights, global trade intelligence, port disruption monitoring, tariff analysis, pipeline management, and live call assistance into a single dark-mode terminal interface.
+A full-stack sales intelligence platform built for Flexport SDRs. Combines live prospect data, AI-generated insights, global trade intelligence, live AIS vessel tracking, port disruption monitoring, tariff analysis, pipeline management, and live call assistance into a single dark-mode terminal interface.
 
 ![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=white) ![Express](https://img.shields.io/badge/Express-5-black?logo=express) ![SQLite](https://img.shields.io/badge/SQLite-3-003b57?logo=sqlite) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4.1--mini-412991?logo=openai)
 
@@ -11,6 +11,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 | Route | Page | Description |
 |---|---|---|
 | `/` | Home | Interactive 3D globe with live shipping lanes and port disruption rings, signal ticker, Today's Playbook (priority follow-up list), Hot Prospects panel, Signal Feed with AI outreach matching |
+| `/vessels` | Ocean Command | Live AIS vessel tracking globe — 200 real vessels (AISstream) or 250 simulated vessels on 62 great-circle trade routes. Animated route arcs with directional color gradient, vessel type coloring (Container/Tanker/Bulk), port disruption rings. Right panel: Fleet Overview stats, live event feed (clickable — pans globe to vessel), container tracker (Terminal49 API), vessel detail with ship flag + country. Live/simulated toggle on the header badge. |
 | `/trade` | Trade Intelligence Terminal | Bloomberg-style macro terminal — FRED live data, 20-route container spot rates, port congestion table, live FX rates, tariff tables, route optimizer, §301 actions, trade policy calendar, earnings trigger event monitor |
 | `/account/:id` | Account 360 | Full prospect deep-dive — animated supply chain diagram with correct US port routing by primary lane, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser (auto-populates from Live Call notes) |
 | `/performance` | SDR Performance | 365-day activity heatmap, quota attainment rings, activity funnel, win/loss chart and logger, follow-up radar, pipeline velocity, recent activity feed |
@@ -36,7 +37,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 
 **Frontend** — React 19, Vite 7, React Router v7, Recharts, Three.js / react-globe.gl, @dnd-kit (Kanban drag-and-drop), react-icons/ri
 
-**Backend** — Express 5, SQLite3, OpenAI GPT-4.1-mini (all AI features), FRED API (Federal Reserve macro data), NewsAPI (signal feed + trigger events), exchangerate-api.com + frankfurter.app (live FX rates with 1-day % change), Serper API (prospect enrichment)
+**Backend** — Express 5, SQLite3, OpenAI GPT-4.1-mini (all AI features), FRED API (Federal Reserve macro data), NewsAPI (signal feed + trigger events), exchangerate-api.com + frankfurter.app (live FX rates with 1-day % change), Serper API (prospect enrichment), AISstream WebSocket (live AIS vessel positions), Terminal49 API (container tracking)
 
 ---
 
@@ -47,7 +48,9 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── GlobeView.jsx               # Three.js globe — shipping lanes, port rings, prospect arcs
+│   │   │   ├── GlobeView.jsx               # Home page globe — shipping lanes, port rings, prospect arcs
+│   │   │   ├── VesselsGlobe.jsx            # Ocean Command globe — live AIS, animated route arcs
+│   │   │   ├── VGPanel.jsx                 # Ocean Command right panel — fleet stats, event feed, container tracker
 │   │   │   ├── LiveCallModal.jsx           # Live call assistant — timer, talk track, objection AI, notes
 │   │   │   ├── PipelineKanban.jsx          # Drag-and-drop deal board (@dnd-kit)
 │   │   │   ├── BattleCardsModal.jsx        # Competitive intelligence overlay
@@ -62,6 +65,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   │   │   └── ProspectSearch.jsx          # Filters + AI natural language search
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx / .css
+│   │   │   ├── VesselsPage.jsx / .css      # Ocean Command page
 │   │   │   ├── TradePage.jsx / .css
 │   │   │   ├── Account360Page.jsx / .css
 │   │   │   ├── PerformancePage.jsx / .css
@@ -90,7 +94,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   ├── data/
 │   │   └── seedProspects.js                # 136-prospect database seed script
 │   ├── initDb.js                           # Schema creation + safe ALTER TABLE migrations
-│   └── server.js                           # All API routes + static trade/battle card data
+│   └── server.js                           # All API routes, AISstream WebSocket client, static data
 │
 └── DEPLOYMENT.md
 ```
@@ -106,6 +110,8 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 - FRED API key (optional — macro charts fall back to cached data)
 - NewsAPI key (optional — signal feed falls back to static signals)
 - ExchangeRate API key (optional — FX rates fall back to static values)
+- AISstream API key (optional — Ocean Command shows 250 simulated vessels without it)
+- Terminal49 API key (optional — container tracker on Ocean Command requires it)
 
 ### 1. Clone and install
 
@@ -155,7 +161,8 @@ cd frontend && npm run dev
 | GET | `/api/prospects/:id` | Single prospect |
 | GET | `/api/prospects/sectors` | Sector summary with counts and avg ICP |
 | GET | `/api/market-map` | Prospects grouped by sector with pipeline stage |
-| GET | `/api/globe-data` | Shipping lanes + dynamic port congestion |
+| GET | `/api/globe-data` | Shipping lanes + dynamic port congestion for Home globe |
+| GET | `/api/vessels` | Live AIS vessels (AISstream, ≥100 vessels) or 250 simulated vessels on 62 trade routes. `?mode=sim` forces simulated. |
 | GET | `/api/account360/:id` | Full account — prospect + NewsAPI signal timeline |
 | GET | `/api/hot-prospects` | Top 8 by opportunity score (ICP + pipeline stage bonus) |
 | GET | `/api/followup-radar` | Overdue contacts sorted by ICP score (`?days=N`) |
@@ -188,6 +195,7 @@ cd frontend && npm run dev
 | POST | `/api/win-loss` | Add win/loss record |
 | POST | `/api/route-optimize` | Transit benchmark — Flexport vs industry time + cost |
 | GET | `/api/hs-lookup` | HS code tariff data (`?q=HS_CODE`) |
+| POST | `/api/containers/track` | Container or B/L tracking via Terminal49 (35+ carriers) |
 
 ---
 
@@ -196,13 +204,14 @@ cd frontend && npm run dev
 ### Backend (`backend/.env`)
 
 ```
-OPENAI_API_KEY=sk-...                      # Required — all AI features
-FRED_API_KEY=your_fred_key                 # Optional — FRED macro data
+OPENAI_API_KEY=sk-...                      # Required — all AI features (GPT-4.1-mini)
+FRED_API_KEY=your_fred_key                 # Optional — FRED macro data charts
 NEWS_API_KEY=your_newsapi_key              # Optional — live signal feed + trigger events
 SERPER_API_KEY=your_serper_key             # Optional — prospect web enrichment
-EXCHANGE_RATE_API_KEY=your_key            # Optional — live FX rates
-MARINETRAFFIC_API_KEY=your_key            # Optional — live port congestion data
-FRONTEND_URL=https://your-app.vercel.app  # Required for production CORS
+EXCHANGE_RATE_API_KEY=your_key             # Optional — live FX rates
+AISSTREAM_API_KEY=your_key                 # Optional — live AIS vessel positions (Ocean Command)
+TERMINAL49_API_KEY=your_key                # Optional — container tracking (Ocean Command)
+FRONTEND_URL=https://your-app.vercel.app   # Required for production CORS
 PORT=5001
 ```
 
