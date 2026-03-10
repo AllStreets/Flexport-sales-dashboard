@@ -250,7 +250,7 @@ function MutualActionPlanModal({ prospect, onClose }) {
   );
 }
 
-export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStartLiveCall, lastCallData }) {
+export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStartLiveCall, lastCallData, onOpenEmailComposer }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const aiEnabled = localStorage.getItem('sdr_ai_enabled') !== 'false';
@@ -634,6 +634,9 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
         {onOpenOutreach && (
           <button className="btn-primary" onClick={() => onOpenOutreach(p, analysis)}><RiMailSendLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Outreach Sequence</button>
         )}
+        <button className="action-btn" onClick={() => onOpenEmailComposer?.(p)}>
+          <RiMailSendLine size={14} /> Compose Email
+        </button>
         <button className="btn-secondary" onClick={generateCallPrep} disabled={callPrepLoading}>
           {callPrepLoading ? '...' : <><RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Call Prep</>}
         </button>

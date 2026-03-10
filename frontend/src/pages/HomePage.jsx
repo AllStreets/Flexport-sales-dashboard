@@ -94,7 +94,7 @@ function TodaysPlaybook({ hotProspects, navigate }) {
   );
 }
 
-export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscreen, onEnterFullscreen, onStartLiveCall }) {
+export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscreen, onEnterFullscreen, onStartLiveCall, onOpenEmailComposer }) {
   const [selectedProspect, setSelectedProspect] = useState(null);
   const [hotProspects, setHotProspects] = useState([]);
   const navigate = useNavigate();
@@ -148,7 +148,7 @@ export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscr
         {/* Right column */}
         <div className="right-column">
           <div className="glass-card col-section">
-            <SignalFeed onOpenOutreach={onOpenOutreach} selectedProspect={selectedProspect} />
+            <SignalFeed onOpenOutreach={onOpenOutreach} selectedProspect={selectedProspect} onOpenEmailComposer={onOpenEmailComposer} />
           </div>
 
           {/* Today's Playbook — above Hot Prospects */}

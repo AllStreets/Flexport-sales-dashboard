@@ -1,11 +1,11 @@
 // frontend/src/components/SignalFeed.jsx
 import { useState, useEffect } from 'react';
-import { RiSparklingLine } from 'react-icons/ri';
+import { RiSparklingLine, RiMailSendLine } from 'react-icons/ri';
 import './SignalFeed.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
+export default function SignalFeed({ onOpenOutreach, selectedProspect, onOpenEmailComposer }) {
   const [signals, setSignals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [matchSignal, setMatchSignal] = useState(null);
@@ -109,6 +109,14 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect }) {
                   <RiSparklingLine size={10} style={{ marginRight: 3 }} />AI Match
                 </button>
               )}
+              <button
+                className="signal-email-btn"
+                title="Compose email from this signal"
+                onClick={e => { e.preventDefault(); onOpenEmailComposer?.(null, s.title || s.headline); }}
+                style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '2px 4px' }}
+              >
+                <RiMailSendLine size={11} />
+              </button>
             </div>
           </a>
         ))}

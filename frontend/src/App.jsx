@@ -13,6 +13,7 @@ import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
 import PipelineKanban from './components/PipelineKanban';
 import LiveCallModal from './components/LiveCallModal';
+import EmailComposerModal from './components/EmailComposerModal';
 import './App.css';
 
 // Generate particle field
@@ -52,6 +53,7 @@ export default function App() {
   const [globeFullscreen, setGlobeFullscreen] = useState(false);
   const [liveCallState, setLiveCallState] = useState({ open: false, prospect: null });
   const [lastCallData, setLastCallData] = useState(null);
+  const [emailState, setEmailState] = useState({ open: false, prospect: null, trigger: '' });
 
   // Apply accent color + density from settings on mount and on cross-tab storage changes
   useEffect(() => {
@@ -78,6 +80,8 @@ export default function App() {
   const handleOpenOutreach = (prospect, analysis) => setOutreachState({ open: true, prospect, analysis });
   const handleStartLiveCall = (prospect = null) => setLiveCallState({ open: true, prospect });
   const handleEndCall = (callData) => setLastCallData(callData);
+  const handleOpenEmailComposer = (prospect = null, trigger = '') =>
+    setEmailState({ open: true, prospect, trigger });
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -113,8 +117,16 @@ export default function App() {
         return;
       }
 
+      // Ctrl+Shift+E — Toggle Email Composer
+      if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+        e.preventDefault();
+        setEmailState(s => s.open ? { open: false, prospect: null, trigger: '' } : { open: true, prospect: null, trigger: '' });
+        return;
+      }
+
       // Escape — close topmost open modal/overlay
       if (e.key === 'Escape') {
+        if (emailState.open) { setEmailState({ open: false, prospect: null, trigger: '' }); return; }
         if (liveCallState.open) { setLiveCallState({ open: false, prospect: null }); return; }
         if (outreachState.open) { setOutreachState({ open: false, prospect: null, analysis: null }); return; }
         if (showBattleCards)   { setShowBattleCards(false); return; }
@@ -124,7 +136,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [liveCallState.open, outreachState.open, showBattleCards, showPipeline, globeFullscreen]);
+  }, [emailState.open, liveCallState.open, outreachState.open, showBattleCards, showPipeline, globeFullscreen]);
 
   return (
     <div className="app-root">
@@ -150,6 +162,7 @@ export default function App() {
                 globeFullscreen={globeFullscreen}
                 onEnterFullscreen={() => setGlobeFullscreen(true)}
                 onStartLiveCall={handleStartLiveCall}
+                onOpenEmailComposer={handleOpenEmailComposer}
               />
             } />
             <Route path="/trade" element={<TradePage />} />
@@ -159,6 +172,7 @@ export default function App() {
                 onOpenOutreach={handleOpenOutreach}
                 onStartLiveCall={handleStartLiveCall}
                 lastCallData={lastCallData}
+                onOpenEmailComposer={handleOpenEmailComposer}
               />
             } />
             <Route path="/performance" element={<PerformancePage />} />
@@ -186,6 +200,13 @@ export default function App() {
         onAddToPipeline={handleAddToPipeline}
         onOpenOutreach={handleOpenOutreach}
         onEndCall={handleEndCall}
+      />
+
+      <EmailComposerModal
+        isOpen={emailState.open}
+        initialProspect={emailState.prospect}
+        initialTrigger={emailState.trigger}
+        onClose={() => setEmailState({ open: false, prospect: null, trigger: '' })}
       />
 
       {globeFullscreen && (
