@@ -37,53 +37,96 @@ const AIRSPACE_RESTRICTIONS = [
 
 const HOME_POV = { lat: 25, lng: 10, altitude: 2.2 };
 
-// Trail arc: from origin airport to current flight position — bright at plane end, fading at origin.
-function flightTrailArc(f) {
-  if (!f.srcLat || !f.lat) return null;
-  const isCargo = f.isCargo;
-  const bright = isCargo ? 'rgba(132,204,22,0.8)' : 'rgba(0,212,255,0.8)';
-  const dim    = isCargo ? 'rgba(132,204,22,0.05)' : 'rgba(0,212,255,0.05)';
+// ── Colors ─────────────────────────────────────────────────────────────────
+// Rose/coral for cargo, soft violet for passenger — distinct from all existing
+// page colors (teal #00d4ff, red #ef4444, amber #f59e0b, lime #84cc16)
+const CARGO_COLOR   = 'rgba(251,113,133,0.9)';  // rose-400
+const PAX_COLOR     = 'rgba(167,139,250,0.9)';  // violet-400
+const CARGO_DIM     = 'rgba(251,113,133,0.07)';
+const PAX_DIM       = 'rgba(167,139,250,0.07)';
+
+function portStatusColor(status) {
+  if (status === 'disruption') return '#ef4444';
+  if (status === 'congestion') return '#f59e0b';
+  return '#10b981';
+}
+
+// Full route arc (src→dst). Dashes are phased by flight.progress so each arc
+// shows a moving "scanner" at a different position along the route.
+function flightRouteArc(f) {
+  if (!f.srcLat || !f.dstLat) return null;
+  const bright = f.isCargo ? CARGO_COLOR.replace('0.9)', '0.6)') : PAX_COLOR.replace('0.9)', '0.6)');
+  const dim    = f.isCargo ? CARGO_DIM : PAX_DIM;
   return {
     startLat: f.srcLat, startLng: f.srcLng,
-    endLat: f.lat,       endLng: f.lng,
+    endLat:   f.dstLat, endLng:   f.dstLng,
     color: [dim, bright],
     id: f.id,
+    progress: f.progress ?? 0,
   };
+}
+
+// ── Great-circle SLERP (mirrored from backend) ────────────────────────────
+// Used in the RAF loop for real-time sprite animation between API refreshes.
+function gcFlightPoint(lat1d, lng1d, lat2d, lng2d, t) {
+  const R = Math.PI / 180;
+  const lat1 = lat1d*R, lng1 = lng1d*R, lat2 = lat2d*R, lng2 = lng2d*R;
+  const x1 = Math.cos(lat1)*Math.cos(lng1), y1 = Math.cos(lat1)*Math.sin(lng1), z1 = Math.sin(lat1);
+  const x2 = Math.cos(lat2)*Math.cos(lng2), y2 = Math.cos(lat2)*Math.sin(lng2), z2 = Math.sin(lat2);
+  const dot = Math.min(1, Math.max(-1, x1*x2 + y1*y2 + z1*z2));
+  const omega = Math.acos(dot);
+  if (omega < 0.0001) return { lat: lat1d, lng: lng1d, heading: 0 };
+  const s = Math.sin(omega);
+  const a = Math.sin((1-t)*omega)/s, b = Math.sin(t*omega)/s;
+  const x = a*x1 + b*x2, y = a*y1 + b*y2, z = a*z1 + b*z2;
+  const lat = Math.atan2(z, Math.sqrt(x*x + y*y)) / R;
+  const lng = Math.atan2(y, x) / R;
+  const t2 = Math.min(t + 0.01, 0.999);
+  const a2 = Math.sin((1-t2)*omega)/s, b2 = Math.sin(t2*omega)/s;
+  const x2p = a2*x1 + b2*x2, y2p = a2*y1 + b2*y2, z2p = a2*z1 + b2*z2;
+  const lat2p = Math.atan2(z2p, Math.sqrt(x2p*x2p + y2p*y2p)) / R;
+  const lng2p = Math.atan2(y2p, x2p) / R;
+  const dLng = ((lng2p - lng + 540) % 360 - 180) * R;
+  const heading = ((Math.atan2(
+    Math.sin(dLng),
+    Math.cos(lat*R)*Math.sin(lat2p*R) - Math.sin(lat*R)*Math.cos(lat2p*R)*Math.cos(dLng)
+  ) / R + 360) % 360);
+  return { lat, lng, heading };
+}
+
+function setSpritePos(sprite, lat, lng, alt, globeRadius) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (90 - lng) * Math.PI / 180;
+  const r = globeRadius * (1 + alt);
+  const ps = Math.sin(phi);
+  sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
 }
 
 // ── Plane sprite icons ─────────────────────────────────────────────────────
 const _planeTexCache = {};
 function makePlaneCanvas(isCargo) {
-  const color = isCargo ? 'rgba(132,204,22,0.95)' : 'rgba(56,189,248,0.9)';
+  const color = isCargo ? CARGO_COLOR : PAX_COLOR;
   const c = document.createElement('canvas');
   c.width = 56; c.height = 56;
   const ctx = c.getContext('2d');
-  // Glow halo
   const glow = ctx.createRadialGradient(28, 28, 2, 28, 28, 22);
   glow.addColorStop(0, color.replace('0.9)', '0.28)'));
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, 56, 56);
   ctx.fillStyle = color;
-  // Fuselage (ellipse, nose pointing up in canvas = North on globe when heading=0)
+  ctx.beginPath(); ctx.ellipse(28, 28, 4, 20, 0, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(28, 28, 4, 20, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Main wings (swept trapezoid)
-  ctx.beginPath();
-  ctx.moveTo(28, 20); ctx.lineTo(7, 34);
-  ctx.lineTo(9, 38);  ctx.lineTo(28, 30);
-  ctx.lineTo(47, 38); ctx.lineTo(49, 34);
+  ctx.moveTo(28, 20); ctx.lineTo(7, 34); ctx.lineTo(9, 38);
+  ctx.lineTo(28, 30); ctx.lineTo(47, 38); ctx.lineTo(49, 34);
   ctx.closePath(); ctx.fill();
-  // Tail fins
   ctx.beginPath();
-  ctx.moveTo(28, 42); ctx.lineTo(18, 51);
-  ctx.lineTo(20, 53); ctx.lineTo(28, 46);
-  ctx.lineTo(36, 53); ctx.lineTo(38, 51);
+  ctx.moveTo(28, 42); ctx.lineTo(18, 51); ctx.lineTo(20, 53);
+  ctx.lineTo(28, 46); ctx.lineTo(36, 53); ctx.lineTo(38, 51);
   ctx.closePath(); ctx.fill();
   return c;
 }
 function makePlaneSprite(flight) {
-  const key = flight.isCargo ? 'cargo' : 'commercial';
+  const key = flight.isCargo ? 'cargo' : 'pax';
   if (!_planeTexCache[key]) _planeTexCache[key] = new THREE.CanvasTexture(makePlaneCanvas(flight.isCargo));
   const mat = new THREE.SpriteMaterial({ map: _planeTexCache[key], transparent: true, depthWrite: false, sizeAttenuation: true });
   const sprite = new THREE.Sprite(mat);
@@ -91,14 +134,20 @@ function makePlaneSprite(flight) {
   return sprite;
 }
 
-export default function FlightsGlobe({ flights = [], source, onFlightClick, focusTarget, width, height }) {
+export default function FlightsGlobe({ flights = [], ports = [], source, onFlightClick, focusTarget, width, height }) {
   const globeRef = useRef(null);
   const threeRefs = useRef({
     frame: null, shouldAnimate: false,
     glowMesh: null, glowGeom: null, glowMat: null,
     ringMesh: null, ringGeom: null, ringMat: null,
     moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
+    sprites: new Map(), // id → { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius }
   });
+
+  // Clear sprite map when flights data refreshes (react-globe.gl recreates sprites on new data reference)
+  useEffect(() => {
+    threeRefs.current.sprites.clear();
+  }, [flights]);
 
   useEffect(() => {
     const refs = threeRefs.current;
@@ -107,7 +156,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
       if (!g?.scene) return;
       const scene = g.scene();
 
-      // ── Atmosphere glow (blue — matches Ocean Command) ──
+      // ── Atmosphere glow ──
       const glowGeom = new THREE.SphereGeometry(105, 32, 32);
       const glowMat = new THREE.ShaderMaterial({
         uniforms: { c: { value: 0.22 }, p: { value: 4.5 } },
@@ -119,7 +168,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
       scene.add(glowMesh);
       refs.glowMesh = glowMesh; refs.glowGeom = glowGeom; refs.glowMat = glowMat;
 
-      // ── Equatorial ring (navy blue — matches Ocean Command) ──
+      // ── Equatorial ring ──
       const ringGeom = new THREE.TorusGeometry(102, 0.5, 8, 64);
       const ringMat = new THREE.MeshBasicMaterial({ color: 0x004466, transparent: true, opacity: 0.4 });
       const ringMesh = new THREE.Mesh(ringGeom, ringMat);
@@ -182,7 +231,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
       scene.add(moonMesh);
       refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
 
-      // ── Unified RAF: ring rotation + moon orbit ──
+      // ── Unified RAF: ring + moon orbit + real-time sprite animation ──
       refs.shouldAnimate = true;
       const animate = () => {
         if (!refs.shouldAnimate) return;
@@ -191,6 +240,20 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
           if (refs.moonMesh) {
             const t = Date.now() * 0.00008;
             refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
+          }
+          // Animate each simulated flight sprite along its great-circle route
+          // Progress formula mirrors backend: (now/1000 + phase) % 86400 / 86400
+          // Simulated phases are stable, so we just advance from the fetched progress value.
+          if (refs.sprites.size > 0) {
+            const now = Date.now();
+            for (const entry of refs.sprites.values()) {
+              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius } = entry;
+              const elapsed = (now - fetchTs) / 1000; // seconds since last fetch
+              const t = (progress0 + elapsed / 86400) % 1;
+              const pt = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
+              setSpritePos(sprite, pt.lat, pt.lng, 0.04, globeRadius);
+              sprite.material.rotation = -(pt.heading * Math.PI / 180);
+            }
           }
         } catch (_) {}
         refs.frame = requestAnimationFrame(animate);
@@ -219,6 +282,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
         refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
         refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
         refs.moonGeom = refs.moonMat = refs.moonTex = null;
+        refs.sprites.clear();
       }
     };
   }, []);
@@ -245,12 +309,13 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
     g.pointOfView(HOME_POV, 1000);
   }, []);
 
-  // Trail arcs: origin → current position, updated on every flights refresh
+  // Full route arcs — stable across animation frames, update only on API refresh
   const arcs = useMemo(() =>
-    flights.filter(f => f.srcLat && f.lat).map(flightTrailArc).filter(Boolean),
+    flights.filter(f => f.srcLat && f.dstLat).map(flightRouteArc).filter(Boolean),
   [flights]);
 
-  // Pan globe when feed card is clicked
+  const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
+
   useEffect(() => {
     if (!focusTarget || !globeRef.current) return;
     globeRef.current.pointOfView({ lat: focusTarget.lat, lng: focusTarget.lng, altitude: 1.2 }, 1500);
@@ -265,29 +330,52 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
     onFlightClick?.(obj);
   }, [onFlightClick]);
 
-  const hubRings = useMemo(() => [
-    ...CARGO_HUBS.filter(h => h.tier <= 2).map(h => ({
+  // Rings: hub rings + airspace restrictions + disruption-status ports
+  const allRings = useMemo(() => {
+    const portRings = ports
+      .filter(p => p.status === 'disruption')
+      .slice(0, 5)
+      .map(p => ({ lat: p.lat, lng: p.lng, color: '#ef4444', maxRadius: 3.5, propagationSpeed: 2.5, repeatPeriod: 850 }));
+    return [
+      ...CARGO_HUBS.filter(h => h.tier <= 2).map(h => ({
+        lat: h.lat, lng: h.lng,
+        color: h.tier === 1 ? '#00d4ff' : 'rgba(0,212,255,0.45)',
+        maxRadius: h.tier === 1 ? 2.5 : 1.8,
+        propagationSpeed: h.tier === 1 ? 3 : 2,
+        repeatPeriod: h.tier === 1 ? 700 : 950,
+      })),
+      ...AIRSPACE_RESTRICTIONS,
+      ...portRings,
+    ];
+  }, [ports]);
+
+  // Labels: cargo hubs + port status labels (same as Ocean Command)
+  const allLabels = useMemo(() => {
+    const hubs = CARGO_HUBS.map(h => ({
+      type: 'hub', name: h.name, code: h.code, tier: h.tier,
       lat: h.lat, lng: h.lng,
-      color: h.tier === 1 ? '#00d4ff' : 'rgba(0,212,255,0.45)',
-      maxRadius: h.tier === 1 ? 2.5 : 1.8,
-      propagationSpeed: h.tier === 1 ? 3 : 2,
-      repeatPeriod: h.tier === 1 ? 700 : 950,
-    })),
-    ...AIRSPACE_RESTRICTIONS,
-  ], []);
+      color: h.tier === 1 ? '#00d4ff' : h.tier === 2 ? 'rgba(0,212,255,0.65)' : 'rgba(0,212,255,0.38)',
+      labelSize: h.tier === 1 ? 0.52 : h.tier === 2 ? 0.38 : 0.28,
+    }));
+    const portLabels = ports.map(p => ({
+      type: 'port', name: p.name, status: p.status, congestion: p.congestion,
+      lat: p.lat, lng: p.lng,
+      color: portStatusColor(p.status),
+      labelSize: 0.25,
+    }));
+    return [...hubs, ...portLabels];
+  }, [ports]);
 
-  const hubLabels = useMemo(() => CARGO_HUBS.map(h => ({
-    ...h,
-    color: h.tier === 1 ? '#00d4ff' : h.tier === 2 ? 'rgba(0,212,255,0.65)' : 'rgba(0,212,255,0.38)',
-    labelSize: h.tier === 1 ? 0.52 : h.tier === 2 ? 0.38 : 0.28,
-  })), []);
-
-  const hubLabelColor = useCallback(h => h.color, []);
-  const hubLabelSize  = useCallback(h => h.labelSize, []);
-
-  const hubLabelLabel = useCallback(h =>
-    `<div style="color:#00d4ff;font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid rgba(0,212,255,0.3)">${h.name}<br/><span style="font-size:9px;opacity:0.7">Cargo Hub · Tier ${h.tier}</span></div>`,
-  []);
+  const labelText  = useCallback(l => l.type === 'hub' ? l.code : l.name, []);
+  const labelColor = useCallback(l => l.color, []);
+  const labelSize  = useCallback(l => l.labelSize, []);
+  const labelLabel = useCallback(l => {
+    if (l.type === 'hub') {
+      return `<div style="color:#00d4ff;font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid rgba(0,212,255,0.3)">${l.name}<br/><span style="font-size:9px;opacity:0.7">Cargo Hub · Tier ${l.tier}</span></div>`;
+    }
+    const c = portStatusColor(l.status);
+    return `<div style="color:${c};font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid ${c}40">${l.name}<br/><span style="font-size:9px;opacity:0.7">${l.status} · ${l.congestion}/10</span></div>`;
+  }, []);
 
   const flightLabel = useCallback(f =>
     `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${f.callsign || f.id}</strong><br/>FL${Math.round((f.altitude || 10000) / 30.48)} · ${f.velocity || 0} kts${f.destination ? '<br/>' + (f.origin || '') + ' \u2192 ' + f.destination : ''}</div>`,
@@ -307,39 +395,46 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
         customLayerData={flights}
         customThreeObject={makePlaneSprite}
         customThreeObjectUpdate={(sprite, f, globeRadius) => {
-          const alt = 0.04;
-          const phi = (90 - f.lat) * Math.PI / 180;
-          const theta = (90 - f.lng) * Math.PI / 180;
-          const r = globeRadius * (1 + alt);
-          const ps = Math.sin(phi);
-          sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
+          if (f.srcLat && f.dstLat) {
+            // Register for RAF animation
+            threeRefs.current.sprites.set(f.id, {
+              sprite, srcLat: f.srcLat, srcLng: f.srcLng,
+              dstLat: f.dstLat, dstLng: f.dstLng,
+              progress0: f.progress ?? 0, fetchTs: Date.now(), globeRadius,
+            });
+            // Initial position from fetched data
+            setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
+          } else {
+            threeRefs.current.sprites.delete(f.id);
+            setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
+          }
           sprite.material.rotation = -((f.heading ?? 0) * Math.PI / 180);
         }}
         onCustomLayerClick={handleFlightClick}
         customLayerLabel={flightLabel}
         arcsData={arcs}
         arcColor="color"
-        arcDashLength={0.5}
-        arcDashGap={0.5}
-        arcDashInitialGap={0}
-        arcDashAnimateTime={3500}
+        arcDashLength={0.55}
+        arcDashGap={0.45}
+        arcDashInitialGap={arcInitialGap}
+        arcDashAnimateTime={5000}
         arcStroke={0.22}
-        arcAltitudeAutoScale={0.15}
+        arcAltitudeAutoScale={0.18}
         arcCurveResolution={24}
-        ringsData={hubRings}
+        ringsData={allRings}
         ringColor="color"
         ringMaxRadius="maxRadius"
         ringPropagationSpeed="propagationSpeed"
         ringRepeatPeriod="repeatPeriod"
-        labelsData={hubLabels}
+        labelsData={allLabels}
         labelLat="lat"
         labelLng="lng"
-        labelText="code"
-        labelSize={hubLabelSize}
-        labelDotRadius={0.4}
-        labelColor={hubLabelColor}
+        labelText={labelText}
+        labelSize={labelSize}
+        labelDotRadius={0.35}
+        labelColor={labelColor}
         labelResolution={2}
-        labelLabel={hubLabelLabel}
+        labelLabel={labelLabel}
       />
       <button
         onClick={handleReset}

@@ -1379,6 +1379,40 @@ function gcFlightPoint(lat1d, lng1d, lat2d, lng2d, t) {
 
 const CARGO_CS = ['FDX','UPS','GTI','CLX','NCA','ABX','ATN','PAC','KAC','CAL','CPA','ETH'];
 const AC_TYPES = ['B748','B77F','MD11','B763','A330'];
+const PAXCS = ['AAL','UAL','DAL','BAW','DLH','AFR','SIA','KAL','QFA','CCA','UAE','JAL','ANA','VIR','IBE'];
+const PAX_AC_TYPES = ['B777','B787','A380','A350','B737','A320'];
+const PASSENGER_ROUTES = [
+  { from:'New York',     fromLat:40.63,  fromLng:-73.78,  to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'New York',     fromLat:40.63,  fromLng:-73.78,  to:'Paris',       toLat:49.01,  toLng:2.55    },
+  { from:'New York',     fromLat:40.63,  fromLng:-73.78,  to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'New York',     fromLat:40.63,  fromLng:-73.78,  to:'Dubai',       toLat:25.25,  toLng:55.36   },
+  { from:'New York',     fromLat:40.63,  fromLng:-73.78,  to:'Hong Kong',   toLat:22.31,  toLng:113.92  },
+  { from:'Los Angeles',  fromLat:33.94,  fromLng:-118.41, to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Los Angeles',  fromLat:33.94,  fromLng:-118.41, to:'Seoul',       toLat:37.46,  toLng:126.44  },
+  { from:'Los Angeles',  fromLat:33.94,  fromLng:-118.41, to:'Singapore',   toLat:1.36,   toLng:103.99  },
+  { from:'Los Angeles',  fromLat:33.94,  fromLng:-118.41, to:'Sydney',      toLat:-33.95, toLng:151.18  },
+  { from:'Los Angeles',  fromLat:33.94,  fromLng:-118.41, to:'Beijing',     toLat:40.08,  toLng:116.59  },
+  { from:'Chicago',      fromLat:41.97,  fromLng:-87.91,  to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Chicago',      fromLat:41.97,  fromLng:-87.91,  to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'Dallas',       fromLat:32.90,  fromLng:-97.04,  to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'Dallas',       fromLat:32.90,  fromLng:-97.04,  to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Miami',        fromLat:25.79,  fromLng:-80.29,  to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'London',       fromLat:51.47,  fromLng:-0.45,   to:'Singapore',   toLat:1.36,   toLng:103.99  },
+  { from:'London',       fromLat:51.47,  fromLng:-0.45,   to:'Hong Kong',   toLat:22.31,  toLng:113.92  },
+  { from:'London',       fromLat:51.47,  fromLng:-0.45,   to:'Sydney',      toLat:-33.95, toLng:151.18  },
+  { from:'London',       fromLat:51.47,  fromLng:-0.45,   to:'Mumbai',      toLat:19.09,  toLng:72.87   },
+  { from:'Dubai',        fromLat:25.25,  fromLng:55.36,   to:'New York',    toLat:40.63,  toLng:-73.78  },
+  { from:'Dubai',        fromLat:25.25,  fromLng:55.36,   to:'Sydney',      toLat:-33.95, toLng:151.18  },
+  { from:'Dubai',        fromLat:25.25,  fromLng:55.36,   to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Paris',        fromLat:49.01,  fromLng:2.55,    to:'Singapore',   toLat:1.36,   toLng:103.99  },
+  { from:'Paris',        fromLat:49.01,  fromLng:2.55,    to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'Tokyo',        fromLat:35.54,  fromLng:139.78,  to:'New York',    toLat:40.63,  toLng:-73.78  },
+  { from:'Seoul',        fromLat:37.46,  fromLng:126.44,  to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Seoul',        fromLat:37.46,  fromLng:126.44,  to:'New York',    toLat:40.63,  toLng:-73.78  },
+  { from:'Sydney',       fromLat:-33.95, fromLng:151.18,  to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Mumbai',       fromLat:19.09,  fromLng:72.87,   to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Sao Paulo',    fromLat:-23.43, fromLng:-46.48,  to:'London',      toLat:51.47,  toLng:-0.45   },
+];
 let _flightCache = { flights: [], ts: 0, source: 'simulated' };
 let _openSkyToken = { access_token: null, expires_at: 0 };
 
@@ -1408,6 +1442,7 @@ async function getOpenSkyToken() {
 function buildSimulatedFlights() {
   const now = Date.now();
   const flights = [];
+  // Cargo flights
   FLIGHT_ROUTES.forEach((r, ri) => {
     for (let i = 0; i < 3; i++) {
       const seed = ri * 3 + i;
@@ -1417,19 +1452,31 @@ function buildSimulatedFlights() {
       const cs = CARGO_CS[seed % CARGO_CS.length];
       const num = 1000 + ((seed * 47 + ri * 13) % 8999);
       flights.push({
-        id: `SIM${seed}`,
-        callsign: `${cs}${num}`,
-        isCargo: true,
-        lat, lng,
-        altitude: 9000 + ((seed * 37 + i * 500) % 3000),
-        velocity: 240 + ((seed * 13 + i * 7) % 60),
-        heading,
-        origin: r.from,
-        destination: r.to,
-        srcLat: r.fromLat, srcLng: r.fromLng,
-        dstLat: r.toLat, dstLng: r.toLng,
-        progress,
-        aircraftType: AC_TYPES[seed % AC_TYPES.length],
+        id: `SIM${seed}`, callsign: `${cs}${num}`, isCargo: true,
+        lat, lng, altitude: 9000 + ((seed * 37 + i * 500) % 3000),
+        velocity: 240 + ((seed * 13 + i * 7) % 60), heading,
+        origin: r.from, destination: r.to,
+        srcLat: r.fromLat, srcLng: r.fromLng, dstLat: r.toLat, dstLng: r.toLng,
+        progress, aircraftType: AC_TYPES[seed % AC_TYPES.length],
+      });
+    }
+  });
+  // Passenger flights
+  PASSENGER_ROUTES.forEach((r, ri) => {
+    for (let i = 0; i < 3; i++) {
+      const seed = 10000 + ri * 3 + i;
+      const phase = (seed * 6271 + 4817) % 86400;
+      const progress = ((now / 1000 + phase) % 86400) / 86400;
+      const { lat, lng, heading } = gcFlightPoint(r.fromLat, r.fromLng, r.toLat, r.toLng, progress);
+      const cs = PAXCS[seed % PAXCS.length];
+      const num = 100 + ((seed * 31 + ri * 17) % 899);
+      flights.push({
+        id: `PAX${seed}`, callsign: `${cs}${num}`, isCargo: false,
+        lat, lng, altitude: 10000 + ((seed * 29 + i * 300) % 2000),
+        velocity: 250 + ((seed * 11 + i * 9) % 50), heading,
+        origin: r.from, destination: r.to,
+        srcLat: r.fromLat, srcLng: r.fromLng, dstLat: r.toLat, dstLng: r.toLng,
+        progress, aircraftType: PAX_AC_TYPES[seed % PAX_AC_TYPES.length],
       });
     }
   });

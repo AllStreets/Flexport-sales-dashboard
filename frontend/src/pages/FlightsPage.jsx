@@ -40,6 +40,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function FlightsPage() {
   const [flights, setFlights]           = useState([]);
+  const [ports, setPorts]               = useState([]);
   const [source, setSource]             = useState('');
   const [loading, setLoading]           = useState(true);
   const [selectedFlight, setSelectedFlight] = useState(null);
@@ -73,6 +74,14 @@ export default function FlightsPage() {
     fetchFlights();
     const id = setInterval(fetchFlights, 60000);
     return () => clearInterval(id);
+  }, []);
+
+  // Fetch port congestion/disruption data (same source as Ocean Command)
+  useEffect(() => {
+    fetch(`${API}/api/vessels`)
+      .then(r => r.json())
+      .then(d => setPorts(d.ports || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -117,6 +126,7 @@ export default function FlightsPage() {
             <GlobeErrorBoundary>
               <FlightsGlobe
                 flights={flights}
+                ports={ports}
                 source={source}
                 onFlightClick={setSelectedFlight}
                 focusTarget={focusTarget}
@@ -126,11 +136,13 @@ export default function FlightsPage() {
             </GlobeErrorBoundary>
           )}
           <div className="fg-legend">
-            <span style={{ color: '#84cc16' }}>&#9632; Cargo</span>
-            <span style={{ color: '#38bdf8' }}>&#9632; Passenger</span>
+            <span style={{ color: '#fb7185' }}>&#9632; Cargo</span>
+            <span style={{ color: '#a78bfa' }}>&#9632; Passenger</span>
             <span style={{ color: '#00d4ff' }}>&#9679; Hub (Tier 1)</span>
             <span style={{ color: 'rgba(0,212,255,0.5)' }}>&#9679; Hub (Tier 2)</span>
-            <span style={{ color: '#ef4444' }}>&#9679; Airspace Alert</span>
+            <span style={{ color: '#10b981' }}>&#9679; Port Clear</span>
+            <span style={{ color: '#f59e0b' }}>&#9679; Congested</span>
+            <span style={{ color: '#ef4444' }}>&#9679; Disruption</span>
           </div>
           <div className="fg-scanline" />
         </div>

@@ -69,8 +69,8 @@ function FGStats({ flights }) {
       <div className="fg-stats-label">FLEET OVERVIEW</div>
       <div className="fg-stats-grid">
         <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#94a3b8' }}>{flights.length}</span><span className="fg-stat-key">TOTAL</span></div>
-        <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#84cc16' }}>{cargo}</span><span className="fg-stat-key">CARGO</span></div>
-        <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#38bdf8' }}>{commercial || '\u2014'}</span><span className="fg-stat-key">PAX</span></div>
+        <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#fb7185' }}>{cargo}</span><span className="fg-stat-key">CARGO</span></div>
+        <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#a78bfa' }}>{commercial || '\u2014'}</span><span className="fg-stat-key">PAX</span></div>
         <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#10b981', fontSize: 13 }}>FL{avgFl || '\u2014'}</span><span className="fg-stat-key">AVG ALT</span></div>
       </div>
       {avgSpd > 0 && (
