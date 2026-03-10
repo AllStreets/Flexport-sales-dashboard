@@ -832,6 +832,101 @@ OUTPUT FORMAT (use these exact headers):
   }
 });
 
+// ── Research — AI company intelligence brief with Serper + NewsAPI + OpenAI ─
+app.post('/api/research', async (req, res) => {
+  const { company } = req.body;
+  if (!company) return res.status(400).json({ error: 'company required' });
+
+  let newsContext = '', serperContext = '';
+  try {
+    const axios = require('axios');
+    const [newsRes, serperRes] = await Promise.allSettled([
+      process.env.NEWS_API_KEY
+        ? axios.get('https://newsapi.org/v2/everything', {
+            params: { q: company, sortBy: 'publishedAt', pageSize: 5, apiKey: process.env.NEWS_API_KEY }
+          })
+        : Promise.resolve(null),
+      process.env.SERPER_API_KEY
+        ? axios.post('https://google.serper.dev/search',
+            { q: `${company} logistics shipping supply chain 2026` },
+            { headers: { 'X-API-KEY': process.env.SERPER_API_KEY, 'Content-Type': 'application/json' } })
+        : Promise.resolve(null),
+    ]);
+    if (newsRes.status === 'fulfilled' && newsRes.value?.data?.articles) {
+      newsContext = newsRes.value.data.articles
+        .map(a => `- ${a.title} (${a.publishedAt?.slice(0,10)})`).join('\n');
+    }
+    if (serperRes.status === 'fulfilled' && serperRes.value?.data?.organic) {
+      serperContext = serperRes.value.data.organic.slice(0, 4)
+        .map(r => `- ${r.title}: ${r.snippet}`).join('\n');
+    }
+  } catch (e) { console.error('research enrichment error:', e.message); }
+
+  const prompt = `You are a world-class sales intelligence analyst. Generate a concise prospect intelligence brief for an SDR at Flexport (AI-powered freight forwarding) targeting this company.
+
+COMPANY: ${company}
+
+RECENT NEWS:
+${newsContext || 'No live news available — use your knowledge.'}
+
+WEB SIGNALS:
+${serperContext || 'No web signals — use your knowledge.'}
+
+Write the brief using EXACTLY these section headers:
+
+## SNAPSHOT
+2-3 sentences: revenue estimate, employee count, HQ, founding year, what they make/sell.
+
+## TRADE PROFILE
+Their primary import/export lanes, likely freight forwarder, estimated annual freight spend range, dominant shipping mode (ocean/air/both).
+
+## RECENT SIGNALS
+3-5 bullet points: notable news from last 90 days — funding, exec hires, factory moves, earnings, supply chain changes. If none, note the silence.
+
+## WHY CONTACT NOW
+2-3 specific, signal-grounded reasons this company needs Flexport RIGHT NOW. Reference tariffs, Hormuz disruption, Vietnam factory surge, or relevant market forces.
+
+## OPENING HOOK
+One killer first sentence for a cold call or email. Reference something specific about their business. Make it impossible to ignore.`;
+
+  try {
+    const axios = require('axios');
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.flushHeaders();
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini',
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      responseType: 'stream',
+    });
+
+    response.data.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(l => l.trim());
+      for (const line of lines) {
+        if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+          try {
+            const json = JSON.parse(line.slice(6));
+            const text = json.choices?.[0]?.delta?.content || '';
+            if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
+          } catch {}
+        } else if (line.includes('[DONE]')) {
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+      }
+    });
+    response.data.on('end', () => { if (!res.writableEnded) { res.write('data: [DONE]\n\n'); res.end(); } });
+    response.data.on('error', () => { if (!res.writableEnded) res.end(); });
+  } catch (err) {
+    console.error('research error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Research generation failed' });
+  }
+});
+
 // Freight rate 12-week history (seeded random walk for sparklines)
 app.get('/api/rate-history', (req, res) => {
   const ROUTES = [
