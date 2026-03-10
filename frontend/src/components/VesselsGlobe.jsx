@@ -32,15 +32,19 @@ function portStatusColor(status) {
   return '#10b981';
 }
 
-// Traveled arc only — no 'remaining' arc (arcDashAnimateTime=0 crashes WebGL shader)
-function traveledArc(vessel) {
+// Full-route arc: always srcPort→dstPort regardless of vessel position.
+// arcDashInitialGap is set to vessel.progress so the animated dash starts
+// at the vessel's current position — early-journey vessels get the same
+// full-length visible arc as late-journey vessels.
+function fullRouteArc(vessel) {
   if (!vessel.srcLat || !vessel.dstLat) return null;
   const color = vesselColor(vessel.type);
   return {
     startLat: vessel.srcLat, startLng: vessel.srcLng,
-    endLat: vessel.lat, endLng: vessel.lng,
+    endLat: vessel.dstLat, endLng: vessel.dstLng,
     color: [color, color],
     mmsi: vessel.mmsi,
+    progress: vessel.progress ?? 0,
   };
 }
 
@@ -231,8 +235,8 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     }
     if (arcsInitialized.current) return; // frozen — never rebuild on refresh
     const arcs = vessels
-      .filter(v => v.srcLat && v.dstLat && (v.progress ?? 0.5) > 0.03)
-      .map(v => traveledArc(v))
+      .filter(v => v.srcLat && v.dstLat)
+      .map(v => fullRouteArc(v))
       .filter(Boolean);
     if (arcs.length > 0) {
       arcsInitialized.current = true;
@@ -257,9 +261,9 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...p, dotColor: portStatusColor(p.status),
   })), [ports]);
 
-  // Stagger arc animation resets: each arc's loop-reset happens at a different time
-  // so not all 250 arcs flash simultaneously (which is what causes the ~1s glitch).
-  const arcInitialGap = useCallback(arc => (arc.mmsi % 47) / 47, []);
+  // Stagger arc resets using vessel.progress (uniformly distributed 0→1 across all vessels).
+  // 250 vessels × 10s cycle = one reset every ~40ms — completely imperceptible.
+  const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
 
   const handleVesselClick = useCallback((point) => {
     const g = globeRef.current;
@@ -306,8 +310,8 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         arcDashLength={0.4}
         arcDashGap={0.6}
         arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={3000}
-        arcStroke={0.22}
+        arcDashAnimateTime={10000}
+        arcStroke={0.28}
         arcAltitudeAutoScale={0.06}
         arcCurveResolution={10}
         ringsData={allRings}
