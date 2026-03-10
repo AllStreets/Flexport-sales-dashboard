@@ -8,11 +8,11 @@ import './Sidebar.css';
 
 const NAV = [
   { to: '/',            Icon: RiGlobalLine,          label: 'Home'                },
-  { to: '/vessels',     Icon: RiShipLine,             label: 'Ocean'               },
+  { to: '/vessels',     Icon: RiShipLine,             label: 'Ocean Freight'       },
   { to: '/flights',     Icon: RiPlaneLine,            label: 'Air Freight'         },
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'          },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
-  { to: '/research',    Icon: RiSearchEyeLine,        label: 'Research'            },
+  { to: '/research',    Icon: RiSearchEyeLine,        label: 'Quick Research'      },
   { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
 ];
 

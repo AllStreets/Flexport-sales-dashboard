@@ -105,7 +105,7 @@ export default function VesselsPage() {
     <div className="vg-page">
       <div className="vg-header">
         <RiShipLine size={15} className="vg-header-icon" />
-        <span className="vg-header-title">OCEAN COMMAND</span>
+        <span className="vg-header-title">OCEAN FREIGHT</span>
         {source && (
           <button className={`vg-source-badge ${source}`} onClick={toggleMode} title={forcedSim ? 'Switch to live data' : 'Switch to simulated data'}>
             <RiWifiLine size={9} /> {source === 'live' ? 'LIVE AIS' : 'SIMULATED'}

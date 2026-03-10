@@ -34,16 +34,31 @@ function portStatusColor(status) {
 
 // Trail arc: origin port → current vessel position.
 // Dim at origin, bright at the vessel's current position — gives a wake/trail effect.
-// Arcs update on every vessel refresh so they extend as vessels move.
+// Simulated vessels use known srcLat/srcLng; live AIS vessels use nearest known port.
 function dimColor(color) {
   return color.replace(/[\d.]+\)$/, '0.06)');
 }
-function trailArc(vessel) {
-  if (!vessel.srcLat || !vessel.lat) return null;
+function nearestPort(lat, lng, ports) {
+  if (!ports.length) return null;
+  let best = ports[0], bestDist = Infinity;
+  for (const p of ports) {
+    const d = (p.lat - lat) ** 2 + (p.lng - lng) ** 2;
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best;
+}
+function trailArc(vessel, ports) {
+  if (!vessel.lat) return null;
+  let srcLat = vessel.srcLat, srcLng = vessel.srcLng;
+  if (!srcLat) {
+    const p = nearestPort(vessel.lat, vessel.lng, ports);
+    if (!p) return null;
+    srcLat = p.lat; srcLng = p.lng;
+  }
   const bright = vesselColor(vessel.type);
   return {
-    startLat: vessel.srcLat, startLng: vessel.srcLng,
-    endLat: vessel.lat,       endLng: vessel.lng,
+    startLat: srcLat, startLng: srcLng,
+    endLat: vessel.lat, endLng: vessel.lng,
     color: [dimColor(bright), bright],
     mmsi: vessel.mmsi,
   };
@@ -252,10 +267,10 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
   }, []);
 
   // Trail arcs: origin port → current vessel position, updated on every refresh.
-  // Live AIS vessels have no srcLat/srcLng so they naturally produce no arcs.
+  // Simulated vessels use known srcLat/srcLng; live AIS vessels use nearest known port.
   const arcs = useMemo(() =>
-    vessels.filter(v => v.srcLat && v.lat).map(trailArc).filter(Boolean),
-  [vessels]);
+    vessels.filter(v => v.lat && v.lng).map(v => trailArc(v, ports)).filter(Boolean),
+  [vessels, ports]);
 
   // Pan globe when feed card vessel is clicked
   useEffect(() => {

@@ -51,19 +51,26 @@ function portStatusColor(status) {
   return '#10b981';
 }
 
-// Full route arc (src→dst). Dashes are phased by flight.progress so each arc
-// shows a moving "scanner" at a different position along the route.
+function nearestHub(lat, lng) {
+  let best = CARGO_HUBS[0], bestDist = Infinity;
+  for (const h of CARGO_HUBS) {
+    const d = (h.lat - lat) ** 2 + (h.lng - lng) ** 2;
+    if (d < bestDist) { bestDist = d; best = h; }
+  }
+  return best;
+}
+
+// Simulated flights: full route arc src→dst with progress-phased dashes.
+// Live flights (no route data): trail arc from nearest cargo hub → current position.
 function flightRouteArc(f) {
-  if (!f.srcLat || !f.dstLat) return null;
   const bright = f.isCargo ? CARGO_COLOR.replace('0.9)', '0.6)') : PAX_COLOR.replace('0.9)', '0.6)');
   const dim    = f.isCargo ? CARGO_DIM : PAX_DIM;
-  return {
-    startLat: f.srcLat, startLng: f.srcLng,
-    endLat:   f.dstLat, endLng:   f.dstLng,
-    color: [dim, bright],
-    id: f.id,
-    progress: f.progress ?? 0,
-  };
+  if (f.srcLat && f.dstLat) {
+    return { startLat: f.srcLat, startLng: f.srcLng, endLat: f.dstLat, endLng: f.dstLng, color: [dim, bright], id: f.id, progress: f.progress ?? 0 };
+  }
+  // Live ADS-B: nearest cargo hub as estimated origin, trail to current position
+  const hub = nearestHub(f.lat, f.lng);
+  return { startLat: hub.lat, startLng: hub.lng, endLat: f.lat, endLng: f.lng, color: [dim, bright], id: f.id, progress: 0 };
 }
 
 // ── Great-circle SLERP (mirrored from backend) ────────────────────────────
@@ -309,9 +316,9 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
     g.pointOfView(HOME_POV, 1000);
   }, []);
 
-  // Full route arcs — stable across animation frames, update only on API refresh
+  // Route arcs for all flights — simulated get full src→dst, live get nearest hub→position
   const arcs = useMemo(() =>
-    flights.filter(f => f.srcLat && f.dstLat).map(flightRouteArc).filter(Boolean),
+    flights.filter(f => f.lat && f.lng).map(flightRouteArc).filter(Boolean),
   [flights]);
 
   const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
