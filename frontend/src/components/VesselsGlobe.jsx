@@ -1,7 +1,8 @@
 // frontend/src/components/VesselsGlobe.jsx
-import { useEffect, useRef, useCallback, useMemo } from 'react'; // useMemo kept for vesselPoints + trailData
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
+import { RiRefreshLine } from 'react-icons/ri';
 
 const DISRUPTION_ZONES = [
   { lat: 26.5, lng: 56.5, label: 'Strait of Hormuz', color: '#ef4444', maxRadius: 5, propagationSpeed: 3, repeatPeriod: 700 },
@@ -9,16 +10,7 @@ const DISRUPTION_ZONES = [
   { lat: 31.5, lng: 32.3, label: 'Suez Canal', color: '#f59e0b', maxRadius: 3, propagationSpeed: 1.8, repeatPeriod: 1100 },
 ];
 
-const MAJOR_PORTS = [
-  { lat: 31.2, lng: 121.5, name: 'Shanghai' },
-  { lat: 1.35, lng: 103.8, name: 'Singapore' },
-  { lat: 51.9, lng: 4.5,   name: 'Rotterdam' },
-  { lat: 33.7, lng: -118.2, name: 'Los Angeles' },
-  { lat: 22.3, lng: 114.2, name: 'Hong Kong' },
-  { lat: 53.5, lng: 10.0,  name: 'Hamburg' },
-  { lat: 25.2, lng: 55.3,  name: 'Dubai (Jebel Ali)' },
-  { lat: 35.4, lng: 139.6, name: 'Tokyo / Yokohama' },
-];
+const HOME_POV = { lat: 20, lng: 10, altitude: 2.2 };
 
 function vesselColor(type = '') {
   if (type.includes('Tanker')) return 'rgba(245,158,11,0.9)';
@@ -26,82 +18,169 @@ function vesselColor(type = '') {
   return 'rgba(0,212,255,0.9)';
 }
 
-// Given a vessel's current position + COG + SOG, compute N ghost positions trailing behind it
-function trailArcs(vessel, steps = 3) {
-  if (!vessel.cog && !vessel.sog) return [];
-  const sogKm = (vessel.sog || 14) * 1.852; // knots → km/h
-  const cog = (vessel.cog || 0) * Math.PI / 180;
-  const R = 6371; // Earth radius km
-  const arcs = [];
-  // step = 2 hours of travel
-  for (let i = 1; i <= steps; i++) {
-    const dist = (sogKm * 2 * i) / R;
-    const lat1 = vessel.lat * Math.PI / 180;
-    const lng1 = vessel.lng * Math.PI / 180;
-    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dist) + Math.cos(lat1) * Math.sin(dist) * Math.cos(cog + Math.PI));
-    const lng2 = lng1 + Math.atan2(Math.sin(cog + Math.PI) * Math.sin(dist) * Math.cos(lat1), Math.cos(dist) - Math.sin(lat1) * Math.sin(lat2));
-    const opacity = (steps - i + 1) / steps * 0.35;
-    const baseColor = vesselColor(vessel.type);
-    const color = baseColor.replace(/[\d.]+\)$/, `${opacity})`);
-    arcs.push({
-      startLat: vessel.lat, startLng: vessel.lng,
-      endLat: lat2 * 180 / Math.PI, endLng: lng2 * 180 / Math.PI,
-      color: [color, 'rgba(0,0,0,0)'],
-      mmsi: vessel.mmsi, trailStep: i
-    });
-  }
-  return arcs;
+function portStatusColor(status) {
+  if (status === 'disruption') return '#ef4444';
+  if (status === 'congestion') return '#f59e0b';
+  return '#10b981';
 }
 
-export default function VesselsGlobe({ vessels = [], onVesselClick, width, height }) {
+// Port-to-port arc: bright arc srcPort→vessel, dim arc vessel→dstPort
+function portToPortArcs(vessel) {
+  if (!vessel.srcLat || !vessel.dstLat) return [];
+  const color = vesselColor(vessel.type);
+  const dimColor = color.replace(/[\d.]+\)$/, '0.12)');
+  return [
+    {
+      startLat: vessel.srcLat, startLng: vessel.srcLng,
+      endLat: vessel.lat, endLng: vessel.lng,
+      color: [color, color],
+      mmsi: vessel.mmsi, part: 'traveled',
+    },
+    {
+      startLat: vessel.lat, startLng: vessel.lng,
+      endLat: vessel.dstLat, endLng: vessel.dstLng,
+      color: [dimColor, dimColor],
+      mmsi: vessel.mmsi, part: 'remaining',
+    },
+  ];
+}
+
+export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, width, height }) {
   const globeRef = useRef(null);
 
+  // Single ref object for all Three.js scene objects — crash-safe across React strict-mode double-mount
+  const threeRefs = useRef({
+    frame: null,
+    glowMesh: null, glowGeom: null, glowMat: null,
+    ringMesh: null, ringGeom: null, ringMat: null,
+    moonMesh: null, moonGeom: null, moonMat: null,
+  });
 
-  // Custom atmosphere shader + rotating equatorial ring
+  // Atmosphere glow + equatorial ring + orbiting moon
   useEffect(() => {
-    let frame;
-    let glowMesh, glowGeom, glowMat, ringMesh, ringGeom, ringMat;
+    const refs = threeRefs.current;
     const timer = setTimeout(() => {
       const g = globeRef.current;
       if (!g?.scene) return;
       const scene = g.scene();
 
-      glowGeom = new THREE.SphereGeometry(105, 32, 32);
-      glowMat = new THREE.ShaderMaterial({
+      // ── Atmosphere glow ──
+      const glowGeom = new THREE.SphereGeometry(105, 32, 32);
+      const glowMat = new THREE.ShaderMaterial({
         uniforms: { c: { value: 0.22 }, p: { value: 4.5 } },
         vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
         fragmentShader: `uniform float c; uniform float p; varying vec3 vNormal; void main() { float i = pow(c - dot(vNormal, vec3(0.0,0.0,1.0)), p); gl_FragColor = vec4(0.0,0.6,1.0,max(0.0,i)); }`,
         side: THREE.FrontSide, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
       });
-      glowMesh = new THREE.Mesh(glowGeom, glowMat);
+      const glowMesh = new THREE.Mesh(glowGeom, glowMat);
       scene.add(glowMesh);
+      refs.glowMesh = glowMesh; refs.glowGeom = glowGeom; refs.glowMat = glowMat;
 
-      ringGeom = new THREE.TorusGeometry(102, 0.6, 8, 64);
-      ringMat = new THREE.MeshBasicMaterial({ color: 0x004466, transparent: true, opacity: 0.4 });
-      ringMesh = new THREE.Mesh(ringGeom, ringMat);
+      // ── Equatorial ring ──
+      const ringGeom = new THREE.TorusGeometry(102, 0.6, 8, 64);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x004466, transparent: true, opacity: 0.4 });
+      const ringMesh = new THREE.Mesh(ringGeom, ringMat);
       ringMesh.rotation.x = Math.PI / 2;
       scene.add(ringMesh);
+      refs.ringMesh = ringMesh; refs.ringGeom = ringGeom; refs.ringMat = ringMat;
 
-      const animRing = () => {
+      // ── Moon — same texture + orbit as homepage ──
+      const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
+
+      // Build moon surface texture via canvas
+      const mc = document.createElement('canvas');
+      mc.width = 512; mc.height = 512;
+      const mx = mc.getContext('2d');
+      // base — varied grey highland/lowland
+      const baseG = mx.createRadialGradient(220, 180, 30, 256, 256, 300);
+      baseG.addColorStop(0, '#c8c8c8'); baseG.addColorStop(0.35, '#a0a0a0');
+      baseG.addColorStop(0.7, '#7c7c7c'); baseG.addColorStop(1, '#606060');
+      mx.fillStyle = baseG; mx.fillRect(0, 0, 512, 512);
+      // mare (dark volcanic plains)
+      [[190,155,90],[310,200,70],[145,295,55],[360,330,50],[240,390,40]].forEach(([x,y,r]) => {
+        const g = mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(48,50,58,0.75)'); g.addColorStop(1,'rgba(48,50,58,0)');
+        mx.fillStyle = g; mx.fillRect(0,0,512,512);
+      });
+      // large craters with rim + floor + central peak
+      [[110,75,42],[365,145,36],[195,360,30],[445,290,26],[70,340,32],[300,420,22]].forEach(([x,y,r]) => {
+        const ej = mx.createRadialGradient(x,y,r*0.8,x,y,r*1.6);
+        ej.addColorStop(0,'rgba(185,185,185,0.25)'); ej.addColorStop(1,'rgba(185,185,185,0)');
+        mx.fillStyle=ej; mx.beginPath(); mx.arc(x,y,r*1.6,0,Math.PI*2); mx.fill();
+        const rim = mx.createRadialGradient(x,y,r*0.55,x,y,r*1.05);
+        rim.addColorStop(0,'rgba(60,62,68,0)'); rim.addColorStop(0.6,'rgba(175,175,178,0.55)');
+        rim.addColorStop(1,'rgba(175,175,178,0)');
+        mx.fillStyle=rim; mx.beginPath(); mx.arc(x,y,r*1.05,0,Math.PI*2); mx.fill();
+        const fl = mx.createRadialGradient(x-r*0.15,y-r*0.1,0,x,y,r*0.62);
+        fl.addColorStop(0,'rgba(78,80,86,0.95)'); fl.addColorStop(1,'rgba(58,60,66,0.88)');
+        mx.fillStyle=fl; mx.beginPath(); mx.arc(x,y,r*0.62,0,Math.PI*2); mx.fill();
+        mx.fillStyle='rgba(195,195,198,0.7)'; mx.beginPath(); mx.arc(x,y,r*0.07,0,Math.PI*2); mx.fill();
+      });
+      // medium craters
+      for (let i=0;i<18;i++){
+        const x=18+(i*47+i*i*13)%476, y=18+(i*61+i*i*7)%476, r=5+(i*11)%16;
+        const g=mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(62,64,70,0.9)'); g.addColorStop(0.75,'rgba(158,158,162,0.4)');
+        g.addColorStop(1,'rgba(130,130,134,0)');
+        mx.fillStyle=g; mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+      }
+      // small craters
+      for (let i=0;i<40;i++){
+        const x=5+(i*83+i*i*17)%502, y=5+(i*71+i*i*23)%502, r=1.5+(i*5)%5;
+        mx.fillStyle=`rgba(60,62,65,${0.5+0.3*(i%3)/2})`;
+        mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+        mx.fillStyle=`rgba(170,170,172,${0.2+0.15*(i%2)})`;
+        mx.beginPath(); mx.arc(x-r*0.4,y-r*0.4,r*0.4,0,Math.PI*2); mx.fill();
+      }
+      // surface grain
+      const idata = mx.getImageData(0,0,512,512);
+      for (let i=0;i<idata.data.length;i+=4){
+        const n=(Math.sin(i*0.0013)*Math.cos(i*0.00071)*14)|0;
+        idata.data[i]  =Math.min(255,Math.max(0,idata.data[i]+n));
+        idata.data[i+1]=Math.min(255,Math.max(0,idata.data[i+1]+n));
+        idata.data[i+2]=Math.min(255,Math.max(0,idata.data[i+2]+n));
+      }
+      mx.putImageData(idata,0,0);
+      const moonTex = new THREE.CanvasTexture(mc);
+      const moonMat = new THREE.MeshStandardMaterial({ map: moonTex, roughness: 0.92, metalness: 0.0 });
+      const moonMesh = new THREE.Mesh(moonGeom, moonMat);
+      scene.add(moonMesh);
+      refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat;
+
+      // ── Animate ring + moon orbit (same elliptical params as homepage) ──
+      const animate = () => {
         ringMesh.rotation.z += 0.001;
-        frame = requestAnimationFrame(animRing);
+        const t = Date.now() * 0.00008;
+        moonMesh.position.set(
+          Math.cos(t) * 165,
+          Math.sin(t * 0.28) * 28,
+          Math.sin(t) * 165
+        );
+        refs.frame = requestAnimationFrame(animate);
       };
-      animRing();
+      animate();
     }, 600);
 
     return () => {
       clearTimeout(timer);
-      if (frame) cancelAnimationFrame(frame);
+      if (refs.frame) cancelAnimationFrame(refs.frame);
+      refs.frame = null;
       const scene = globeRef.current?.scene?.();
       if (scene) {
-        if (glowMesh) scene.remove(glowMesh);
-        if (ringMesh) scene.remove(ringMesh);
+        if (refs.glowMesh) scene.remove(refs.glowMesh);
+        if (refs.ringMesh) scene.remove(refs.ringMesh);
+        if (refs.moonMesh) scene.remove(refs.moonMesh);
       }
-      glowGeom?.dispose(); glowMat?.dispose(); ringGeom?.dispose(); ringMat?.dispose();
+      refs.glowGeom?.dispose(); refs.glowMat?.dispose();
+      refs.ringGeom?.dispose(); refs.ringMat?.dispose();
+      refs.moonGeom?.dispose();
+      refs.moonMat?.map?.dispose();
+      refs.moonMat?.dispose();
+      refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
     };
   }, []);
 
-  // Auto-rotate with damping — deferred to match globe async init
+  // Auto-rotate
   useEffect(() => {
     const timer = setTimeout(() => {
       const g = globeRef.current;
@@ -116,14 +195,37 @@ export default function VesselsGlobe({ vessels = [], onVesselClick, width, heigh
     return () => clearTimeout(timer);
   }, []);
 
+  const handleReset = useCallback(() => {
+    const g = globeRef.current;
+    if (!g) return;
+    g.controls().autoRotate = true;
+    g.controls().autoRotateSpeed = 0.3;
+    g.pointOfView(HOME_POV, 1000);
+  }, []);
+
   const vesselPoints = useMemo(() => vessels.map(v => ({
-    ...v,
-    color: vesselColor(v.type),
-    size: 0.35,
+    ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
   const trailData = useMemo(() =>
-    vessels.flatMap(v => trailArcs(v, 3)), [vessels]);
+    vessels.flatMap(v => portToPortArcs(v)), [vessels]);
+
+  // Port rings from live data (disrupted/congested ports)
+  const portRings = useMemo(() => ports
+    .filter(p => p.status === 'disruption' || p.status === 'congestion')
+    .map(p => ({
+      lat: p.lat, lng: p.lng,
+      maxRadius: p.status === 'disruption' ? 4 : 2.5,
+      propagationSpeed: p.status === 'disruption' ? 3 : 1.5,
+      repeatPeriod: p.status === 'disruption' ? 800 : 1400,
+      color: portStatusColor(p.status),
+    })), [ports]);
+
+  const allRings = useMemo(() => [...DISRUPTION_ZONES, ...portRings], [portRings]);
+
+  const portPoints = useMemo(() => ports.map(p => ({
+    ...p, dotColor: portStatusColor(p.status),
+  })), [ports]);
 
   const handleVesselClick = useCallback((point) => {
     const g = globeRef.current;
@@ -134,52 +236,71 @@ export default function VesselsGlobe({ vessels = [], onVesselClick, width, heigh
     onVesselClick?.(point);
   }, [onVesselClick]);
 
-  const portLabel = useCallback((p) =>
-    `<div style="color:#00d4ff;font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid rgba(0,212,255,0.2)">${p.name}</div>`, []);
+  const portLabel = useCallback((p) => {
+    const c = portStatusColor(p.status);
+    return `<div style="color:${c};font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid ${c}40">${p.name}<br/><span style="font-size:9px;opacity:0.7">${p.status} · ${p.congestion}/10</span></div>`;
+  }, []);
 
   const vesselLabel = useCallback((v) =>
-    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${v.name || 'MMSI ' + v.mmsi}</strong><br/>${v.type || 'Unknown'} · ${(v.sog || 0).toFixed(1)} kn</div>`, []);
+    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${v.name || 'MMSI ' + v.mmsi}</strong><br/>${v.type || 'Unknown'} · ${(v.sog || 0).toFixed(1)} kn${v.dstName ? '<br/>' + (v.srcName || '') + ' → ' + v.dstName : ''}</div>`,
+  []);
 
   return (
-    <Globe
-      ref={globeRef}
-      width={width}
-      height={height}
-      globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-      bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-      backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
-      backgroundColor="rgba(0,0,0,0)"
-      atmosphereColor="rgba(0,180,255,0.25)"
-      atmosphereAltitude={0.25}
-      pointsData={vesselPoints}
-      pointLat="lat"
-      pointLng="lng"
-      pointColor="color"
-      pointAltitude={0.008}
-      pointRadius="size"
-      pointLabel={vesselLabel}
-      onPointClick={handleVesselClick}
-      arcsData={trailData}
-      arcColor="color"
-      arcDashLength={0.3}
-      arcDashGap={0.15}
-      arcDashAnimateTime={2000}
-      arcStroke={0.3}
-      arcAltitudeAutoScale={0.2}
-      ringsData={DISRUPTION_ZONES}
-      ringColor="color"
-      ringMaxRadius="maxRadius"
-      ringPropagationSpeed="propagationSpeed"
-      ringRepeatPeriod="repeatPeriod"
-      labelsData={MAJOR_PORTS}
-      labelLat="lat"
-      labelLng="lng"
-      labelText="name"
-      labelSize={0.4}
-      labelDotRadius={0.3}
-      labelColor={() => 'rgba(0,212,255,0.7)'}
-      labelResolution={2}
-      labelLabel={portLabel}
-    />
+    <div style={{ position: 'relative', width, height }}>
+      <Globe
+        ref={globeRef}
+        width={width}
+        height={height}
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+        bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+        backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
+        backgroundColor="rgba(0,0,0,0)"
+        atmosphereColor="rgba(0,180,255,0.25)"
+        atmosphereAltitude={0.25}
+        pointsData={vesselPoints}
+        pointLat="lat"
+        pointLng="lng"
+        pointColor="color"
+        pointAltitude={0.008}
+        pointRadius="size"
+        pointLabel={vesselLabel}
+        onPointClick={handleVesselClick}
+        arcsData={trailData}
+        arcColor="color"
+        arcDashLength={d => d.part === 'remaining' ? 0.04 : 0.5}
+        arcDashGap={d => d.part === 'remaining' ? 0.08 : 0.06}
+        arcDashAnimateTime={d => d.part === 'remaining' ? 0 : 3500}
+        arcStroke={d => d.part === 'remaining' ? 0.12 : 0.22}
+        arcAltitudeAutoScale={0.15}
+        ringsData={allRings}
+        ringColor="color"
+        ringMaxRadius="maxRadius"
+        ringPropagationSpeed="propagationSpeed"
+        ringRepeatPeriod="repeatPeriod"
+        labelsData={portPoints}
+        labelLat="lat"
+        labelLng="lng"
+        labelText="name"
+        labelSize={0.35}
+        labelDotRadius={0.4}
+        labelColor={p => portStatusColor(p.status)}
+        labelResolution={2}
+        labelLabel={portLabel}
+      />
+      <button
+        onClick={handleReset}
+        title="Reset globe view"
+        style={{
+          position: 'absolute', top: 14, right: 14, zIndex: 20,
+          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(6,11,24,0.88)', border: '1px solid rgba(0,212,255,0.2)',
+          borderRadius: 6, cursor: 'pointer', color: '#334155', transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#00d4ff'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.5)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#334155'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.2)'; }}
+      >
+        <RiRefreshLine size={13} />
+      </button>
+    </div>
   );
 }
