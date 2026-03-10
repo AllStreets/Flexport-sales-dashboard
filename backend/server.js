@@ -753,6 +753,36 @@ Return JSON: {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Freight rate 12-week history (seeded random walk for sparklines)
+app.get('/api/rate-history', (req, res) => {
+  const ROUTES = [
+    { id: 'china-usw',  base: 2480 },
+    { id: 'china-use',  base: 3350 },
+    { id: 'me-europe',  base: 2650 },
+    { id: 'vietnam-usw',base: 2190 },
+    { id: 'india-use',  base: 1820 },
+    { id: 'europe-use', base: 1240 },
+    { id: 'latam-use',  base: 1680 },
+    { id: 'se-asia-usw',base: 2050 },
+  ];
+  function randomWalk(base, weeks = 12, seed = 42) {
+    let v = base * 0.78;
+    const out = [];
+    let rng = seed;
+    for (let i = 0; i < weeks; i++) {
+      rng = (rng * 1664525 + 1013904223) & 0xffffffff;
+      const delta = ((rng >>> 0) / 0xffffffff - 0.5) * base * 0.06;
+      v = Math.max(base * 0.6, Math.min(base * 1.05, v + delta));
+      out.push(Math.round(v));
+    }
+    out[weeks - 1] = base; // last point is always current rate
+    return out;
+  }
+  const history = {};
+  ROUTES.forEach(r => { history[r.id] = randomWalk(r.base, 12, r.base); });
+  res.json(history);
+});
+
 // ── Settings Health ────────────────────────────────
 app.get('/api/settings/health', (req, res) => {
   res.json({
