@@ -48,7 +48,7 @@ function fullRouteArc(vessel) {
   };
 }
 
-export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, width, height }) {
+export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, focusTarget, width, height }) {
   const globeRef = useRef(null);
 
   // Single ref object for all Three.js scene objects — safe across React strict-mode double-mount
@@ -236,6 +236,12 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
       setStableArcs(arcs);
     }
   }, [vessels]);
+
+  // Pan globe when feed card vessel is clicked
+  useEffect(() => {
+    if (!focusTarget || !globeRef.current) return;
+    globeRef.current.pointOfView({ lat: focusTarget.lat, lng: focusTarget.lng, altitude: 1.2 }, 1500);
+  }, [focusTarget]);
 
   // Only disruption-status port rings + the 3 fixed disruption zones (max 8 rings total)
   const allRings = useMemo(() => {

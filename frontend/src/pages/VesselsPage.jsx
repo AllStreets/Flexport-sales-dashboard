@@ -43,15 +43,30 @@ export default function VesselsPage() {
   const [source, setSource] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedVessel, setSelectedVessel] = useState(null);
+  const [focusTarget, setFocusTarget] = useState(null);
+  const [forcedSim, setForcedSim] = useState(false);
+  const forcedSimRef = useRef(false);
   const wrapRef = useRef(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
 
   const fetchVessels = () => {
     setLoading(true);
-    fetch(`${API}/api/vessels`)
+    const qs = forcedSimRef.current ? '?mode=sim' : '';
+    fetch(`${API}/api/vessels${qs}`)
       .then(r => r.json())
       .then(d => { setVessels(d.vessels || []); setSource(d.source); setLoading(false); })
       .catch(() => setLoading(false));
+  };
+
+  const toggleMode = () => {
+    forcedSimRef.current = !forcedSimRef.current;
+    setForcedSim(forcedSimRef.current);
+    fetchVessels();
+  };
+
+  const handleFeedVesselClick = (vessel) => {
+    setSelectedVessel(vessel);
+    setFocusTarget({ lat: vessel.lat, lng: vessel.lng, ts: Date.now() });
   };
 
   const fetchGlobeData = () => {
@@ -92,9 +107,9 @@ export default function VesselsPage() {
         <RiShipLine size={15} className="vg-header-icon" />
         <span className="vg-header-title">OCEAN COMMAND</span>
         {source && (
-          <span className={`vg-source-badge ${source}`}>
+          <button className={`vg-source-badge ${source}`} onClick={toggleMode} title={forcedSim ? 'Switch to live data' : 'Switch to simulated data'}>
             <RiWifiLine size={9} /> {source === 'live' ? 'LIVE AIS' : 'SIMULATED'}
-          </span>
+          </button>
         )}
         <span className="vg-vessel-count">{vessels.length} vessels tracked</span>
         <button className="vg-refresh-btn" onClick={fetchVessels} title="Refresh">
@@ -115,6 +130,7 @@ export default function VesselsPage() {
                 vessels={vessels}
                 ports={ports}
                 onVesselClick={setSelectedVessel}
+                focusTarget={focusTarget}
                 width={dims.w}
                 height={dims.h}
               />
@@ -136,6 +152,7 @@ export default function VesselsPage() {
             ports={ports}
             selectedVessel={selectedVessel}
             onClearVessel={() => setSelectedVessel(null)}
+            onFeedVesselClick={handleFeedVesselClick}
           />
         </PanelErrorBoundary>
       </div>

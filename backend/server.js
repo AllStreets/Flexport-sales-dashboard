@@ -1114,8 +1114,8 @@ connectAisStream();
 
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
-  if (vessels.length >= 100) {
-    // Only serve live data with substantial coverage (≥100 vessels).
+  if (vessels.length >= 100 && req.query.mode !== 'sim') {
+    // Only serve live data with substantial coverage (≥100 vessels) and mode not forced to sim.
     return res.json({ source: 'live', vessels: vessels.slice(0, 200) });
   }
   // Great-circle interpolation — prevents vessels crossing land or taking wrong-hemisphere paths
