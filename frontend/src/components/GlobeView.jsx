@@ -107,8 +107,34 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       glowMatRef.current = glowMat;
 
       const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
-      const moonTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/moon_1024.jpg');
-      const moonMat = new THREE.MeshStandardMaterial({ map: moonTex, roughness: 0.9, metalness: 0.0 });
+      const moonMat = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0.0 });
+      new THREE.TextureLoader().load(
+        'https://unpkg.com/three-globe/example/img/earth-night.jpg', // fallback while moon loads
+        () => {},
+        () => {}
+      );
+      new THREE.TextureLoader().load(
+        'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg',
+        (tex) => { moonMat.map = tex; moonMat.needsUpdate = true; },
+        undefined,
+        () => {
+          // fallback: procedural grey crater texture via canvas
+          const size = 256;
+          const canvas = document.createElement('canvas');
+          canvas.width = size; canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#7a7a7a';
+          ctx.fillRect(0, 0, size, size);
+          const craters = [[80,60,22],[180,100,18],[130,180,14],[50,170,10],[200,200,16],[100,120,8],[160,50,12],[220,140,9]];
+          craters.forEach(([x,y,r]) => {
+            const g = ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);
+            g.addColorStop(0,'#999'); g.addColorStop(0.4,'#5a5a5a'); g.addColorStop(1,'#707070');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+          });
+          const fallbackTex = new THREE.CanvasTexture(canvas);
+          moonMat.map = fallbackTex; moonMat.needsUpdate = true;
+        }
+      );
       const moonMesh = new THREE.Mesh(moonGeom, moonMat);
       scene.add(moonMesh);
       moonMeshRef.current = moonMesh;
@@ -138,7 +164,7 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       glowGeomRef.current?.dispose();
       glowMatRef.current?.dispose();
       moonGeomRef.current?.dispose();
-      moonMatRef.current?.map?.dispose();
+      if (moonMatRef.current?.map) moonMatRef.current.map.dispose();
       moonMatRef.current?.dispose();
     };
   }, []);
