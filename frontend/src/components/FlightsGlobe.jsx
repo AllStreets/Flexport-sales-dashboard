@@ -42,7 +42,7 @@ function flightRouteArc(f) {
   return {
     startLat: f.srcLat, startLng: f.srcLng,
     endLat: f.dstLat,   endLng: f.dstLng,
-    color: ['rgba(245,158,11,0.9)', 'rgba(245,158,11,0.12)'],
+    color: ['rgba(0,212,255,0.85)', 'rgba(0,212,255,0.08)'],
     id: f.id,
     progress: f.progress ?? 0,
   };
@@ -51,7 +51,7 @@ function flightRouteArc(f) {
 // ── Plane sprite icons ─────────────────────────────────────────────────────
 const _planeTexCache = {};
 function makePlaneCanvas(isCargo) {
-  const color = isCargo ? 'rgba(245,158,11,0.9)' : 'rgba(56,189,248,0.9)';
+  const color = isCargo ? 'rgba(132,204,22,0.95)' : 'rgba(56,189,248,0.9)';
   const c = document.createElement('canvas');
   c.width = 56; c.height = 56;
   const ctx = c.getContext('2d');
@@ -84,7 +84,7 @@ function makePlaneSprite(flight) {
   if (!_planeTexCache[key]) _planeTexCache[key] = new THREE.CanvasTexture(makePlaneCanvas(flight.isCargo));
   const mat = new THREE.SpriteMaterial({ map: _planeTexCache[key], transparent: true, depthWrite: false, sizeAttenuation: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(4, 4, 1);
+  sprite.scale.set(7, 7, 1);
   return sprite;
 }
 
@@ -103,21 +103,21 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
       if (!g?.scene) return;
       const scene = g.scene();
 
-      // ── Atmosphere glow (warm amber) ──
+      // ── Atmosphere glow (blue — matches Ocean Command) ──
       const glowGeom = new THREE.SphereGeometry(105, 32, 32);
       const glowMat = new THREE.ShaderMaterial({
         uniforms: { c: { value: 0.22 }, p: { value: 4.5 } },
         vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-        fragmentShader: `uniform float c; uniform float p; varying vec3 vNormal; void main() { float i = pow(c - dot(vNormal, vec3(0.0,0.0,1.0)), p); gl_FragColor = vec4(1.0,0.55,0.1,max(0.0,i)); }`,
+        fragmentShader: `uniform float c; uniform float p; varying vec3 vNormal; void main() { float i = pow(c - dot(vNormal, vec3(0.0,0.0,1.0)), p); gl_FragColor = vec4(0.0,0.6,1.0,max(0.0,i)); }`,
         side: THREE.FrontSide, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
       });
       const glowMesh = new THREE.Mesh(glowGeom, glowMat);
       scene.add(glowMesh);
       refs.glowMesh = glowMesh; refs.glowGeom = glowGeom; refs.glowMat = glowMat;
 
-      // ── Equatorial ring (amber/gold tint) ──
+      // ── Equatorial ring (navy blue — matches Ocean Command) ──
       const ringGeom = new THREE.TorusGeometry(102, 0.5, 8, 64);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0x553300, transparent: true, opacity: 0.35 });
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x004466, transparent: true, opacity: 0.4 });
       const ringMesh = new THREE.Mesh(ringGeom, ringMat);
       ringMesh.rotation.x = Math.PI / 2;
       scene.add(ringMesh);
@@ -220,7 +220,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
   const hubRings = useMemo(() => [
     ...CARGO_HUBS.filter(h => h.tier <= 2).map(h => ({
       lat: h.lat, lng: h.lng,
-      color: h.tier === 1 ? '#f59e0b' : 'rgba(245,158,11,0.45)',
+      color: h.tier === 1 ? '#00d4ff' : 'rgba(0,212,255,0.45)',
       maxRadius: h.tier === 1 ? 2.5 : 1.8,
       propagationSpeed: h.tier === 1 ? 3 : 2,
       repeatPeriod: h.tier === 1 ? 700 : 950,
@@ -230,7 +230,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
 
   const hubLabels = useMemo(() => CARGO_HUBS.map(h => ({
     ...h,
-    color: h.tier === 1 ? '#f59e0b' : h.tier === 2 ? 'rgba(245,158,11,0.65)' : 'rgba(245,158,11,0.38)',
+    color: h.tier === 1 ? '#00d4ff' : h.tier === 2 ? 'rgba(0,212,255,0.65)' : 'rgba(0,212,255,0.38)',
     labelSize: h.tier === 1 ? 0.52 : h.tier === 2 ? 0.38 : 0.28,
   })), []);
 
@@ -238,11 +238,11 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
   const hubLabelSize  = useCallback(h => h.labelSize, []);
 
   const hubLabelLabel = useCallback(h =>
-    `<div style="color:#f59e0b;font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid rgba(245,158,11,0.3)">${h.name}<br/><span style="font-size:9px;opacity:0.7">Cargo Hub · Tier ${h.tier}</span></div>`,
+    `<div style="color:#00d4ff;font-size:10px;font-family:'JetBrains Mono',monospace;background:rgba(6,11,24,0.85);padding:2px 6px;border-radius:4px;border:1px solid rgba(0,212,255,0.3)">${h.name}<br/><span style="font-size:9px;opacity:0.7">Cargo Hub · Tier ${h.tier}</span></div>`,
   []);
 
   const flightLabel = useCallback(f =>
-    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(245,158,11,0.25);font-family:'JetBrains Mono',monospace"><strong>${f.callsign || f.id}</strong><br/>FL${Math.round((f.altitude || 10000) / 30.48)} · ${f.velocity || 0} kts${f.destination ? '<br/>' + (f.origin || '') + ' \u2192 ' + f.destination : ''}</div>`,
+    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${f.callsign || f.id}</strong><br/>FL${Math.round((f.altitude || 10000) / 30.48)} · ${f.velocity || 0} kts${f.destination ? '<br/>' + (f.origin || '') + ' \u2192 ' + f.destination : ''}</div>`,
   []);
 
   return (
@@ -251,17 +251,20 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
         ref={globeRef}
         width={width}
         height={height}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-day.jpg"
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         backgroundColor="rgba(0,0,0,0)"
-        atmosphereColor="rgba(255,140,50,0.22)"
+        atmosphereColor="rgba(0,180,255,0.25)"
         atmosphereAltitude={0.25}
         customLayerData={flights}
-        customLayerLat="lat"
-        customLayerLng="lng"
-        customLayerAltitude={() => 0.04}
         customThreeObject={makePlaneSprite}
-        customThreeObjectUpdate={(sprite, f) => {
+        customThreeObjectUpdate={(sprite, f, globeRadius) => {
+          const alt = 0.04;
+          const phi = (90 - f.lat) * Math.PI / 180;
+          const theta = (90 - f.lng) * Math.PI / 180;
+          const r = globeRadius * (1 + alt);
+          const ps = Math.sin(phi);
+          sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
           sprite.material.rotation = -((f.heading ?? 0) * Math.PI / 180);
         }}
         onCustomLayerClick={handleFlightClick}
@@ -296,11 +299,11 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
         style={{
           position: 'absolute', top: 14, right: 14, zIndex: 20,
           width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(6,11,24,0.88)', border: '1px solid rgba(245,158,11,0.2)',
+          background: 'rgba(6,11,24,0.88)', border: '1px solid rgba(0,212,255,0.2)',
           borderRadius: 6, cursor: 'pointer', color: '#334155', transition: 'all 0.15s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.5)'; }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#334155'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.2)'; }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#00d4ff'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.5)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#334155'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.2)'; }}
       >
         <RiRefreshLine size={13} />
       </button>

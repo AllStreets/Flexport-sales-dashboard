@@ -85,7 +85,7 @@ function makeShipSprite(vessel) {
   if (!_shipTexCache[color]) _shipTexCache[color] = new THREE.CanvasTexture(makeShipCanvas(color));
   const mat = new THREE.SpriteMaterial({ map: _shipTexCache[color], transparent: true, depthWrite: false, sizeAttenuation: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(2, 3.2, 1);
+  sprite.scale.set(5, 8, 1);
   return sprite;
 }
 
@@ -347,11 +347,14 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         atmosphereColor="rgba(0,180,255,0.25)"
         atmosphereAltitude={0.25}
         customLayerData={vessels}
-        customLayerLat="lat"
-        customLayerLng="lng"
-        customLayerAltitude={() => 0.008}
         customThreeObject={makeShipSprite}
-        customThreeObjectUpdate={(sprite, vessel) => {
+        customThreeObjectUpdate={(sprite, vessel, globeRadius) => {
+          const alt = 0.025;
+          const phi = (90 - vessel.lat) * Math.PI / 180;
+          const theta = (90 - vessel.lng) * Math.PI / 180;
+          const r = globeRadius * (1 + alt);
+          const ps = Math.sin(phi);
+          sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
           sprite.material.rotation = -((vessel.cog ?? vessel.heading ?? 0) * Math.PI / 180);
         }}
         onCustomLayerClick={handleVesselClick}
