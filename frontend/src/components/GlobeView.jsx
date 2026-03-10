@@ -18,13 +18,6 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   const [globeData, setGlobeData] = useState({ shippingLanes: [], ports: [] });
   const [overlayMode, setOverlayMode] = useState(0);
   const [portDetail, setPortDetail] = useState(null);
-  const [arcTick, setArcTick] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setArcTick(t => t + 1), 80);
-    return () => clearInterval(id);
-  }, []);
-
   const getDimensions = (fs) => ({
     w: window.innerWidth,
     h: fs ? window.innerHeight : Math.floor(window.innerHeight * 0.55)
@@ -186,25 +179,22 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   // High-tariff origin prefixes for tariff overlay
   const HIGH_TARIFF_PREFIXES = ['China', 'SE Asia', 'Vietnam', 'Taiwan', 'Korea'];
 
-  const laneColor = (lane, idx = 0) => {
-    const phase = (arcTick * 0.06 + idx * 0.7);
-    const alpha = 0.45 + Math.sin(phase) * 0.25;
-
+  const laneColor = (lane) => {
     if (mode === 'tariff') {
       return HIGH_TARIFF_PREFIXES.some(p => lane.label?.startsWith(p))
-        ? [`rgba(239,68,68,${alpha})`, `rgba(239,68,68,${alpha})`]
-        : [`rgba(16,185,129,${alpha})`, `rgba(16,185,129,${alpha})`];
+        ? ['rgba(239,68,68,0.7)', 'rgba(239,68,68,0.7)']
+        : ['rgba(16,185,129,0.6)', 'rgba(16,185,129,0.6)'];
     }
     const status = srcPortStatus(lane);
-    if (status === 'disruption') return [`rgba(239,68,68,${alpha})`, `rgba(239,68,68,${alpha})`];
-    if (status === 'congestion') return [`rgba(245,158,11,${alpha})`, `rgba(245,158,11,${alpha})`];
-    return [`rgba(0,212,255,${alpha})`, `rgba(0,212,255,${alpha})`];
+    if (status === 'disruption') return ['rgba(239,68,68,0.75)', 'rgba(239,68,68,0.75)'];
+    if (status === 'congestion') return ['rgba(245,158,11,0.75)', 'rgba(245,158,11,0.75)'];
+    return ['rgba(0, 212, 255, 0.6)', 'rgba(0, 212, 255, 0.6)'];
   };
 
-  const baseLanes = globeData.shippingLanes.map((lane, idx) => ({
+  const baseLanes = globeData.shippingLanes.map(lane => ({
     startLat: lane.src_lat, startLng: lane.src_lng,
     endLat: lane.dst_lat, endLng: lane.dst_lng,
-    color: laneColor(lane, idx), label: lane.label, weight: lane.weight, type: 'lane'
+    color: laneColor(lane), label: lane.label, weight: lane.weight, type: 'lane'
   }));
 
   const particleLanes = globeData.shippingLanes.map(lane => ({
