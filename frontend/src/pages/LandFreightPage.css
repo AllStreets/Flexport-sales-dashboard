@@ -1,0 +1,101 @@
+/* frontend/src/pages/LandFreightPage.css */
+.lg-page { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; background: #060b18; }
+
+/* Header */
+.lg-header {
+  display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+  border-bottom: 1px solid rgba(250,204,21,0.1); flex-shrink: 0;
+  background: rgba(6,11,24,0.95);
+}
+.lg-header-icon { color: #facc15; }
+.lg-header-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #e2e8f0; letter-spacing: 0.12em; font-weight: 700; }
+.lg-truck-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #334155; }
+.lg-refresh-btn { background: none; border: none; color: #334155; cursor: pointer; padding: 4px; transition: color 0.15s; }
+.lg-refresh-btn:hover { color: #facc15; }
+@keyframes lg-spin { to { transform: rotate(360deg); } }
+.lg-spin { animation: lg-spin 1s linear infinite; }
+.lg-border-badges { display: flex; gap: 5px; margin-left: auto; }
+.lg-bz-badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.08em;
+  padding: 2px 7px; border-radius: 3px; font-weight: 700;
+}
+.lg-bz-badge.red   { background: rgba(239,68,68,0.1);   color: #ef4444; border: 1px solid rgba(239,68,68,0.25);   }
+.lg-bz-badge.amber { background: rgba(245,158,11,0.1);  color: #f59e0b; border: 1px solid rgba(245,158,11,0.25);  }
+.lg-bz-badge.green { background: rgba(16,185,129,0.1);  color: #10b981; border: 1px solid rgba(16,185,129,0.25);  }
+
+/* Body */
+.lg-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.lg-globe-wrap { flex: 1; min-width: 0; position: relative; overflow: hidden; background: #020608; }
+
+/* Scanline overlay */
+.lg-scanline {
+  position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+}
+
+/* Legend */
+.lg-legend {
+  position: absolute; bottom: 14px; left: 14px; z-index: 10;
+  display: flex; flex-direction: column; gap: 4px;
+  background: rgba(6,11,24,0.88); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; padding: 10px 14px; font-size: 11px;
+  backdrop-filter: blur(8px);
+}
+.lg-legend span { color: #94a3b8; letter-spacing: 0.03em; }
+
+/* Right panel */
+.lg-panel {
+  width: 310px; flex-shrink: 0; border-left: 1px solid rgba(250,204,21,0.08);
+  display: flex; flex-direction: column; overflow-y: auto;
+  background: rgba(6,11,24,0.97);
+}
+
+/* Fleet overview */
+.lg-stats { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.lg-stats-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #475569; letter-spacing: 0.12em; margin-bottom: 10px; }
+.lg-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lg-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.lg-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; line-height: 1; }
+.lg-stat-key { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #475569; letter-spacing: 0.08em; }
+.lg-speed-strip { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: #475569; font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+
+/* Carrier watch */
+.lg-carriers { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.lg-section-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #475569; letter-spacing: 0.12em; margin-bottom: 10px; }
+.lg-carrier-row { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.lg-carrier-code { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #facc15; font-weight: 700; min-width: 40px; }
+.lg-carrier-name { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #64748b; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-carrier-bar { width: 52px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; flex-shrink: 0; }
+.lg-carrier-fill { height: 100%; background: rgba(250,204,21,0.5); border-radius: 2px; transition: width 0.4s; }
+.lg-carrier-count { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #475569; min-width: 22px; text-align: right; }
+
+/* Hot corridors */
+.lg-corridors { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.lg-corridor-row { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.lg-corridor-rank { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #475569; min-width: 22px; }
+.lg-corridor-name { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #94a3b8; flex: 1; }
+.lg-corridor-count { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #a3e635; white-space: nowrap; }
+
+/* Event feed */
+.lg-feed { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.lg-feed-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #475569; letter-spacing: 0.12em; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.lg-feed-pulse { width: 6px; height: 6px; border-radius: 50%; background: #facc15; box-shadow: 0 0 6px rgba(250,204,21,0.6); animation: lg-pulse 1.5s ease-in-out infinite; }
+@keyframes lg-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.lg-feed-clear { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 8px; background: none; border: 1px solid rgba(255,255,255,0.08); color: #475569; cursor: pointer; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.06em; }
+.lg-feed-clear:hover { color: #facc15; border-color: rgba(250,204,21,0.2); }
+.lg-feed-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.lg-feed-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 5px; padding: 8px 10px; }
+.lg-feed-card-clickable { cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.lg-feed-card-clickable:hover { background: rgba(250,204,21,0.05); border-color: rgba(250,204,21,0.15); }
+.lg-feed-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.lg-feed-callsign { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #facc15; font-weight: 700; }
+.lg-feed-warn { display: flex; align-items: center; gap: 3px; font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #f59e0b; }
+.lg-feed-card-detail { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #64748b; }
+.lg-feed-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #334155; height: 80px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; }
+
+/* Truck detail */
+.lg-truck-detail { display: flex; flex-direction: column; gap: 2px; }
+.lg-td-name { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: #facc15; font-weight: 700; margin-bottom: 10px; }
+.lg-td-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.lg-td-row span:first-child { color: #475569; }
+.lg-td-row span:last-child { color: #e2e8f0; }
