@@ -1101,6 +1101,24 @@ app.get('/api/vessels', (req, res) => {
   if (vessels.length > 0) {
     return res.json({ source: 'live', vessels: vessels.slice(0, 100) });
   }
+  // Great-circle interpolation — prevents vessels crossing land or taking wrong-hemisphere paths
+  function greatCirclePoint(lat1d, lng1d, lat2d, lng2d, t) {
+    const R = Math.PI / 180;
+    const lat1 = lat1d * R, lng1 = lng1d * R, lat2 = lat2d * R, lng2 = lng2d * R;
+    const x1 = Math.cos(lat1)*Math.cos(lng1), y1 = Math.cos(lat1)*Math.sin(lng1), z1 = Math.sin(lat1);
+    const x2 = Math.cos(lat2)*Math.cos(lng2), y2 = Math.cos(lat2)*Math.sin(lng2), z2 = Math.sin(lat2);
+    const dot = Math.min(1, Math.max(-1, x1*x2 + y1*y2 + z1*z2));
+    const omega = Math.acos(dot);
+    if (omega < 0.0001) return { lat: lat1d, lng: lng1d };
+    const s = Math.sin(omega);
+    const a = Math.sin((1-t)*omega)/s, b = Math.sin(t*omega)/s;
+    const x = a*x1 + b*x2, y = a*y1 + b*y2, z = a*z1 + b*z2;
+    return {
+      lat: Math.atan2(z, Math.sqrt(x*x + y*y)) / R,
+      lng: Math.atan2(y, x) / R,
+    };
+  }
+
   // Simulated fallback — 250 vessels on real SHIPPING_LANES trade routes
   const PORT_NAMES = {
     '31.2,121.5': 'Shanghai', '10.8,106.7': 'Ho Chi Minh City',
@@ -1131,8 +1149,8 @@ app.get('/api/vessels', (req, res) => {
   for (let i = 0; i < 250; i++) {
     const lane = simLanes[i % simLanes.length];
     const t = ((i * 0.13 + i * i * 0.0003 + Date.now() * 0.0000008) % 1);
-    const lat = lane.src_lat + (lane.dst_lat - lane.src_lat) * t;
-    const lng = lane.src_lng + (lane.dst_lng - lane.src_lng) * t;
+    const pos = greatCirclePoint(lane.src_lat, lane.src_lng, lane.dst_lat, lane.dst_lng, t);
+    const { lat, lng } = pos;
     const dlat = lane.dst_lat - lane.src_lat;
     const dlng = lane.dst_lng - lane.src_lng;
     const suffix = i >= VESSEL_NAMES.length ? ` ${Math.floor(i / VESSEL_NAMES.length) + 1}` : '';
