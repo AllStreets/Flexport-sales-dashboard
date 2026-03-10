@@ -753,6 +753,85 @@ Return JSON: {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Email Composer — SSE streaming cold outreach package ──────────────────
+app.post('/api/compose-email', async (req, res) => {
+  const { prospect, trigger, tone = 'consultative' } = req.body;
+  if (!prospect) return res.status(400).json({ error: 'prospect required' });
+
+  const toneGuide = {
+    direct: 'Be direct, confident, and brief. No fluff. Lead with value.',
+    consultative: 'Be warm, curious, and helpful. Ask a discovery question.',
+    challenger: 'Challenge the status quo. Use a provocative insight to reframe their thinking.',
+  }[tone] || 'Be professional and concise.';
+
+  const prompt = `You are an elite SDR at Flexport, the AI-powered logistics platform.
+Write a cold outreach package for this prospect. Tone: ${toneGuide}
+
+PROSPECT:
+Name: ${prospect.name}
+Industry: ${prospect.industry || prospect.sector}
+Primary Lanes: ${(prospect.primary_lanes || []).join(', ')}
+Likely Forwarder: ${prospect.likely_forwarder || 'unknown'}
+ICP Score: ${prospect.icp_score}
+${trigger ? `TRIGGER/SIGNAL: ${trigger}` : ''}
+
+OUTPUT FORMAT (use these exact headers):
+## SUBJECT_1
+[subject line option 1]
+## SUBJECT_2
+[subject line option 2]
+## SUBJECT_3
+[subject line option 3]
+## EMAIL
+[150-200 word email body — personalized, no generic opener, references their specific lanes/pain]
+## LINKEDIN
+[60-80 word LinkedIn message — casual, curious, references trigger if available]`;
+
+  try {
+    const axios = require('axios');
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.flushHeaders();
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini',
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+      responseType: 'stream',
+    });
+
+    response.data.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(l => l.trim());
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') { res.write('data: [DONE]\n\n'); return; }
+        try {
+          const parsed = JSON.parse(raw);
+          const text = parsed.choices?.[0]?.delta?.content || '';
+          if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
+        } catch { /* skip malformed chunk */ }
+      }
+    });
+
+    response.data.on('end', () => {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+
+    response.data.on('error', (err) => {
+      console.error('compose-email stream error:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Email generation failed' });
+      else res.end();
+    });
+  } catch (err) {
+    console.error('compose-email error:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Email generation failed' });
+  }
+});
+
 // Freight rate 12-week history (seeded random walk for sparklines)
 app.get('/api/rate-history', (req, res) => {
   const ROUTES = [
