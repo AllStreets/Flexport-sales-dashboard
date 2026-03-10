@@ -1,5 +1,5 @@
 // frontend/src/components/VesselsGlobe.jsx
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { RiRefreshLine } from 'react-icons/ri';
@@ -213,14 +213,32 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
-  // All vessels get arcs. Filter progress < 0.03: a near-zero arc (vessel just departed)
-  // produces a ~zero-length TubeGeometry which generates NaN vertices and crashes WebGL.
-  const trailData = useMemo(() =>
-    vessels
+  // ── Arc data: FROZEN after first simulated load ──────────────────────────
+  // The crash root cause: react-globe.gl destroys + recreates ALL arc objects
+  // whenever arcsData prop changes. This races with our RAF loop every 60s.
+  // Fix: freeze arc endpoints on first load — vessel refreshes only update
+  // pointsData (dots), never arcsData (arc objects). Ships move ~0.5% of their
+  // route per minute so stale arcs are visually imperceptible.
+  const [stableArcs, setStableArcs] = useState([]);
+  const arcsInitialized = useRef(false);
+  useEffect(() => {
+    if (!vessels.length) return;
+    // Live AIS vessels have no srcLat — clear arcs and let simulated re-init next cycle
+    if (vessels[0]?.srcLat == null) {
+      setStableArcs([]);
+      arcsInitialized.current = false;
+      return;
+    }
+    if (arcsInitialized.current) return; // frozen — never rebuild on refresh
+    const arcs = vessels
       .filter(v => v.srcLat && v.dstLat && (v.progress ?? 0.5) > 0.03)
       .map(v => traveledArc(v))
-      .filter(Boolean),
-  [vessels]);
+      .filter(Boolean);
+    if (arcs.length > 0) {
+      arcsInitialized.current = true;
+      setStableArcs(arcs);
+    }
+  }, [vessels]);
 
   // Only disruption-status port rings + the 3 fixed disruption zones (max 8 rings total)
   const allRings = useMemo(() => {
@@ -283,7 +301,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         pointRadius="size"
         pointLabel={vesselLabel}
         onPointClick={handleVesselClick}
-        arcsData={trailData}
+        arcsData={stableArcs}
         arcColor="color"
         arcDashLength={0.4}
         arcDashGap={0.6}

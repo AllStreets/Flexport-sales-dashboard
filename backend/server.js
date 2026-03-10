@@ -1101,8 +1101,11 @@ connectAisStream();
 
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
-  if (vessels.length > 0) {
-    return res.json({ source: 'live', vessels: vessels.slice(0, 100) });
+  if (vessels.length >= 50) {
+    // Only serve live data once we have meaningful coverage (≥50 vessels).
+    // Partial connections (aisstream connects briefly then 503s) leave <50 in cache
+    // and would cause simulated→live→simulated flip, which races with the RAF loop.
+    return res.json({ source: 'live', vessels: vessels.slice(0, 150) });
   }
   // Great-circle interpolation — prevents vessels crossing land or taking wrong-hemisphere paths
   function greatCirclePoint(lat1d, lng1d, lat2d, lng2d, t) {
