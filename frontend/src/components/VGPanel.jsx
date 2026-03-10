@@ -40,11 +40,13 @@ function generateEvent(vessel) {
   return { name, detail: `${vessel.type || 'Vessel'} in transit`, speed: spd, warn: false, ts: Date.now() };
 }
 
-function VGStats({ vessels }) {
+function VGStats({ vessels, ports = [] }) {
   const ctr = vessels.filter(v => !v.type?.includes('Tanker') && !v.type?.includes('Bulk')).length;
   const tnk = vessels.filter(v => v.type?.includes('Tanker')).length;
   const blk = vessels.filter(v => v.type?.includes('Bulk')).length;
-  const alerts = vessels.filter(v => DISRUPTION_CHECK.some(z => deg(z, v) < z.r)).length;
+  const alerts = ports.length > 0
+    ? ports.filter(p => p.status === 'disruption').length
+    : vessels.filter(v => DISRUPTION_CHECK.some(z => deg(z, v) < z.r)).length;
 
   return (
     <div className="vg-stats">
@@ -202,10 +204,10 @@ function VGContainerTracker() {
   );
 }
 
-export default function VGPanel({ vessels, selectedVessel, onClearVessel }) {
+export default function VGPanel({ vessels, ports = [], selectedVessel, onClearVessel }) {
   return (
     <div className="vg-panel">
-      <VGStats vessels={vessels} />
+      <VGStats vessels={vessels} ports={ports} />
       <VGEventFeed vessels={vessels} selectedVessel={selectedVessel} onClear={onClearVessel} />
       <VGContainerTracker />
     </div>

@@ -5,10 +5,11 @@ import VesselsGlobe from '../components/VesselsGlobe';
 import VGPanel from '../components/VGPanel';
 import './VesselsPage.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function VesselsPage() {
   const [vessels, setVessels] = useState([]);
+  const [ports, setPorts] = useState([]);
   const [source, setSource] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedVessel, setSelectedVessel] = useState(null);
@@ -23,10 +24,19 @@ export default function VesselsPage() {
       .catch(() => setLoading(false));
   };
 
+  const fetchGlobeData = () => {
+    fetch(`${API}/api/globe-data`)
+      .then(r => r.json())
+      .then(d => setPorts(d.ports || []))
+      .catch(console.error);
+  };
+
   useEffect(() => {
     fetchVessels();
-    const id = setInterval(fetchVessels, 30000);
-    return () => clearInterval(id);
+    fetchGlobeData();
+    const vesselId = setInterval(fetchVessels, 30000);
+    const portId = setInterval(fetchGlobeData, 60000);
+    return () => { clearInterval(vesselId); clearInterval(portId); };
   }, []);
 
   useEffect(() => {
@@ -39,6 +49,12 @@ export default function VesselsPage() {
     if (wrapRef.current) ro.observe(wrapRef.current);
     return () => ro.disconnect();
   }, []);
+
+  // Derive disruption badge statuses from live port data
+  const hormuz = ports.find(p => p.name === 'Jebel Ali')?.status || 'disruption';
+  const redSea = ports.find(p => p.name === 'Aden')?.status || 'disruption';
+  const suez   = ports.find(p => p.name === 'Port Said')?.status || 'disruption';
+  const badgeClass = s => s === 'disruption' ? 'red' : s === 'congestion' ? 'amber' : 'green';
 
   return (
     <div className="vg-page">
@@ -55,9 +71,9 @@ export default function VesselsPage() {
           <RiRefreshLine size={13} className={loading ? 'vg-spin' : ''} />
         </button>
         <div className="vg-disruption-badges">
-          <span className="vg-dz-badge red">Hormuz</span>
-          <span className="vg-dz-badge amber">Red Sea</span>
-          <span className="vg-dz-badge amber">Suez</span>
+          <span className={`vg-dz-badge ${badgeClass(hormuz)}`}>Hormuz</span>
+          <span className={`vg-dz-badge ${badgeClass(redSea)}`}>Red Sea</span>
+          <span className={`vg-dz-badge ${badgeClass(suez)}`}>Suez</span>
         </div>
       </div>
 
@@ -66,6 +82,7 @@ export default function VesselsPage() {
           {dims.w > 0 && (
             <VesselsGlobe
               vessels={vessels}
+              ports={ports}
               onVesselClick={setSelectedVessel}
               width={dims.w}
               height={dims.h}
@@ -75,12 +92,15 @@ export default function VesselsPage() {
             <span style={{ color: '#00d4ff' }}>■ Container</span>
             <span style={{ color: '#f59e0b' }}>■ Tanker</span>
             <span style={{ color: '#a78bfa' }}>■ Bulk Carrier</span>
-            <span style={{ color: '#ef4444' }}>◎ Disruption Zone</span>
+            <span style={{ color: '#10b981' }}>● Clear</span>
+            <span style={{ color: '#f59e0b' }}>● Congested</span>
+            <span style={{ color: '#ef4444' }}>● Disrupted</span>
           </div>
           <div className="vg-scanline" />
         </div>
         <VGPanel
           vessels={vessels}
+          ports={ports}
           selectedVessel={selectedVessel}
           onClearVessel={() => setSelectedVessel(null)}
         />
