@@ -239,6 +239,10 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...p, dotColor: portStatusColor(p.status),
   })), [ports]);
 
+  // Stagger arc animation resets: each arc's loop-reset happens at a different time
+  // so not all 250 arcs flash simultaneously (which is what causes the ~1s glitch).
+  const arcInitialGap = useCallback(arc => (arc.mmsi % 47) / 47, []);
+
   const handleVesselClick = useCallback((point) => {
     const g = globeRef.current;
     if (g) {
@@ -282,7 +286,8 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         arcsData={trailData}
         arcColor="color"
         arcDashLength={0.4}
-        arcDashGap={0.07}
+        arcDashGap={0.6}
+        arcDashInitialGap={arcInitialGap}
         arcDashAnimateTime={3000}
         arcStroke={0.22}
         arcAltitudeAutoScale={0.06}
