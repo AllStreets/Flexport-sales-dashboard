@@ -9,6 +9,7 @@ import PerformancePage from './pages/PerformancePage';
 import MarketMapPage from './pages/MarketMapPage';
 import TariffCalculatorPage from './pages/TariffCalculatorPage';
 import ResearchPage from './pages/ResearchPage';
+import TeamPage from './pages/TeamPage';
 import SettingsPage from './pages/SettingsPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
@@ -180,6 +181,7 @@ export default function App() {
             <Route path="/market" element={<MarketMapPage />} />
             <Route path="/tariff" element={<TariffCalculatorPage />} />
             <Route path="/research" element={<ResearchPage />} />
+            <Route path="/team" element={<TeamPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
