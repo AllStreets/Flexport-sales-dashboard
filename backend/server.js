@@ -1134,38 +1134,113 @@ app.get('/api/vessels', (req, res) => {
     const key = `${lat},${lng}`;
     return PORT_NAMES[key] || `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lng).toFixed(1)}°${lng >= 0 ? 'E' : 'W'}`;
   }
-  // Skip Red Sea direct lane — vessels reroute via Cape post-Houthi attacks
-  const simLanes = SHIPPING_LANES.filter(l => !l.label?.includes('Red Sea Risk'));
+  // 62 diverse ocean routes covering all major trade regions — all great-circle-safe (open ocean paths)
+  const VESSEL_LANES = [
+    // ── Trans-Pacific (Asia → US West) ──
+    { sl: 31.2, sg: 121.5, dl: 33.7, dg: -118.2, sn: 'Shanghai', dn: 'Los Angeles' },
+    { sl: 10.8, sg: 106.7, dl: 33.7, dg: -118.2, sn: 'Ho Chi Minh City', dn: 'Los Angeles' },
+    { sl: 35.7, sg: 139.7, dl: 33.7, dg: -118.2, sn: 'Tokyo', dn: 'Los Angeles' },
+    { sl: 35.1, sg: 129.0, dl: 33.7, dg: -118.2, sn: 'Busan', dn: 'Los Angeles' },
+    { sl: 25.0, sg: 121.5, dl: 33.7, dg: -118.2, sn: 'Taipei', dn: 'Los Angeles' },
+    { sl: 22.3, sg: 114.2, dl: 33.7, dg: -118.2, sn: 'Hong Kong', dn: 'Los Angeles' },
+    { sl: 14.6, sg: 121.0, dl: 33.7, dg: -118.2, sn: 'Manila', dn: 'Los Angeles' },
+    { sl: -6.2, sg: 106.8, dl: 33.7, dg: -118.2, sn: 'Jakarta', dn: 'Los Angeles' },
+    { sl: -33.9, sg: 151.2, dl: 33.7, dg: -118.2, sn: 'Sydney', dn: 'Los Angeles' },
+    { sl: -37.8, sg: 144.9, dl: 33.7, dg: -118.2, sn: 'Melbourne', dn: 'Los Angeles' },
+    { sl: -36.9, sg: 174.8, dl: 33.7, dg: -118.2, sn: 'Auckland', dn: 'Los Angeles' },
+    { sl: 35.0, sg: 136.8, dl: 33.7, dg: -118.2, sn: 'Nagoya', dn: 'Los Angeles' },
+    { sl: -27.4, sg: 153.0, dl: 33.7, dg: -118.2, sn: 'Brisbane', dn: 'Los Angeles' },
+    // ── Trans-Pacific (Asia → US East via Panama) — use Seattle as proxy to avoid land ──
+    { sl: 31.2, sg: 121.5, dl: 47.6, dg: -122.3, sn: 'Shanghai', dn: 'Seattle' },
+    { sl: 1.35, sg: 103.8, dl: 47.6, dg: -122.3, sn: 'Singapore', dn: 'Seattle' },
+    // ── Cape Reroute: Asia → Cape Town ──
+    { sl: 1.35, sg: 103.8, dl: -34.4, dg: 18.5, sn: 'Singapore', dn: 'Cape Town' },
+    { sl: 19.0, sg: 72.8,  dl: -34.4, dg: 18.5, sn: 'Mumbai', dn: 'Cape Town' },
+    { sl: 6.9,  sg: 79.9,  dl: -34.4, dg: 18.5, sn: 'Colombo', dn: 'Cape Town' },
+    { sl: 31.2, sg: 121.5, dl: -34.4, dg: 18.5, sn: 'Shanghai', dn: 'Cape Town' },
+    { sl: 35.7, sg: 139.7, dl: -34.4, dg: 18.5, sn: 'Tokyo', dn: 'Cape Town' },
+    { sl: -6.2, sg: 106.8, dl: -34.4, dg: 18.5, sn: 'Jakarta', dn: 'Cape Town' },
+    { sl: -31.9,sg: 115.8, dl: -34.4, dg: 18.5, sn: 'Fremantle', dn: 'Cape Town' },
+    { sl: 13.1, sg: 80.3,  dl: -34.4, dg: 18.5, sn: 'Chennai', dn: 'Cape Town' },
+    // ── Cape Reroute: Cape Town → Europe ──
+    { sl: -34.4, sg: 18.5, dl: 51.9, dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam' },
+    { sl: -34.4, sg: 18.5, dl: 53.5, dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg' },
+    { sl: -34.4, sg: 18.5, dl: 40.7, dg: -74.0, sn: 'Cape Town', dn: 'New York' },
+    { sl: -34.4, sg: 18.5, dl: 29.7, dg: -95.0, sn: 'Cape Town', dn: 'Houston' },
+    // ── Atlantic: Europe ↔ Americas ──
+    { sl: 51.9,  sg: 4.5,  dl: 40.7, dg: -74.0, sn: 'Rotterdam', dn: 'New York' },
+    { sl: 53.5,  sg: 10.0, dl: 40.7, dg: -74.0, sn: 'Hamburg', dn: 'New York' },
+    { sl: 51.3,  sg: 4.4,  dl: 40.7, dg: -74.0, sn: 'Antwerp', dn: 'New York' },
+    { sl: 51.9,  sg: 4.5,  dl: 32.1, dg: -81.1, sn: 'Rotterdam', dn: 'Savannah' },
+    { sl: 51.9,  sg: 4.5,  dl: 29.7, dg: -95.0, sn: 'Rotterdam', dn: 'Houston' },
+    { sl: 51.9,  sg: 4.5,  dl: 25.8, dg: -80.2, sn: 'Rotterdam', dn: 'Miami' },
+    // ── South America ──
+    { sl: -23.9, sg: -46.3, dl: 40.7, dg: -74.0, sn: 'Santos', dn: 'New York' },
+    { sl: -23.9, sg: -46.3, dl: 51.9, dg: 4.5,   sn: 'Santos', dn: 'Rotterdam' },
+    { sl: -34.6, sg: -58.4, dl: 51.9, dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam' },
+    { sl: -34.6, sg: -58.4, dl: 40.7, dg: -74.0, sn: 'Buenos Aires', dn: 'New York' },
+    { sl: -12.0, sg: -77.1, dl: 33.7, dg: -118.2,sn: 'Callao', dn: 'Los Angeles' },
+    { sl: 10.4,  sg: -75.5, dl: 29.7, dg: -95.0, sn: 'Cartagena', dn: 'Houston' },
+    { sl: 19.2,  sg: -96.1, dl: 29.7, dg: -95.0, sn: 'Veracruz', dn: 'Houston' },
+    // ── Africa ──
+    { sl: -29.9, sg: 31.0,  dl: 51.9, dg: 4.5,   sn: 'Durban', dn: 'Rotterdam' },
+    { sl: 6.4,   sg: 3.4,   dl: 51.9, dg: 4.5,   sn: 'Lagos', dn: 'Rotterdam' },
+    { sl: 14.7,  sg: -17.4, dl: 40.7, dg: -74.0, sn: 'Dakar', dn: 'New York' },
+    { sl: -4.1,  sg: 39.7,  dl: -34.4,dg: 18.5,  sn: 'Mombasa', dn: 'Cape Town' },
+    // ── Indian Ocean ──
+    { sl: 25.0,  sg: 55.1,  dl: 1.35, dg: 103.8, sn: 'Jebel Ali', dn: 'Singapore' },
+    { sl: 25.0,  sg: 55.1,  dl: -34.4,dg: 18.5,  sn: 'Jebel Ali', dn: 'Cape Town' },
+    { sl: 19.0,  sg: 72.8,  dl: 1.35, dg: 103.8, sn: 'Mumbai', dn: 'Singapore' },
+    { sl: 6.9,   sg: 79.9,  dl: 1.35, dg: 103.8, sn: 'Colombo', dn: 'Singapore' },
+    { sl: -4.1,  sg: 39.7,  dl: 19.0, dg: 72.8,  sn: 'Mombasa', dn: 'Mumbai' },
+    { sl: 19.0,  sg: 72.8,  dl: -4.1, dg: 39.7,  sn: 'Mumbai', dn: 'Mombasa' },
+    // ── Intra-Asia ──
+    { sl: 31.2,  sg: 121.5, dl: 1.35, dg: 103.8, sn: 'Shanghai', dn: 'Singapore' },
+    { sl: 35.7,  sg: 139.7, dl: 1.35, dg: 103.8, sn: 'Tokyo', dn: 'Singapore' },
+    { sl: 35.1,  sg: 129.0, dl: 1.35, dg: 103.8, sn: 'Busan', dn: 'Singapore' },
+    { sl: 14.6,  sg: 121.0, dl: 1.35, dg: 103.8, sn: 'Manila', dn: 'Singapore' },
+    { sl: 31.2,  sg: 121.5, dl: 35.7, dg: 139.7, sn: 'Shanghai', dn: 'Tokyo' },
+    { sl: 31.2,  sg: 121.5, dl: 35.1, dg: 129.0, sn: 'Shanghai', dn: 'Busan' },
+    // ── Australia ↔ Asia ──
+    { sl: -33.9, sg: 151.2, dl: 1.35, dg: 103.8, sn: 'Sydney', dn: 'Singapore' },
+    { sl: -37.8, sg: 144.9, dl: 35.7, dg: 139.7, sn: 'Melbourne', dn: 'Tokyo' },
+    { sl: -27.4, sg: 153.0, dl: 1.35, dg: 103.8, sn: 'Brisbane', dn: 'Singapore' },
+    { sl: -31.9, sg: 115.8, dl: 1.35, dg: 103.8, sn: 'Fremantle', dn: 'Singapore' },
+    // ── South Pacific ──
+    { sl: -36.9, sg: 174.8, dl: 35.7, dg: 139.7, sn: 'Auckland', dn: 'Tokyo' },
+    { sl: -36.9, sg: 174.8, dl: -33.9,dg: 151.2, sn: 'Auckland', dn: 'Sydney' },
+  ];
   const VESSEL_NAMES = [
     'EVER ACCORD','OOCL EUROPE','MSC GÜLSÜN','CMA CGM BRAZIL','COSCO SHIPPING UNIVERSE',
     'HMM ALGECIRAS','YANG MING WITNESS','ONE APUS','ZIM KINGSTON','MAERSK ESSEX',
     'HYUNDAI PRIDE','PIL VICTORIA','EVERGREEN ZENITH','APL DANUBE','HAPAG CAIRO',
     'MSC DIANA','CMA CGM THALASSA','COSCO NAGOYA','EVERGREEN FORTUNE','MSC OSCAR',
-    'MAERSK MC-KINNEY','OOCL HONG KONG','MED SHIPPING','YANG MING UBERTY',
-    'ONE STORK','ZIM LUANDA','APL TEMASEK','HYUNDAI BRAVE','PIL EUROPE','HAPAG BERLIN',
+    'MAERSK MC-KINNEY','OOCL HONG KONG','ONE STORK','ZIM LUANDA','APL TEMASEK',
+    'HYUNDAI BRAVE','PIL EUROPE','HAPAG BERLIN','MSC LORETO','COSCO FAITH',
+    'EVER GIVEN','CMA CGM MARCO POLO','YANG MING UNIFORMITY','APL VANDA',
+    'HAPAG LONDON','MSC ROMINA','EVERGREEN LION','ONE COLUMBA','ZIM AMSTERDAM',
+    'MAERSK LABERINTO','OOCL BERLIN','PIL JAVA','HAPAG BRUGES','COSCO ALPS',
+    'MSC ISTANBUL','CMA CGM TITUS','YANG MING WIND','APL CHANGI','ONE MINATO',
   ];
   const SIM_TYPES = ['Container', 'Container', 'Container', 'Container', 'Tanker', 'Bulk Carrier'];
   const simVessels = [];
   for (let i = 0; i < 250; i++) {
-    const lane = simLanes[i % simLanes.length];
+    const lane = VESSEL_LANES[i % VESSEL_LANES.length];
     const t = ((i * 0.13 + i * i * 0.0003 + Date.now() * 0.0000008) % 1);
-    const pos = greatCirclePoint(lane.src_lat, lane.src_lng, lane.dst_lat, lane.dst_lng, t);
+    const pos = greatCirclePoint(lane.sl, lane.sg, lane.dl, lane.dg, t);
     const { lat, lng } = pos;
-    const dlat = lane.dst_lat - lane.src_lat;
-    const dlng = lane.dst_lng - lane.src_lng;
     const suffix = i >= VESSEL_NAMES.length ? ` ${Math.floor(i / VESSEL_NAMES.length) + 1}` : '';
     simVessels.push({
       mmsi: 900000000 + i,
       name: VESSEL_NAMES[i % VESSEL_NAMES.length] + suffix,
       lat, lng,
       sog: 14 + (i % 7),
-      cog: Math.atan2(dlat, dlng) * 180 / Math.PI,
+      cog: Math.atan2(lane.dl - lane.sl, lane.dg - lane.sg) * 180 / Math.PI,
       type: SIM_TYPES[i % SIM_TYPES.length],
-      destination: portName(lane.dst_lat, lane.dst_lng),
-      srcLat: lane.src_lat, srcLng: lane.src_lng,
-      dstLat: lane.dst_lat, dstLng: lane.dst_lng,
-      srcName: portName(lane.src_lat, lane.src_lng),
-      dstName: portName(lane.dst_lat, lane.dst_lng),
+      destination: lane.dn,
+      srcLat: lane.sl, srcLng: lane.sg,
+      dstLat: lane.dl, dstLng: lane.dg,
+      srcName: lane.sn, dstName: lane.dn,
       progress: t,
       ts: Date.now(), simulated: true,
     });
