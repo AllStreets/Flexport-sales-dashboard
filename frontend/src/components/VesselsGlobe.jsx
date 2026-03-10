@@ -32,23 +32,20 @@ function portStatusColor(status) {
   return '#10b981';
 }
 
-// Each vessel gets two arc objects:
-//   1. bg  — always-visible dim route line (95% lit, slow 120s cycle)
-//   2. dot — bright animated comet showing vessel's position (8% length, fast 8s cycle)
-// arcDashLength/Gap/AnimateTime/Stroke use function accessors (per-arc) so both
-// types can share a single arcsData array without any per-prop bifurcation on Globe.
-function makeArcPair(vessel) {
-  if (!vessel.srcLat || !vessel.dstLat) return [];
+// Full-route arc: srcPort→dstPort, always the complete route length.
+// arcDashInitialGap=vessel.progress places the moving scanner gap at the
+// vessel's current position. arcDashLength=0.85 keeps 85% of each arc
+// lit at all times — ~212 of 250 arcs always visible, no synchronized flashes.
+function fullRouteArc(vessel) {
+  if (!vessel.srcLat || !vessel.dstLat) return null;
   const color = vesselColor(vessel.type);
-  const dimColor = color.replace(/[\d.]+\)$/, '0.13)');
-  const prog = vessel.progress ?? 0;
-  const base = { startLat: vessel.srcLat, startLng: vessel.srcLng,
-                 endLat: vessel.dstLat,   endLng: vessel.dstLng,
-                 mmsi: vessel.mmsi, progress: prog };
-  return [
-    { ...base, color: [dimColor, dimColor], isStatic: true  },
-    { ...base, color: [color,    color],    isStatic: false },
-  ];
+  return {
+    startLat: vessel.srcLat, startLng: vessel.srcLng,
+    endLat: vessel.dstLat,   endLng: vessel.dstLng,
+    color: [color, color],
+    mmsi: vessel.mmsi,
+    progress: vessel.progress ?? 0,
+  };
 }
 
 export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, width, height }) {
@@ -233,7 +230,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     // Only init from simulated vessels (which carry route data)
     const routed = vessels.filter(v => v.srcLat && v.dstLat);
     if (routed.length === 0) return; // live AIS only — skip until sim data arrives
-    const arcs = routed.flatMap(v => makeArcPair(v));
+    const arcs = routed.map(v => fullRouteArc(v)).filter(Boolean);
     if (arcs.length > 0) {
       arcsInitialized.current = true;
       setStableArcs(arcs);
@@ -257,12 +254,9 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...p, dotColor: portStatusColor(p.status),
   })), [ports]);
 
-  // Per-arc accessors — different behavior for bg (dim static) vs comet (animated)
-  const arcDashLen   = useCallback(arc => arc.isStatic ? 0.95 : 0.08, []);
-  const arcDashGapFn = useCallback(arc => arc.isStatic ? 0.05 : 0.92, []);
-  const arcAnimTime  = useCallback(arc => arc.isStatic ? 120000 : 8000, []);
+  // Stagger arc scanner gap: vessel.progress is uniformly 0→1 across all 250 vessels.
+  // 250 arcs × 10s cycle = one gap-reset every ~40ms — invisible to the eye.
   const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
-  const arcStrokeFn  = useCallback(arc => arc.isStatic ? 0.12 : 0.42, []);
 
   const handleVesselClick = useCallback((point) => {
     const g = globeRef.current;
@@ -306,11 +300,11 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         onPointClick={handleVesselClick}
         arcsData={stableArcs}
         arcColor="color"
-        arcDashLength={arcDashLen}
-        arcDashGap={arcDashGapFn}
+        arcDashLength={0.85}
+        arcDashGap={0.15}
         arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={arcAnimTime}
-        arcStroke={arcStrokeFn}
+        arcDashAnimateTime={10000}
+        arcStroke={0.28}
         arcAltitudeAutoScale={0.06}
         arcCurveResolution={10}
         ringsData={allRings}
