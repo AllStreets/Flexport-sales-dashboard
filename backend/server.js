@@ -1447,35 +1447,38 @@ app.get('/api/flights', async (req, res) => {
   }
   if (!forceSim) {
     try {
-      const token = await getOpenSkyToken();
-      if (token) {
-        const axios = require('axios');
-        const r = await axios.get('https://opensky-network.org/api/states/all', {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 8000,
-        });
-        const states = (r.data?.states || []).filter(s =>
-          s[5] != null && s[6] != null && !s[8] &&
-          CARGO_PREFIXES_SET.has((s[1] || '').trim().toUpperCase().slice(0, 3))
-        );
-        if (states.length >= 20) {
-          const flights = states.map(s => ({
-            id: s[0],
-            callsign: (s[1] || '').trim(),
-            isCargo: true,
-            lat: s[6], lng: s[5],
-            altitude: s[7] || 0,
-            velocity: s[9] ? Math.round(s[9] * 1.944) : 0,
-            heading: s[10] || 0,
-            origin: s[2] || 'Unknown',
-            destination: null,
-            srcLat: null, srcLng: null, dstLat: null, dstLng: null,
-            progress: null,
-            aircraftType: null,
-          }));
-          _flightCache = { flights, ts: now, source: 'live' };
-          return res.json({ flights, source: 'live' });
-        }
+      const axios = require('axios');
+      // Try authenticated first; if token fetch fails fall through to unauthenticated
+      let headers = {};
+      try {
+        const token = await getOpenSkyToken();
+        if (token) headers = { Authorization: `Bearer ${token}` };
+      } catch (_) {}
+      const r = await axios.get('https://opensky-network.org/api/states/all', {
+        headers,
+        timeout: 8000,
+      });
+      const states = (r.data?.states || []).filter(s =>
+        s[5] != null && s[6] != null && !s[8] &&
+        CARGO_PREFIXES_SET.has((s[1] || '').trim().toUpperCase().slice(0, 3))
+      );
+      if (states.length >= 20) {
+        const flights = states.map(s => ({
+          id: s[0],
+          callsign: (s[1] || '').trim(),
+          isCargo: true,
+          lat: s[6], lng: s[5],
+          altitude: s[7] || 0,
+          velocity: s[9] ? Math.round(s[9] * 1.944) : 0,
+          heading: s[10] || 0,
+          origin: s[2] || 'Unknown',
+          destination: null,
+          srcLat: null, srcLng: null, dstLat: null, dstLng: null,
+          progress: null,
+          aircraftType: null,
+        }));
+        _flightCache = { flights, ts: now, source: 'live' };
+        return res.json({ flights, source: 'live' });
       }
     } catch (e) {
       console.warn('[flights] OpenSky fetch failed:', e.message);
