@@ -106,8 +106,9 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       glowGeomRef.current = glowGeom;
       glowMatRef.current = glowMat;
 
-      const moonGeom = new THREE.SphereGeometry(2.8, 16, 16);
-      const moonMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness: 0.85, metalness: 0.05 });
+      const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
+      const moonTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/moon_1024.jpg');
+      const moonMat = new THREE.MeshStandardMaterial({ map: moonTex, roughness: 0.9, metalness: 0.0 });
       const moonMesh = new THREE.Mesh(moonGeom, moonMat);
       scene.add(moonMesh);
       moonMeshRef.current = moonMesh;
@@ -137,6 +138,7 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       glowGeomRef.current?.dispose();
       glowMatRef.current?.dispose();
       moonGeomRef.current?.dispose();
+      moonMatRef.current?.map?.dispose();
       moonMatRef.current?.dispose();
     };
   }, []);
