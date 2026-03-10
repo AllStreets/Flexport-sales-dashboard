@@ -1,10 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { RiShipLine, RiSearchLine, RiRefreshLine } from 'react-icons/ri';
 import './VesselsPage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+class MapErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+          height: '100%', color: '#475569', flexDirection: 'column', gap: 12 }}>
+          <RiShipLine size={32} />
+          <span style={{ fontSize: 13 }}>Map failed to load — try refreshing the page.</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const vesselIcon = (type = '', simulated = false) => {
   const color = type.includes('Tanker') ? '#f59e0b' : type.includes('Bulk') ? '#a78bfa' : '#00d4ff';
@@ -219,7 +237,9 @@ export default function VesselsPage() {
       <div className="vessels-body">
         {tab === 'map' && (
           <div className="vessels-map-wrap">
-            <VesselMap vessels={filtered} onSelect={setSelectedVessel} />
+            <MapErrorBoundary>
+              <VesselMap vessels={filtered} onSelect={setSelectedVessel} />
+            </MapErrorBoundary>
             {selectedVessel && (
               <div className="vessel-detail-panel">
                 <div className="vd-header">
