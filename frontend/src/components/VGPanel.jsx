@@ -68,11 +68,15 @@ function VGStats({ vessels }) {
 function VGEventFeed({ vessels, selectedVessel, onClear }) {
   const [events, setEvents] = useState([]);
   const timerRef = useRef(null);
+  const vesselsRef = useRef(vessels);
+  useEffect(() => { vesselsRef.current = vessels; }, [vessels]);
 
   useEffect(() => {
-    if (selectedVessel || vessels.length === 0) return;
+    if (!vesselsRef.current.length) return;
     const push = () => {
-      const v = vessels[Math.floor(Math.random() * vessels.length)];
+      if (selectedVessel) return;
+      const arr = vesselsRef.current;
+      const v = arr[Math.floor(Math.random() * arr.length)];
       const ev = generateEvent(v);
       if (!ev) return;
       setEvents(prev => [ev, ...prev].slice(0, 8));
@@ -80,7 +84,7 @@ function VGEventFeed({ vessels, selectedVessel, onClear }) {
     push();
     timerRef.current = setInterval(push, 3000);
     return () => clearInterval(timerRef.current);
-  }, [vessels, selectedVessel]);
+  }, [selectedVessel]);
 
   if (selectedVessel) {
     return (
