@@ -304,9 +304,9 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         arcDashGap={0.15}
         arcDashInitialGap={arcInitialGap}
         arcDashAnimateTime={10000}
-        arcStroke={0.28}
-        arcAltitudeAutoScale={0.06}
-        arcCurveResolution={10}
+        arcStroke={0.22}
+        arcAltitudeAutoScale={0.15}
+        arcCurveResolution={20}
         ringsData={allRings}
         ringColor="color"
         ringMaxRadius="maxRadius"
