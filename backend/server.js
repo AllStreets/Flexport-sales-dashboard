@@ -1099,7 +1099,7 @@ connectAisStream();
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
   if (vessels.length > 0) {
-    return res.json({ source: 'live', vessels: vessels.slice(0, 500) });
+    return res.json({ source: 'live', vessels: vessels.slice(0, 100) });
   }
   // Simulated fallback — 60 vessels along key shipping lanes
   const LANES = [
@@ -1114,7 +1114,7 @@ app.get('/api/vessels', (req, res) => {
   ];
   const types = ['Container', 'Container', 'Container', 'Tanker', 'Bulk Carrier'];
   const simVessels = [];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 40; i++) {
     const lane = LANES[i % LANES.length];
     const t = ((i * 0.17 + Date.now() * 0.000001) % 1);
     simVessels.push({
