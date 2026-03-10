@@ -1,21 +1,22 @@
-.research-page { display: flex; height: 100%; gap: 0; overflow: hidden; }
+.research-page { display: flex; flex: 1; min-height: 0; gap: 0; overflow: hidden; }
 .research-left {
   width: 240px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.06);
   padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;
+  min-width: 0;
 }
-.research-right { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.research-right { flex: 1; overflow-y: auto; padding: 20px 24px; min-width: 0; }
 .research-search-box {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 6px;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 8px; padding: 4px 8px;
+  border-radius: 8px; padding: 4px 8px; overflow: hidden;
 }
 .research-search-icon { color: #00d4ff; flex-shrink: 0; }
 .research-input {
-  flex: 1; background: none; border: none; color: #e2e8f0;
+  flex: 1; min-width: 0; background: none; border: none; color: #e2e8f0;
   font-size: 13px; outline: none; font-family: inherit;
 }
 .research-scan-btn {
-  padding: 5px 10px; background: rgba(0,212,255,0.12);
+  flex-shrink: 0; padding: 5px 10px; background: rgba(0,212,255,0.12);
   border: 1px solid rgba(0,212,255,0.3); border-radius: 6px;
   color: #00d4ff; font-size: 10px; cursor: pointer;
   font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;

@@ -1,4 +1,4 @@
-.team-page { padding: 24px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; height: 100%; }
+.team-page { padding: 24px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; flex: 1; min-height: 0; }
 .team-loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #475569; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
 .team-header-row { display: flex; align-items: center; gap: 10px; }
 .team-header-icon { color: #00d4ff; }
