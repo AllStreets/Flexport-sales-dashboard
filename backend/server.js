@@ -1307,6 +1307,183 @@ app.get('/api/containers/:requestId', async (req, res) => {
   }
 });
 
+// ── Air Freight (Flights) ─────────────────────────────────────────────────
+const CARGO_PREFIXES_SET = new Set(['FDX','UPS','GTI','CLX','NCA','CKS','PAC','SWN','KAC','CAL','CPA','ETD','QTR','ABX','ATN','GEC','TAY','VDA','DHL','BOX','WOA','ETH','LCO','CKK']);
+
+const FLIGHT_ROUTES = [
+  { from:'Memphis',     fromLat:35.04,  fromLng:-89.98,  to:'Frankfurt',   toLat:50.04,  toLng:8.57    },
+  { from:'Memphis',     fromLat:35.04,  fromLng:-89.98,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+  { from:'Memphis',     fromLat:35.04,  fromLng:-89.98,  to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'Memphis',     fromLat:35.04,  fromLng:-89.98,  to:'Shanghai',    toLat:31.14,  toLng:121.81  },
+  { from:'Louisville',  fromLat:38.17,  fromLng:-85.74,  to:'Frankfurt',   toLat:50.04,  toLng:8.57    },
+  { from:'Louisville',  fromLat:38.17,  fromLng:-85.74,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+  { from:'Louisville',  fromLat:38.17,  fromLng:-85.74,  to:'Chicago',     toLat:41.97,  toLng:-87.91  },
+  { from:'Frankfurt',   fromLat:50.04,  fromLng:8.57,    to:'Dubai',       toLat:25.25,  toLng:55.36   },
+  { from:'Frankfurt',   fromLat:50.04,  fromLng:8.57,    to:'Singapore',   toLat:1.36,   toLng:103.99  },
+  { from:'Frankfurt',   fromLat:50.04,  fromLng:8.57,    to:'New York',    toLat:40.63,  toLng:-73.78  },
+  { from:'Dubai',       fromLat:25.25,  fromLng:55.36,   to:'Hong Kong',   toLat:22.31,  toLng:113.92  },
+  { from:'Dubai',       fromLat:25.25,  fromLng:55.36,   to:'London',      toLat:51.47,  toLng:-0.45   },
+  { from:'Dubai',       fromLat:25.25,  fromLng:55.36,   to:'Mumbai',      toLat:19.09,  toLng:72.87   },
+  { from:'Hong Kong',   fromLat:22.31,  fromLng:113.92,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+  { from:'Hong Kong',   fromLat:22.31,  fromLng:113.92,  to:'Chicago',     toLat:41.97,  toLng:-87.91  },
+  { from:'Shanghai',    fromLat:31.14,  fromLng:121.81,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+  { from:'Shanghai',    fromLat:31.14,  fromLng:121.81,  to:'Amsterdam',   toLat:52.31,  toLng:4.77    },
+  { from:'Tokyo',       fromLat:35.54,  fromLng:139.78,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+  { from:'Tokyo',       fromLat:35.54,  fromLng:139.78,  to:'Amsterdam',   toLat:52.31,  toLng:4.77    },
+  { from:'Incheon',     fromLat:37.46,  fromLng:126.44,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+  { from:'Incheon',     fromLat:37.46,  fromLng:126.44,  to:'Frankfurt',   toLat:50.04,  toLng:8.57    },
+  { from:'Anchorage',   fromLat:61.17,  fromLng:-149.99, to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'Anchorage',   fromLat:61.17,  fromLng:-149.99, to:'Frankfurt',   toLat:50.04,  toLng:8.57    },
+  { from:'Anchorage',   fromLat:61.17,  fromLng:-149.99, to:'Chicago',     toLat:41.97,  toLng:-87.91  },
+  { from:'Singapore',   fromLat:1.36,   fromLng:103.99,  to:'Amsterdam',   toLat:52.31,  toLng:4.77    },
+  { from:'Singapore',   fromLat:1.36,   fromLng:103.99,  to:'Sydney',      toLat:-33.95, toLng:151.18  },
+  { from:'Miami',       fromLat:25.79,  fromLng:-80.29,  to:'Bogota',      toLat:4.70,   toLng:-74.14  },
+  { from:'Miami',       fromLat:25.79,  fromLng:-80.29,  to:'Mexico City', toLat:19.44,  toLng:-99.07  },
+  { from:'Los Angeles', fromLat:33.94,  fromLng:-118.41, to:'Tokyo',       toLat:35.54,  toLng:139.78  },
+  { from:'London',      fromLat:51.47,  fromLng:-0.45,   to:'New York',    toLat:40.63,  toLng:-73.78  },
+  { from:'London',      fromLat:51.47,  fromLng:-0.45,   to:'Dubai',       toLat:25.25,  toLng:55.36   },
+  { from:'Amsterdam',   fromLat:52.31,  fromLng:4.77,    to:'New York',    toLat:40.63,  toLng:-73.78  },
+  { from:'Amsterdam',   fromLat:52.31,  fromLng:4.77,    to:'Singapore',   toLat:1.36,   toLng:103.99  },
+  { from:'Doha',        fromLat:25.27,  fromLng:51.61,   to:'Chicago',     toLat:41.97,  toLng:-87.91  },
+  { from:'Addis Ababa', fromLat:8.98,   fromLng:38.80,   to:'Frankfurt',   toLat:50.04,  toLng:8.57    },
+  { from:'Addis Ababa', fromLat:8.98,   fromLng:38.80,   to:'Beijing',     toLat:40.08,  toLng:116.59  },
+  { from:'Taipei',      fromLat:25.08,  fromLng:121.23,  to:'Los Angeles', toLat:33.94,  toLng:-118.41 },
+];
+
+function gcFlightPoint(lat1d, lng1d, lat2d, lng2d, t) {
+  const R = Math.PI / 180;
+  const lat1 = lat1d * R, lng1 = lng1d * R, lat2 = lat2d * R, lng2 = lng2d * R;
+  const x1 = Math.cos(lat1)*Math.cos(lng1), y1 = Math.cos(lat1)*Math.sin(lng1), z1 = Math.sin(lat1);
+  const x2 = Math.cos(lat2)*Math.cos(lng2), y2 = Math.cos(lat2)*Math.sin(lng2), z2 = Math.sin(lat2);
+  const dot = Math.min(1, Math.max(-1, x1*x2 + y1*y2 + z1*z2));
+  const omega = Math.acos(dot);
+  if (omega < 0.0001) return { lat: lat1d, lng: lng1d, heading: 0 };
+  const s = Math.sin(omega);
+  const a = Math.sin((1-t)*omega)/s, b = Math.sin(t*omega)/s;
+  const x = a*x1 + b*x2, y = a*y1 + b*y2, z = a*z1 + b*z2;
+  const lat = Math.atan2(z, Math.sqrt(x*x + y*y)) / R;
+  const lng = Math.atan2(y, x) / R;
+  // Heading from adjacent point
+  const t2 = Math.min(t + 0.01, 0.999);
+  const a2 = Math.sin((1-t2)*omega)/s, b2 = Math.sin(t2*omega)/s;
+  const x2p = a2*x1 + b2*x2, y2p = a2*y1 + b2*y2, z2p = a2*z1 + b2*z2;
+  const lat2p = Math.atan2(z2p, Math.sqrt(x2p*x2p + y2p*y2p)) / R;
+  const lng2p = Math.atan2(y2p, x2p) / R;
+  const dLng = ((lng2p - lng + 540) % 360 - 180) * R;
+  const heading = ((Math.atan2(
+    Math.sin(dLng),
+    Math.cos(lat * R) * Math.sin(lat2p * R) - Math.sin(lat * R) * Math.cos(lat2p * R) * Math.cos(dLng)
+  ) / R + 360) % 360);
+  return { lat, lng, heading };
+}
+
+const CARGO_CS = ['FDX','UPS','GTI','CLX','NCA','ABX','ATN','PAC','KAC','CAL','CPA','ETH'];
+const AC_TYPES = ['B748','B77F','MD11','B763','A330'];
+let _flightCache = { flights: [], ts: 0, source: 'simulated' };
+let _openSkyToken = { access_token: null, expires_at: 0 };
+
+async function getOpenSkyToken() {
+  if (_openSkyToken.access_token && Date.now() < _openSkyToken.expires_at - 30000) {
+    return _openSkyToken.access_token;
+  }
+  const clientId = process.env.OPENSKY_CLIENT_ID;
+  const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  try {
+    const axios = require('axios');
+    const r = await axios.post(
+      'https://opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
+      `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`,
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 6000 }
+    );
+    const { access_token, expires_in } = r.data;
+    _openSkyToken = { access_token, expires_at: Date.now() + (expires_in || 300) * 1000 };
+    return access_token;
+  } catch (e) {
+    console.warn('[flights] OpenSky token fetch failed:', e.message);
+    return null;
+  }
+}
+
+function buildSimulatedFlights() {
+  const now = Date.now();
+  const flights = [];
+  FLIGHT_ROUTES.forEach((r, ri) => {
+    for (let i = 0; i < 3; i++) {
+      const seed = ri * 3 + i;
+      const phase = (seed * 7919 + 3571) % 86400;
+      const progress = ((now / 1000 + phase) % 86400) / 86400;
+      const { lat, lng, heading } = gcFlightPoint(r.fromLat, r.fromLng, r.toLat, r.toLng, progress);
+      const cs = CARGO_CS[seed % CARGO_CS.length];
+      const num = 1000 + ((seed * 47 + ri * 13) % 8999);
+      flights.push({
+        id: `SIM${seed}`,
+        callsign: `${cs}${num}`,
+        isCargo: true,
+        lat, lng,
+        altitude: 9000 + ((seed * 37 + i * 500) % 3000),
+        velocity: 240 + ((seed * 13 + i * 7) % 60),
+        heading,
+        origin: r.from,
+        destination: r.to,
+        srcLat: r.fromLat, srcLng: r.fromLng,
+        dstLat: r.toLat, dstLng: r.toLng,
+        progress,
+        aircraftType: AC_TYPES[seed % AC_TYPES.length],
+      });
+    }
+  });
+  return flights;
+}
+
+app.get('/api/flights', async (req, res) => {
+  const now = Date.now();
+  const CACHE_TTL = 45_000;
+  const forceSim = req.query.mode === 'sim';
+  if (!forceSim && now - _flightCache.ts < CACHE_TTL && _flightCache.flights.length > 0) {
+    return res.json({ flights: _flightCache.flights, source: _flightCache.source });
+  }
+  if (!forceSim) {
+    try {
+      const token = await getOpenSkyToken();
+      if (token) {
+        const axios = require('axios');
+        const r = await axios.get('https://opensky-network.org/api/states/all', {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 8000,
+        });
+        const states = (r.data?.states || []).filter(s =>
+          s[5] != null && s[6] != null && !s[8] &&
+          CARGO_PREFIXES_SET.has((s[1] || '').trim().toUpperCase().slice(0, 3))
+        );
+        if (states.length >= 20) {
+          const flights = states.map(s => ({
+            id: s[0],
+            callsign: (s[1] || '').trim(),
+            isCargo: true,
+            lat: s[6], lng: s[5],
+            altitude: s[7] || 0,
+            velocity: s[9] ? Math.round(s[9] * 1.944) : 0,
+            heading: s[10] || 0,
+            origin: s[2] || 'Unknown',
+            destination: null,
+            srcLat: null, srcLng: null, dstLat: null, dstLng: null,
+            progress: null,
+            aircraftType: null,
+          }));
+          _flightCache = { flights, ts: now, source: 'live' };
+          return res.json({ flights, source: 'live' });
+        }
+      }
+    } catch (e) {
+      console.warn('[flights] OpenSky fetch failed:', e.message);
+    }
+  }
+  const simFlights = buildSimulatedFlights();
+  _flightCache = { flights: simFlights, ts: now, source: 'simulated' };
+  res.json({ flights: simFlights, source: 'simulated' });
+});
+
 // ── Scheduled Jobs ─────────────────────────────────
 const cron = require('node-cron');
 

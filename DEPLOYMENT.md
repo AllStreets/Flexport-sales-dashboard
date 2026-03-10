@@ -58,6 +58,8 @@ SERPER_API_KEY=your_serper_key             # Optional — prospect web enrichmen
 EXCHANGE_RATE_API_KEY=your_key             # Optional — live FX rates
 AISSTREAM_API_KEY=your_key                 # Optional — live AIS vessel positions on Ocean Command
 TERMINAL49_API_KEY=your_key                # Optional — container tracking on Ocean Command
+OPENSKY_CLIENT_ID=your_client_id           # Optional — live ADS-B cargo flights on Air Freight page
+OPENSKY_CLIENT_SECRET=your_client_secret   # Optional — paired with OPENSKY_CLIENT_ID (opensky-network.org)
 FRONTEND_URL=https://your-app.vercel.app   # Required — CORS allowlist
 PORT=                                      # Set automatically by Railway — do not set
 ```

@@ -52,6 +52,43 @@ function fullRouteArc(vessel) {
   };
 }
 
+// ── Ship sprite icons (customLayerData) ────────────────────────────────────
+// CanvasTexture is created once per color → uploaded to GPU once → reused by all
+// vessels of that type. SpriteMaterial is lightweight (just a map reference).
+const _shipTexCache = {};
+function makeShipCanvas(colorStr) {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 48;
+  const ctx = c.getContext('2d');
+  // Glow halo
+  const glow = ctx.createRadialGradient(16, 24, 2, 16, 24, 16);
+  glow.addColorStop(0, colorStr.replace(/[\d.]+\)$/, '0.3)'));
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, 32, 48);
+  // Hull: pointed bow at top (y=4), bezier midship, tapered stern
+  ctx.fillStyle = colorStr;
+  ctx.beginPath();
+  ctx.moveTo(16, 4);
+  ctx.bezierCurveTo(22, 12, 24, 22, 22, 32);
+  ctx.lineTo(20, 44); ctx.lineTo(12, 44); ctx.lineTo(10, 32);
+  ctx.bezierCurveTo(8, 22, 10, 12, 16, 4);
+  ctx.closePath(); ctx.fill();
+  // Centerline stripe
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(16, 8); ctx.lineTo(16, 40); ctx.stroke();
+  // Superstructure block
+  ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(12, 26, 8, 8);
+  return c;
+}
+function makeShipSprite(vessel) {
+  const color = vesselColor(vessel.type);
+  if (!_shipTexCache[color]) _shipTexCache[color] = new THREE.CanvasTexture(makeShipCanvas(color));
+  const mat = new THREE.SpriteMaterial({ map: _shipTexCache[color], transparent: true, depthWrite: false, sizeAttenuation: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(2, 3.2, 1);
+  return sprite;
+}
+
 export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, focusTarget, source, width, height }) {
   const globeRef = useRef(null);
 
@@ -217,10 +254,6 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     g.pointOfView(HOME_POV, 1000);
   }, []);
 
-  const vesselPoints = useMemo(() => vessels.map(v => ({
-    ...v, color: vesselColor(v.type), size: 0.3,
-  })), [vessels]);
-
   // ── Arc data: FROZEN after first simulated load — NEVER cleared ──────────
   // Crash root cause: react-globe.gl destroys all arc WebGL objects when
   // arcsData prop changes. This can race with its internal RAF.
@@ -313,14 +346,16 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         backgroundColor="rgba(0,0,0,0)"
         atmosphereColor="rgba(0,180,255,0.25)"
         atmosphereAltitude={0.25}
-        pointsData={vesselPoints}
-        pointLat="lat"
-        pointLng="lng"
-        pointColor="color"
-        pointAltitude={0.02}
-        pointRadius="size"
-        pointLabel={vesselLabel}
-        onPointClick={handleVesselClick}
+        customLayerData={vessels}
+        customLayerLat="lat"
+        customLayerLng="lng"
+        customLayerAltitude={() => 0.008}
+        customThreeObject={makeShipSprite}
+        customThreeObjectUpdate={(sprite, vessel) => {
+          sprite.material.rotation = -((vessel.cog ?? vessel.heading ?? 0) * Math.PI / 180);
+        }}
+        onCustomLayerClick={handleVesselClick}
+        customLayerLabel={vesselLabel}
         arcsData={stableArcs}
         arcColor="color"
         arcDashLength={0.55}
