@@ -392,6 +392,67 @@ app.get('/api/hs-lookup', async (req, res) => {
   res.json(results.slice(0, 5));
 });
 
+// ── Team Leaderboard ───────────────────────────────
+let teamCache = null;
+let teamCacheExpiry = 0;
+
+const TEAM_REPS = [
+  { id: 1, name: 'Marcus Chen',    avatar_initials: 'MC', calls: 127, demos: 18, pipeline_value: 340000, quota_pct: 94,  trend: '+', role: 'SDR',        is_you: true  },
+  { id: 2, name: 'Jordan Kim',     avatar_initials: 'JK', calls: 143, demos: 22, pipeline_value: 415000, quota_pct: 112, trend: '+', role: 'SDR',        is_you: false },
+  { id: 3, name: 'Priya Patel',    avatar_initials: 'PP', calls: 98,  demos: 14, pipeline_value: 268000, quota_pct: 76,  trend: '-', role: 'SDR',        is_you: false },
+  { id: 4, name: 'Tyler Brooks',   avatar_initials: 'TB', calls: 156, demos: 19, pipeline_value: 372000, quota_pct: 98,  trend: '+', role: 'Sr. SDR',    is_you: false },
+  { id: 5, name: 'Keisha Williams',avatar_initials: 'KW', calls: 89,  demos: 11, pipeline_value: 198000, quota_pct: 61,  trend: '-', role: 'SDR',        is_you: false },
+  { id: 6, name: 'Sam Rivera',     avatar_initials: 'SR', calls: 117, demos: 16, pipeline_value: 302000, quota_pct: 84,  trend: '+', role: 'SDR',        is_you: false },
+];
+
+const TEAM_FALLBACK_INSIGHT = 'Focus on pipeline conversion this week.';
+
+app.get('/api/team', async (req, res) => {
+  if (teamCache && Date.now() < teamCacheExpiry) {
+    return res.json(teamCache);
+  }
+  try {
+    const axios = require('axios');
+    const repSummaries = TEAM_REPS.map(r =>
+      `${r.name}: calls=${r.calls}, demos=${r.demos}, pipeline=$${r.pipeline_value.toLocaleString()}, quota=${r.quota_pct}%, trend=${r.trend}`
+    ).join('\n');
+    const prompt = `You are a sales coaching AI. Based on each SDR's metrics below, write ONE concise coaching insight per rep (1 sentence, under 20 words). Be specific and actionable.
+
+Reps:
+${repSummaries}
+
+Return ONLY a valid JSON array with exactly 6 objects in the same order, like:
+[{"name":"Marcus Chen","insight":"..."},{"name":"Jordan Kim","insight":"..."},...]`;
+
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini',
+      max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+
+    const raw = r.data.choices[0].message.content;
+    const match = raw.match(/\[[\s\S]*\]/);
+    let insightMap = {};
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      parsed.forEach(item => { insightMap[item.name] = item.insight; });
+    }
+
+    const result = TEAM_REPS.map(rep => ({
+      ...rep,
+      insight: insightMap[rep.name] || TEAM_FALLBACK_INSIGHT,
+    }));
+
+    teamCache = result;
+    teamCacheExpiry = Date.now() + 3600000;
+    res.json(result);
+  } catch (e) {
+    console.error('[/api/team] OpenAI error:', e.message);
+    const fallback = TEAM_REPS.map(rep => ({ ...rep, insight: TEAM_FALLBACK_INSIGHT }));
+    res.json(fallback);
+  }
+});
+
 // ── Follow-up Radar ────────────────────────────────
 app.get('/api/followup-radar', (req, res) => {
   const days = Math.max(1, parseInt(req.query.days, 10) || 3);
