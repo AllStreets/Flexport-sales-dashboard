@@ -21,7 +21,7 @@ function vesselColor(type) {
   } else {
     t = String(type || '');
   }
-  if (t.includes('Tanker')) return 'rgba(245,158,11,0.9)';
+  if (t.includes('Tanker')) return 'rgba(249,115,22,0.9)'; // orange — distinct from amber Congested
   if (t.includes('Bulk'))   return 'rgba(167,139,250,0.9)';
   return 'rgba(0,212,255,0.9)';
 }
@@ -139,13 +139,20 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
       refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
 
       // ── Unified RAF: ring rotation + moon orbit ──
-      // shouldAnimate flag prevents stale loops if RAF fires once after cancelAnimationFrame
+      // IMPORTANT: use refs.ringMesh / refs.moonMesh — NOT closure vars.
+      // Closure vars are stale if this effect cleanup runs and a new effect starts
+      // (e.g. StrictMode double-mount). Using refs ensures we always access the
+      // current mesh, and try/catch ensures a thrown error doesn't kill the loop.
       refs.shouldAnimate = true;
       const animate = () => {
-        if (!refs.shouldAnimate) return; // don't reschedule after cleanup
-        ringMesh.rotation.z += 0.001;
-        const t = Date.now() * 0.00008;
-        moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
+        if (!refs.shouldAnimate) return;
+        try {
+          if (refs.ringMesh) refs.ringMesh.rotation.z += 0.001;
+          if (refs.moonMesh) {
+            const t = Date.now() * 0.00008;
+            refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
+          }
+        } catch (_) { /* mesh temporarily unavailable — keep loop alive */ }
         refs.frame = requestAnimationFrame(animate);
       };
       animate();
@@ -206,12 +213,11 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
-  // 80 arcs at arcCurveResolution=20 → ~15k vertices, completely trivial for any GPU.
-  // No 'remaining' arc (that used arcDashAnimateTime=0 which crashes the WebGL shader).
+  // All vessels get arcs. Filter progress < 0.03: a near-zero arc (vessel just departed)
+  // produces a ~zero-length TubeGeometry which generates NaN vertices and crashes WebGL.
   const trailData = useMemo(() =>
     vessels
-      .filter(v => v.srcLat && v.dstLat)
-      .slice(0, 80)
+      .filter(v => v.srcLat && v.dstLat && (v.progress ?? 0.5) > 0.03)
       .map(v => traveledArc(v))
       .filter(Boolean),
   [vessels]);
@@ -241,6 +247,8 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     }
     onVesselClick?.(point);
   }, [onVesselClick]);
+
+  const labelColor = useCallback(p => portStatusColor(p.status), []);
 
   const portLabel = useCallback((p) => {
     const c = portStatusColor(p.status);
@@ -277,8 +285,8 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         arcDashGap={0.07}
         arcDashAnimateTime={3000}
         arcStroke={0.22}
-        arcAltitudeAutoScale={0.15}
-        arcCurveResolution={20}
+        arcAltitudeAutoScale={0.06}
+        arcCurveResolution={10}
         ringsData={allRings}
         ringColor="color"
         ringMaxRadius="maxRadius"
@@ -290,7 +298,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         labelText="name"
         labelSize={0.35}
         labelDotRadius={0.4}
-        labelColor={p => portStatusColor(p.status)}
+        labelColor={labelColor}
         labelResolution={2}
         labelLabel={portLabel}
       />

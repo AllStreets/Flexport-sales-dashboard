@@ -112,7 +112,7 @@ export default function VesselsPage() {
           )}
           <div className="vg-legend">
             <span style={{ color: '#00d4ff' }}>■ Container</span>
-            <span style={{ color: '#f59e0b' }}>■ Tanker</span>
+            <span style={{ color: '#f97316' }}>■ Tanker</span>
             <span style={{ color: '#a78bfa' }}>■ Bulk Carrier</span>
             <span style={{ color: '#10b981' }}>● Clear</span>
             <span style={{ color: '#f59e0b' }}>● Congested</span>

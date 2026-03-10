@@ -1039,6 +1039,7 @@ app.get('/api/settings/health', (req, res) => {
 // In-memory vessel cache
 let _vesselCache = {};
 let _aisWs = null;
+let _aisReconnectDelay = 10000; // exponential backoff, resets to 10s on successful open
 
 function connectAisStream() {
   const key = process.env.AISSTREAM_API_KEY;
@@ -1048,6 +1049,7 @@ function connectAisStream() {
   _aisWs = new WebSocket('wss://stream.aisstream.io/v0/stream');
 
   _aisWs.on('open', () => {
+    _aisReconnectDelay = 10000; // reset backoff on success
     console.log('aisstream connected');
     _aisWs.send(JSON.stringify({
       APIKey: key,
@@ -1087,8 +1089,9 @@ function connectAisStream() {
   });
 
   _aisWs.on('close', () => {
-    console.log('aisstream disconnected — reconnecting in 10s');
-    setTimeout(connectAisStream, 10000);
+    _aisReconnectDelay = Math.min(_aisReconnectDelay * 2, 120000); // backoff up to 2 min
+    console.log(`aisstream disconnected — reconnecting in ${Math.round(_aisReconnectDelay / 1000)}s`);
+    setTimeout(connectAisStream, _aisReconnectDelay);
   });
 
   _aisWs.on('error', (e) => { console.error('aisstream error:', e.message); });

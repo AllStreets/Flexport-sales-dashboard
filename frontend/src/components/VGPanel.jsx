@@ -52,9 +52,9 @@ function VGStats({ vessels, ports = [] }) {
     <div className="vg-stats">
       <div className="vg-stats-label">FLEET OVERVIEW</div>
       <div className="vg-stats-grid">
-        <div className="vg-stat"><span className="vg-stat-val" style={{ color: '#00d4ff' }}>{vessels.length}</span><span className="vg-stat-key">TOTAL</span></div>
+        <div className="vg-stat"><span className="vg-stat-val" style={{ color: '#94a3b8' }}>{vessels.length}</span><span className="vg-stat-key">TOTAL</span></div>
         <div className="vg-stat"><span className="vg-stat-val" style={{ color: '#00d4ff' }}>{ctr}</span><span className="vg-stat-key">CONTAINER</span></div>
-        <div className="vg-stat"><span className="vg-stat-val" style={{ color: '#f59e0b' }}>{tnk}</span><span className="vg-stat-key">TANKER</span></div>
+        <div className="vg-stat"><span className="vg-stat-val" style={{ color: '#f97316' }}>{tnk}</span><span className="vg-stat-key">TANKER</span></div>
         <div className="vg-stat"><span className="vg-stat-val" style={{ color: '#a78bfa' }}>{blk}</span><span className="vg-stat-key">BULK</span></div>
       </div>
       {alerts > 0 && (
