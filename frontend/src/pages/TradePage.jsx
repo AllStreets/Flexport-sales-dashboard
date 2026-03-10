@@ -249,6 +249,34 @@ function MacroTile({ label, data, color, formatter, barSpark }) {
   );
 }
 
+function RateSparkline({ data = [], color = '#00d4ff' }) {
+  if (!data.length) return null;
+  const chartData = data.map((v) => ({ v }));
+  const first = data[0], last = data[data.length - 1];
+  const pct = (((last - first) / first) * 100).toFixed(1);
+  const up = last >= first;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ width: 80, height: 28 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
+            <defs>
+              <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill="url(#sg)" dot={false} isAnimationActive={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono, monospace', color: up ? '#ef4444' : '#10b981', minWidth: 42 }}>
+        {up ? '▲' : '▼'} {Math.abs(pct)}%
+      </span>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function TradePage() {
   const [tradeData, setTradeData]   = useState(null);
@@ -261,6 +289,7 @@ export default function TradePage() {
   const [clock, setClock]           = useState('');
   const [triggerEvents, setTriggerEvents] = useState([]);
   const [liveFx, setLiveFx]         = useState(null);
+  const [rateHistory, setRateHistory] = useState({});
 
   // Live EST clock
   useEffect(() => {
@@ -284,12 +313,14 @@ export default function TradePage() {
       fetch(`${API}/api/globe-data`).then(r => r.json()),
       fetch(`${API}/api/trigger-events`).then(r => r.json()).catch(() => null),
       fetch(`${API}/api/fx-rates`).then(r => r.json()).catch(() => null),
-    ]).then(([td, sig, globe, te, fx]) => {
+      fetch(`${API}/api/rate-history`).then(r => r.json()).catch(() => ({})),
+    ]).then(([td, sig, globe, te, fx, rh]) => {
       setTradeData(td);
       setSignals(Array.isArray(sig) && sig.length > 0 ? sig : FALLBACK_SIGNALS);
       setPorts(globe?.ports || []);
       if (te?.events?.length) setTriggerEvents(te.events);
       if (fx?.rates?.length) setLiveFx(fx);
+      setRateHistory(rh || {});
       setLoading(false);
     }).catch(() => {
       setSignals(FALLBACK_SIGNALS);
@@ -353,6 +384,17 @@ export default function TradePage() {
       };
     });
   })();
+
+  const ROUTE_IDS = {
+    'China-US West Coast': 'china-usw',
+    'China-US East Coast': 'china-use',
+    'Middle East-Europe':  'me-europe',
+    'Vietnam-US West':     'vietnam-usw',
+    'India-US East':       'india-use',
+    'Europe-US East':      'europe-use',
+    'Brazil-US East':      'latam-use',
+    'SE Asia-US East':     'se-asia-usw',
+  };
 
   const urgencyColor = s => s >= 8 ? '#ff3b3b' : s >= 5 ? '#ff9f0a' : '#00c176';
   const portColor    = s => s === 'disruption' ? '#ff3b3b' : s === 'congestion' ? '#ff9f0a' : '#00c176';
@@ -512,6 +554,7 @@ export default function TradePage() {
                 <span className="cr-change" style={{ color: r.change >= 0 ? '#ff3b3b' : '#00c176' }}>
                   {r.change >= 0 ? '+' : ''}{r.change}%
                 </span>
+                <RateSparkline data={rateHistory[ROUTE_IDS[r.route]] || []} />
               </div>
             ))}
           </div>
