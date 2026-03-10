@@ -2,7 +2,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine,
-  RiSettings3Line, RiSearchEyeLine, RiTeamLine, RiShipLine,
+  RiSettings3Line, RiSearchEyeLine, RiShipLine,
 } from 'react-icons/ri';
 import './Sidebar.css';
 
@@ -13,7 +13,6 @@ const NAV = [
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
   { to: '/research',    Icon: RiSearchEyeLine,        label: 'Research'            },
   { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
-  { to: '/team',        Icon: RiTeamLine,             label: 'Team'                },
 ];
 
 function SidebarLink({ to, Icon, label, end = false }) {

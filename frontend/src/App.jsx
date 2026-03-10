@@ -9,7 +9,6 @@ import PerformancePage from './pages/PerformancePage';
 import MarketMapPage from './pages/MarketMapPage';
 import TariffCalculatorPage from './pages/TariffCalculatorPage';
 import ResearchPage from './pages/ResearchPage';
-import TeamPage from './pages/TeamPage';
 import VesselsPage from './pages/VesselsPage';
 import SettingsPage from './pages/SettingsPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
@@ -128,13 +127,6 @@ export default function App() {
         return;
       }
 
-      // Ctrl+Shift+T — Navigate to Team
-      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-        e.preventDefault();
-        navigate('/team');
-        return;
-      }
-
       // Escape — close topmost open modal/overlay
       if (e.key === 'Escape') {
         if (emailState.open) { setEmailState({ open: false, prospect: null, trigger: '' }); return; }
@@ -191,7 +183,6 @@ export default function App() {
             <Route path="/market" element={<MarketMapPage />} />
             <Route path="/tariff" element={<TariffCalculatorPage />} />
             <Route path="/research" element={<ResearchPage />} />
-            <Route path="/team" element={<TeamPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
