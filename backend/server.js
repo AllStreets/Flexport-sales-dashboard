@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const WebSocket = require('ws');
 
 const app = express();
 app.use(cors({
@@ -1032,6 +1033,142 @@ app.get('/api/settings/health', (req, res) => {
       serper:       !!process.env.SERPER_API_KEY,
     },
   });
+});
+
+// ── AIS Stream WebSocket proxy ──────────────────────
+// In-memory vessel cache
+let _vesselCache = {};
+let _aisWs = null;
+
+function connectAisStream() {
+  const key = process.env.AISSTREAM_API_KEY;
+  if (!key) return;
+  if (_aisWs && (_aisWs.readyState === WebSocket.OPEN || _aisWs.readyState === WebSocket.CONNECTING)) return;
+
+  _aisWs = new WebSocket('wss://stream.aisstream.io/v0/stream');
+
+  _aisWs.on('open', () => {
+    console.log('aisstream connected');
+    _aisWs.send(JSON.stringify({
+      APIKey: key,
+      BoundingBoxes: [[[-90, -180], [90, 180]]],
+      FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
+    }));
+  });
+
+  _aisWs.on('message', (raw) => {
+    try {
+      const msg = JSON.parse(raw);
+      const pos = msg.Message?.PositionReport;
+      const stat = msg.Message?.ShipStaticData;
+      const mmsi = msg.MetaData?.MMSI;
+      if (!mmsi) return;
+      if (pos) {
+        _vesselCache[mmsi] = {
+          ..._vesselCache[mmsi],
+          mmsi, lat: pos.Latitude, lng: pos.Longitude,
+          sog: pos.Sog, cog: pos.Cog, heading: pos.TrueHeading,
+          status: pos.NavigationalStatus, ts: Date.now(),
+        };
+      }
+      if (stat) {
+        _vesselCache[mmsi] = {
+          ..._vesselCache[mmsi],
+          mmsi, name: stat.Name?.trim(), type: stat.Type,
+          destination: stat.Destination?.trim(), draught: stat.Draught,
+          callsign: stat.CallSign?.trim(),
+        };
+      }
+      const cutoff = Date.now() - 30 * 60 * 1000;
+      Object.keys(_vesselCache).forEach(k => {
+        if (_vesselCache[k].ts && _vesselCache[k].ts < cutoff) delete _vesselCache[k];
+      });
+    } catch {}
+  });
+
+  _aisWs.on('close', () => {
+    console.log('aisstream disconnected — reconnecting in 10s');
+    setTimeout(connectAisStream, 10000);
+  });
+
+  _aisWs.on('error', (e) => { console.error('aisstream error:', e.message); });
+}
+
+connectAisStream();
+
+app.get('/api/vessels', (req, res) => {
+  const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
+  if (vessels.length > 0) {
+    return res.json({ source: 'live', vessels: vessels.slice(0, 500) });
+  }
+  // Simulated fallback — 60 vessels along key shipping lanes
+  const LANES = [
+    { srcLat: 31.2, srcLng: 121.5, dstLat: 33.7, dstLng: -118.2 },
+    { srcLat: 10.8, srcLng: 106.7, dstLat: 33.7, dstLng: -118.2 },
+    { srcLat: 1.35, srcLng: 103.8, dstLat: 33.7, dstLng: -118.2 },
+    { srcLat: 31.2, srcLng: 121.5, dstLat: 40.7, dstLng: -74.0  },
+    { srcLat: 19.0, srcLng: 72.8,  dstLat: 51.9, dstLng: 4.5    },
+    { srcLat: 31.2, srcLng: 121.5, dstLat: 51.9, dstLng: 4.5    },
+    { srcLat: -23.5, srcLng: -46.6, dstLat: 51.9, dstLng: 4.5   },
+    { srcLat: 3.1, srcLng: 101.7,  dstLat: 40.7, dstLng: -74.0  },
+  ];
+  const types = ['Container', 'Container', 'Container', 'Tanker', 'Bulk Carrier'];
+  const simVessels = [];
+  for (let i = 0; i < 60; i++) {
+    const lane = LANES[i % LANES.length];
+    const t = ((i * 0.17 + Date.now() * 0.000001) % 1);
+    simVessels.push({
+      mmsi: 900000000 + i, name: `SIM VESSEL ${i + 1}`,
+      lat: lane.srcLat + (lane.dstLat - lane.srcLat) * t,
+      lng: lane.srcLng + (lane.dstLng - lane.srcLng) * t,
+      sog: 14 + (i % 6),
+      cog: Math.atan2(lane.dstLat - lane.srcLat, lane.dstLng - lane.srcLng) * 180 / Math.PI,
+      type: types[i % types.length], destination: 'SIMULATED', ts: Date.now(), simulated: true,
+    });
+  }
+  res.json({ source: 'simulated', vessels: simVessels });
+});
+
+// ── Terminal49 Container Tracking ───────────────────
+app.post('/api/containers/track', async (req, res) => {
+  const { number, type = 'container_number', scac } = req.body;
+  if (!number) return res.status(400).json({ error: 'number required' });
+  const key = process.env.TERMINAL49_API_KEY;
+  if (!key) return res.status(503).json({ error: 'TERMINAL49_API_KEY not configured' });
+  try {
+    const axios = require('axios');
+    const payload = {
+      data: {
+        type: 'tracking_request',
+        attributes: {
+          request_type: type === 'bill_of_lading' ? 'bill_of_lading' : 'container_number',
+          request_number: number,
+          ...(type === 'bill_of_lading' && scac ? { scac } : {}),
+        }
+      }
+    };
+    const r = await axios.post('https://api.terminal49.com/v2/tracking_requests', payload, {
+      headers: { Authorization: `Token ${key}`, 'Content-Type': 'application/vnd.api+json' }
+    });
+    res.json(r.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+  }
+});
+
+app.get('/api/containers/:requestId', async (req, res) => {
+  const key = process.env.TERMINAL49_API_KEY;
+  if (!key) return res.status(503).json({ error: 'TERMINAL49_API_KEY not configured' });
+  try {
+    const axios = require('axios');
+    const r = await axios.get(
+      `https://api.terminal49.com/v2/tracking_requests/${req.params.requestId}?include=shipment.containers`,
+      { headers: { Authorization: `Token ${key}` } }
+    );
+    res.json(r.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({ error: err.response?.data || err.message });
+  }
 });
 
 // ── Scheduled Jobs ─────────────────────────────────
