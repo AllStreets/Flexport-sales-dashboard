@@ -54,8 +54,8 @@ export default function VesselsPage() {
   useEffect(() => {
     fetchVessels();
     fetchGlobeData();
-    const vesselId = setInterval(fetchVessels, 30000);
-    const portId = setInterval(fetchGlobeData, 60000);
+    const vesselId = setInterval(fetchVessels, 60000);
+    const portId = setInterval(fetchGlobeData, 120000);
     return () => { clearInterval(vesselId); clearInterval(portId); };
   }, []);
 

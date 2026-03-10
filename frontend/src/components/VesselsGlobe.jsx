@@ -49,7 +49,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
 
   // Single ref object for all Three.js scene objects — safe across React strict-mode double-mount
   const threeRefs = useRef({
-    frame: null,
+    frame: null, shouldAnimate: false,
     glowMesh: null, glowGeom: null, glowMat: null,
     ringMesh: null, ringGeom: null, ringMat: null,
     moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
@@ -139,7 +139,10 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
       refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
 
       // ── Unified RAF: ring rotation + moon orbit ──
+      // shouldAnimate flag prevents stale loops if RAF fires once after cancelAnimationFrame
+      refs.shouldAnimate = true;
       const animate = () => {
+        if (!refs.shouldAnimate) return; // don't reschedule after cleanup
         ringMesh.rotation.z += 0.001;
         const t = Date.now() * 0.00008;
         moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
@@ -149,21 +152,31 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     }, 600);
 
     return () => {
-      clearTimeout(timer);
-      if (refs.frame) cancelAnimationFrame(refs.frame);
-      refs.frame = null;
-      const scene = globeRef.current?.scene?.();
-      if (scene) {
-        if (refs.glowMesh) scene.remove(refs.glowMesh);
-        if (refs.ringMesh) scene.remove(refs.ringMesh);
-        if (refs.moonMesh) scene.remove(refs.moonMesh);
+      // react-globe.gl destroys its WebGL context before our cleanup runs.
+      // Calling .dispose() on geometries whose context is already gone throws WebGL errors.
+      // Wrap everything in try-catch — the context being gone means resources are already freed.
+      try {
+        clearTimeout(timer);
+        refs.shouldAnimate = false;
+        if (refs.frame) cancelAnimationFrame(refs.frame);
+        refs.frame = null;
+        const scene = globeRef.current?.scene?.();
+        if (scene) {
+          if (refs.glowMesh) scene.remove(refs.glowMesh);
+          if (refs.ringMesh) scene.remove(refs.ringMesh);
+          if (refs.moonMesh) scene.remove(refs.moonMesh);
+        }
+        refs.glowGeom?.dispose(); refs.glowMat?.dispose();
+        refs.ringGeom?.dispose(); refs.ringMat?.dispose();
+        refs.moonGeom?.dispose(); refs.moonTex?.dispose(); refs.moonMat?.dispose();
+      } catch (_) {
+        // WebGL context already gone — resources freed by browser, safe to ignore
+      } finally {
+        refs.shouldAnimate = false; refs.frame = null;
+        refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
+        refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
+        refs.moonGeom = refs.moonMat = refs.moonTex = null;
       }
-      refs.glowGeom?.dispose(); refs.glowMat?.dispose();
-      refs.ringGeom?.dispose(); refs.ringMat?.dispose();
-      refs.moonGeom?.dispose(); refs.moonTex?.dispose(); refs.moonMat?.dispose();
-      refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
-      refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
-      refs.moonGeom = refs.moonMat = refs.moonTex = null;
     };
   }, []);
 
@@ -193,12 +206,12 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
-  // 20 arcs max — each arc is a TubeGeometry rebuilt on every vessel refresh;
-  // keeping this low prevents WebGL memory exhaustion
+  // 80 arcs at arcCurveResolution=20 → ~15k vertices, completely trivial for any GPU.
+  // No 'remaining' arc (that used arcDashAnimateTime=0 which crashes the WebGL shader).
   const trailData = useMemo(() =>
     vessels
       .filter(v => v.srcLat && v.dstLat)
-      .slice(0, 20)
+      .slice(0, 80)
       .map(v => traveledArc(v))
       .filter(Boolean),
   [vessels]);
