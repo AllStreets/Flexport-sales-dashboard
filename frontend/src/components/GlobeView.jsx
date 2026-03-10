@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Globe from 'react-globe.gl';
+import * as THREE from 'three';
 import { RiGlobalLine, RiPercentLine } from 'react-icons/ri';
 import './GlobeView.css';
 
@@ -17,6 +18,12 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   const [globeData, setGlobeData] = useState({ shippingLanes: [], ports: [] });
   const [overlayMode, setOverlayMode] = useState(0);
   const [portDetail, setPortDetail] = useState(null);
+  const [arcTick, setArcTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setArcTick(t => t + 1), 80);
+    return () => clearInterval(id);
+  }, []);
 
   const getDimensions = (fs) => ({
     w: window.innerWidth,
@@ -64,6 +71,83 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
     }
   }, [selectedProspect]);
 
+  useEffect(() => {
+    let frame;
+    const glowMeshRef = { current: null };
+    const moonMeshRef = { current: null };
+    const glowGeomRef = { current: null };
+    const glowMatRef = { current: null };
+    const moonGeomRef = { current: null };
+    const moonMatRef = { current: null };
+
+    const timer = setTimeout(() => {
+      const g = globeRef.current;
+      if (!g?.scene) return;
+      const scene = g.scene();
+
+      const glowGeom = new THREE.SphereGeometry(105, 32, 32);
+      const glowMat = new THREE.ShaderMaterial({
+        uniforms: { c: { value: 0.18 }, p: { value: 3.0 } },
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: `
+          uniform float c;
+          uniform float p;
+          varying vec3 vNormal;
+          void main() {
+            float intensity = pow(c - dot(vNormal, vec3(0.0, 0.0, 1.0)), p);
+            gl_FragColor = vec4(0.0, 0.83, 1.0, max(0.0, intensity));
+          }`,
+        side: THREE.FrontSide,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+      });
+      const glowMesh = new THREE.Mesh(glowGeom, glowMat);
+      scene.add(glowMesh);
+      glowMeshRef.current = glowMesh;
+      glowGeomRef.current = glowGeom;
+      glowMatRef.current = glowMat;
+
+      const moonGeom = new THREE.SphereGeometry(2.8, 16, 16);
+      const moonMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness: 0.85, metalness: 0.05 });
+      const moonMesh = new THREE.Mesh(moonGeom, moonMat);
+      scene.add(moonMesh);
+      moonMeshRef.current = moonMesh;
+      moonGeomRef.current = moonGeom;
+      moonMatRef.current = moonMat;
+
+      const animate = () => {
+        const t = Date.now() * 0.00008;
+        moonMesh.position.set(
+          Math.cos(t) * 165,
+          Math.sin(t * 0.28) * 28,
+          Math.sin(t) * 165
+        );
+        frame = requestAnimationFrame(animate);
+      };
+      animate();
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      if (frame) cancelAnimationFrame(frame);
+      const scene = globeRef.current?.scene?.();
+      if (scene) {
+        if (glowMeshRef.current) scene.remove(glowMeshRef.current);
+        if (moonMeshRef.current) scene.remove(moonMeshRef.current);
+      }
+      glowGeomRef.current?.dispose();
+      glowMatRef.current?.dispose();
+      moonGeomRef.current?.dispose();
+      moonMatRef.current?.dispose();
+    };
+  }, []);
+
   const originCoords = {
     // Asia-Pacific
     'China': { lat: 31.2, lng: 121.5 }, 'Vietnam': { lat: 10.8, lng: 106.7 },
@@ -102,23 +186,25 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
   // High-tariff origin prefixes for tariff overlay
   const HIGH_TARIFF_PREFIXES = ['China', 'SE Asia', 'Vietnam', 'Taiwan', 'Korea'];
 
-  const laneColor = (lane) => {
+  const laneColor = (lane, idx = 0) => {
+    const phase = (arcTick * 0.06 + idx * 0.7);
+    const alpha = 0.45 + Math.sin(phase) * 0.25;
+
     if (mode === 'tariff') {
       return HIGH_TARIFF_PREFIXES.some(p => lane.label?.startsWith(p))
-        ? ['rgba(239,68,68,0.7)', 'rgba(239,68,68,0.7)']
-        : ['rgba(16,185,129,0.6)', 'rgba(16,185,129,0.6)'];
+        ? [`rgba(239,68,68,${alpha})`, `rgba(239,68,68,${alpha})`]
+        : [`rgba(16,185,129,${alpha})`, `rgba(16,185,129,${alpha})`];
     }
-    // Standard mode: color by source port status
     const status = srcPortStatus(lane);
-    if (status === 'disruption') return ['rgba(239,68,68,0.75)', 'rgba(239,68,68,0.75)'];
-    if (status === 'congestion') return ['rgba(245,158,11,0.75)', 'rgba(245,158,11,0.75)'];
-    return ['rgba(0, 212, 255, 0.6)', 'rgba(0, 212, 255, 0.6)'];
+    if (status === 'disruption') return [`rgba(239,68,68,${alpha})`, `rgba(239,68,68,${alpha})`];
+    if (status === 'congestion') return [`rgba(245,158,11,${alpha})`, `rgba(245,158,11,${alpha})`];
+    return [`rgba(0,212,255,${alpha})`, `rgba(0,212,255,${alpha})`];
   };
 
-  const baseLanes = globeData.shippingLanes.map(lane => ({
+  const baseLanes = globeData.shippingLanes.map((lane, idx) => ({
     startLat: lane.src_lat, startLng: lane.src_lng,
     endLat: lane.dst_lat, endLng: lane.dst_lng,
-    color: laneColor(lane), label: lane.label, weight: lane.weight, type: 'lane'
+    color: laneColor(lane, idx), label: lane.label, weight: lane.weight, type: 'lane'
   }));
 
   const particleLanes = globeData.shippingLanes.map(lane => ({
@@ -169,8 +255,8 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
         height={dimensions.h}
         globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
-        atmosphereColor="rgba(37, 99, 235, 0.2)"
-        atmosphereAltitude={0.15}
+        atmosphereColor="rgba(0, 180, 255, 0.25)"
+        atmosphereAltitude={0.18}
         arcsData={allArcs}
         arcColor="color"
         arcDashLength={d => d.type === 'particle' ? 0.02 : 0.4}
