@@ -76,9 +76,9 @@ export default function FlightsPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Fetch port congestion/disruption data (same source as Ocean Command)
+  // Fetch port congestion/disruption data (same source as Ocean Command globe)
   useEffect(() => {
-    fetch(`${API}/api/vessels`)
+    fetch(`${API}/api/globe-data`)
       .then(r => r.json())
       .then(d => setPorts(d.ports || []))
       .catch(() => {});
