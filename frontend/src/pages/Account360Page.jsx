@@ -1,7 +1,7 @@
 // frontend/src/pages/Account360Page.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RiFileTextLine, RiMailSendLine, RiBoxingLine, RiLightbulbLine, RiFlashlightLine, RiRoadMapLine, RiCloseCircleLine, RiPhoneLine } from 'react-icons/ri';
+import { RiFileTextLine, RiMailSendLine, RiBoxingLine, RiLightbulbLine, RiFlashlightLine, RiRoadMapLine, RiCloseCircleLine, RiPhoneLine, RiStepsLine } from 'react-icons/ri';
 import ICPBadge from '../components/ICPBadge';
 import './Account360Page.css';
 
@@ -632,10 +632,10 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
           </button>
         )}
         {onOpenOutreach && (
-          <button className="btn-primary" onClick={() => onOpenOutreach(p, analysis)}><RiMailSendLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Outreach Sequence</button>
+          <button className="btn-primary" onClick={() => onOpenOutreach(p, analysis)}><RiStepsLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Outreach Sequence</button>
         )}
-        <button className="action-btn" onClick={() => onOpenEmailComposer?.(p)}>
-          <RiMailSendLine size={14} /> Compose Email
+        <button className="btn-secondary" onClick={() => onOpenEmailComposer?.(p)}>
+          <RiMailSendLine size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Compose Email
         </button>
         <button className="btn-secondary" onClick={generateCallPrep} disabled={callPrepLoading}>
           {callPrepLoading ? '...' : <><RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Call Prep</>}
