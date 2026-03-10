@@ -32,20 +32,23 @@ function portStatusColor(status) {
   return '#10b981';
 }
 
-// Full-route arc: always srcPort→dstPort regardless of vessel position.
-// arcDashInitialGap is set to vessel.progress so the animated dash starts
-// at the vessel's current position — early-journey vessels get the same
-// full-length visible arc as late-journey vessels.
-function fullRouteArc(vessel) {
-  if (!vessel.srcLat || !vessel.dstLat) return null;
+// Each vessel gets two arc objects:
+//   1. bg  — always-visible dim route line (95% lit, slow 120s cycle)
+//   2. dot — bright animated comet showing vessel's position (8% length, fast 8s cycle)
+// arcDashLength/Gap/AnimateTime/Stroke use function accessors (per-arc) so both
+// types can share a single arcsData array without any per-prop bifurcation on Globe.
+function makeArcPair(vessel) {
+  if (!vessel.srcLat || !vessel.dstLat) return [];
   const color = vesselColor(vessel.type);
-  return {
-    startLat: vessel.srcLat, startLng: vessel.srcLng,
-    endLat: vessel.dstLat, endLng: vessel.dstLng,
-    color: [color, color],
-    mmsi: vessel.mmsi,
-    progress: vessel.progress ?? 0,
-  };
+  const dimColor = color.replace(/[\d.]+\)$/, '0.13)');
+  const prog = vessel.progress ?? 0;
+  const base = { startLat: vessel.srcLat, startLng: vessel.srcLng,
+                 endLat: vessel.dstLat,   endLng: vessel.dstLng,
+                 mmsi: vessel.mmsi, progress: prog };
+  return [
+    { ...base, color: [dimColor, dimColor], isStatic: true  },
+    { ...base, color: [color,    color],    isStatic: false },
+  ];
 }
 
 export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, width, height }) {
@@ -217,27 +220,20 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
-  // ── Arc data: FROZEN after first simulated load ──────────────────────────
-  // The crash root cause: react-globe.gl destroys + recreates ALL arc objects
-  // whenever arcsData prop changes. This races with our RAF loop every 60s.
-  // Fix: freeze arc endpoints on first load — vessel refreshes only update
-  // pointsData (dots), never arcsData (arc objects). Ships move ~0.5% of their
-  // route per minute so stale arcs are visually imperceptible.
+  // ── Arc data: FROZEN after first simulated load — NEVER cleared ──────────
+  // Crash root cause: react-globe.gl destroys all arc WebGL objects when
+  // arcsData prop changes. This can race with its internal RAF.
+  // Fix: once initialized from simulated vessels, arcs are NEVER changed.
+  // Live AIS updates only affect pointsData (vessel dots), not arcsData.
+  // Decorative background routes are valid regardless of live/sim state.
   const [stableArcs, setStableArcs] = useState([]);
   const arcsInitialized = useRef(false);
   useEffect(() => {
-    if (!vessels.length) return;
-    // Live AIS vessels have no srcLat — clear arcs and let simulated re-init next cycle
-    if (vessels[0]?.srcLat == null) {
-      setStableArcs([]);
-      arcsInitialized.current = false;
-      return;
-    }
-    if (arcsInitialized.current) return; // frozen — never rebuild on refresh
-    const arcs = vessels
-      .filter(v => v.srcLat && v.dstLat)
-      .map(v => fullRouteArc(v))
-      .filter(Boolean);
+    if (arcsInitialized.current || !vessels.length) return;
+    // Only init from simulated vessels (which carry route data)
+    const routed = vessels.filter(v => v.srcLat && v.dstLat);
+    if (routed.length === 0) return; // live AIS only — skip until sim data arrives
+    const arcs = routed.flatMap(v => makeArcPair(v));
     if (arcs.length > 0) {
       arcsInitialized.current = true;
       setStableArcs(arcs);
@@ -261,9 +257,12 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...p, dotColor: portStatusColor(p.status),
   })), [ports]);
 
-  // Stagger arc resets using vessel.progress (uniformly distributed 0→1 across all vessels).
-  // 250 vessels × 10s cycle = one reset every ~40ms — completely imperceptible.
+  // Per-arc accessors — different behavior for bg (dim static) vs comet (animated)
+  const arcDashLen   = useCallback(arc => arc.isStatic ? 0.95 : 0.08, []);
+  const arcDashGapFn = useCallback(arc => arc.isStatic ? 0.05 : 0.92, []);
+  const arcAnimTime  = useCallback(arc => arc.isStatic ? 120000 : 8000, []);
   const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
+  const arcStrokeFn  = useCallback(arc => arc.isStatic ? 0.12 : 0.42, []);
 
   const handleVesselClick = useCallback((point) => {
     const g = globeRef.current;
@@ -301,17 +300,17 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         pointLat="lat"
         pointLng="lng"
         pointColor="color"
-        pointAltitude={0.008}
+        pointAltitude={0.02}
         pointRadius="size"
         pointLabel={vesselLabel}
         onPointClick={handleVesselClick}
         arcsData={stableArcs}
         arcColor="color"
-        arcDashLength={0.4}
-        arcDashGap={0.6}
+        arcDashLength={arcDashLen}
+        arcDashGap={arcDashGapFn}
         arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={10000}
-        arcStroke={0.28}
+        arcDashAnimateTime={arcAnimTime}
+        arcStroke={arcStrokeFn}
         arcAltitudeAutoScale={0.06}
         arcCurveResolution={10}
         ringsData={allRings}
