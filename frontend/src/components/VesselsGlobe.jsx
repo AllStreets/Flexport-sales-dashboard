@@ -1,5 +1,5 @@
 // frontend/src/components/VesselsGlobe.jsx
-import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { RiRefreshLine } from 'react-icons/ri';
@@ -32,23 +32,20 @@ function portStatusColor(status) {
   return '#10b981';
 }
 
-// Full-route arc: srcPort→dstPort, always the complete route length.
-// arcDashInitialGap=vessel.progress phases each arc to a different cycle position.
-// arcDashLength=0.55 + arcDashGap=0.45: large enough dark window to read as
-// motion without making arcs invisible. Gradient color (bright at origin →
-// dim at destination) gives each arc a directional "flow" feel.
+// Trail arc: origin port → current vessel position.
+// Dim at origin, bright at the vessel's current position — gives a wake/trail effect.
+// Arcs update on every vessel refresh so they extend as vessels move.
 function dimColor(color) {
-  return color.replace(/[\d.]+\)$/, '0.18)');
+  return color.replace(/[\d.]+\)$/, '0.06)');
 }
-function fullRouteArc(vessel) {
-  if (!vessel.srcLat || !vessel.dstLat) return null;
+function trailArc(vessel) {
+  if (!vessel.srcLat || !vessel.lat) return null;
   const bright = vesselColor(vessel.type);
   return {
     startLat: vessel.srcLat, startLng: vessel.srcLng,
-    endLat: vessel.dstLat,   endLng: vessel.dstLng,
-    color: [bright, dimColor(bright)],
+    endLat: vessel.lat,       endLng: vessel.lng,
+    color: [dimColor(bright), bright],
     mmsi: vessel.mmsi,
-    progress: vessel.progress ?? 0,
   };
 }
 
@@ -254,38 +251,11 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     g.pointOfView(HOME_POV, 1000);
   }, []);
 
-  // ── Arc data: FROZEN after first simulated load — NEVER cleared ──────────
-  // Crash root cause: react-globe.gl destroys all arc WebGL objects when
-  // arcsData prop changes. This can race with its internal RAF.
-  // Fix: once initialized from simulated vessels, arcs are NEVER changed.
-  // Live AIS updates only affect pointsData (vessel dots), not arcsData.
-  // Decorative background routes are valid regardless of live/sim state.
-  const [stableArcs, setStableArcs] = useState([]);
-  const arcsInitialized = useRef(false);
-  const prevSourceRef = useRef(source);
-
-  // Clear arcs when switching from simulated → live. Live AIS vessels have no
-  // route data, so simulated arcs would be orphaned and misleading on the globe.
-  // Reset arcsInitialized so arcs reinit if user switches back to simulated.
-  useEffect(() => {
-    if (prevSourceRef.current === 'simulated' && source === 'live') {
-      setStableArcs([]);
-      arcsInitialized.current = false;
-    }
-    prevSourceRef.current = source;
-  }, [source]);
-
-  useEffect(() => {
-    if (arcsInitialized.current || !vessels.length) return;
-    // Only init from simulated vessels (which carry route data)
-    const routed = vessels.filter(v => v.srcLat && v.dstLat);
-    if (routed.length === 0) return; // live AIS only — skip until sim data arrives
-    const arcs = routed.map(v => fullRouteArc(v)).filter(Boolean);
-    if (arcs.length > 0) {
-      arcsInitialized.current = true;
-      setStableArcs(arcs);
-    }
-  }, [vessels]);
+  // Trail arcs: origin port → current vessel position, updated on every refresh.
+  // Live AIS vessels have no srcLat/srcLng so they naturally produce no arcs.
+  const arcs = useMemo(() =>
+    vessels.filter(v => v.srcLat && v.lat).map(trailArc).filter(Boolean),
+  [vessels]);
 
   // Pan globe when feed card vessel is clicked
   useEffect(() => {
@@ -309,10 +279,6 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
   const portPoints = useMemo(() => ports.map(p => ({
     ...p, dotColor: portStatusColor(p.status),
   })), [ports]);
-
-  // Stagger arc scanner gap: vessel.progress is uniformly 0→1 across all 250 vessels.
-  // 250 arcs × 10s cycle = one gap-reset every ~40ms — invisible to the eye.
-  const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
 
   const handleVesselClick = useCallback((point) => {
     const g = globeRef.current;
@@ -359,14 +325,14 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         }}
         onCustomLayerClick={handleVesselClick}
         customLayerLabel={vesselLabel}
-        arcsData={stableArcs}
+        arcsData={arcs}
         arcColor="color"
-        arcDashLength={0.55}
-        arcDashGap={0.45}
-        arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={5000}
-        arcStroke={0.28}
-        arcAltitudeAutoScale={0.22}
+        arcDashLength={0.5}
+        arcDashGap={0.5}
+        arcDashInitialGap={0}
+        arcDashAnimateTime={4000}
+        arcStroke={0.25}
+        arcAltitudeAutoScale={0.18}
         arcCurveResolution={24}
         ringsData={allRings}
         ringColor="color"

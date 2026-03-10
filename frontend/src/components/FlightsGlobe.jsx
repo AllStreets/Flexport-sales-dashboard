@@ -1,5 +1,5 @@
 // frontend/src/components/FlightsGlobe.jsx
-import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { RiRefreshLine } from 'react-icons/ri';
@@ -37,14 +37,17 @@ const AIRSPACE_RESTRICTIONS = [
 
 const HOME_POV = { lat: 25, lng: 10, altitude: 2.2 };
 
-function flightRouteArc(f) {
-  if (!f.srcLat || !f.dstLat) return null;
+// Trail arc: from origin airport to current flight position — bright at plane end, fading at origin.
+function flightTrailArc(f) {
+  if (!f.srcLat || !f.lat) return null;
+  const isCargo = f.isCargo;
+  const bright = isCargo ? 'rgba(132,204,22,0.8)' : 'rgba(0,212,255,0.8)';
+  const dim    = isCargo ? 'rgba(132,204,22,0.05)' : 'rgba(0,212,255,0.05)';
   return {
     startLat: f.srcLat, startLng: f.srcLng,
-    endLat: f.dstLat,   endLng: f.dstLng,
-    color: ['rgba(0,212,255,0.85)', 'rgba(0,212,255,0.08)'],
+    endLat: f.lat,       endLng: f.lng,
+    color: [dim, bright],
     id: f.id,
-    progress: f.progress ?? 0,
   };
 }
 
@@ -94,6 +97,7 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
     frame: null, shouldAnimate: false,
     glowMesh: null, glowGeom: null, glowMat: null,
     ringMesh: null, ringGeom: null, ringMat: null,
+    moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
   });
 
   useEffect(() => {
@@ -123,10 +127,72 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
       scene.add(ringMesh);
       refs.ringMesh = ringMesh; refs.ringGeom = ringGeom; refs.ringMat = ringMat;
 
+      // ── Moon (same canvas texture + orbit as Ocean Command) ──
+      const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
+      const mc = document.createElement('canvas');
+      mc.width = 512; mc.height = 512;
+      const mx = mc.getContext('2d');
+      const baseG = mx.createRadialGradient(220, 180, 30, 256, 256, 300);
+      baseG.addColorStop(0, '#c8c8c8'); baseG.addColorStop(0.35, '#a0a0a0');
+      baseG.addColorStop(0.7, '#7c7c7c'); baseG.addColorStop(1, '#606060');
+      mx.fillStyle = baseG; mx.fillRect(0, 0, 512, 512);
+      [[190,155,90],[310,200,70],[145,295,55],[360,330,50],[240,390,40]].forEach(([x,y,r]) => {
+        const g = mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(48,50,58,0.75)'); g.addColorStop(1,'rgba(48,50,58,0)');
+        mx.fillStyle = g; mx.fillRect(0,0,512,512);
+      });
+      [[110,75,42],[365,145,36],[195,360,30],[445,290,26],[70,340,32],[300,420,22]].forEach(([x,y,r]) => {
+        const ej = mx.createRadialGradient(x,y,r*0.8,x,y,r*1.6);
+        ej.addColorStop(0,'rgba(185,185,185,0.25)'); ej.addColorStop(1,'rgba(185,185,185,0)');
+        mx.fillStyle=ej; mx.beginPath(); mx.arc(x,y,r*1.6,0,Math.PI*2); mx.fill();
+        const rim = mx.createRadialGradient(x,y,r*0.55,x,y,r*1.05);
+        rim.addColorStop(0,'rgba(60,62,68,0)'); rim.addColorStop(0.6,'rgba(175,175,178,0.55)');
+        rim.addColorStop(1,'rgba(175,175,178,0)');
+        mx.fillStyle=rim; mx.beginPath(); mx.arc(x,y,r*1.05,0,Math.PI*2); mx.fill();
+        const fl = mx.createRadialGradient(x-r*0.15,y-r*0.1,0,x,y,r*0.62);
+        fl.addColorStop(0,'rgba(78,80,86,0.95)'); fl.addColorStop(1,'rgba(58,60,66,0.88)');
+        mx.fillStyle=fl; mx.beginPath(); mx.arc(x,y,r*0.62,0,Math.PI*2); mx.fill();
+        mx.fillStyle='rgba(195,195,198,0.7)'; mx.beginPath(); mx.arc(x,y,r*0.07,0,Math.PI*2); mx.fill();
+      });
+      for (let i=0;i<18;i++){
+        const x=18+(i*47+i*i*13)%476, y=18+(i*61+i*i*7)%476, r=5+(i*11)%16;
+        const g=mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(62,64,70,0.9)'); g.addColorStop(0.75,'rgba(158,158,162,0.4)');
+        g.addColorStop(1,'rgba(130,130,134,0)');
+        mx.fillStyle=g; mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+      }
+      for (let i=0;i<40;i++){
+        const x=5+(i*83+i*i*17)%502, y=5+(i*71+i*i*23)%502, r=1.5+(i*5)%5;
+        mx.fillStyle=`rgba(60,62,65,${0.5+0.3*(i%3)/2})`;
+        mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+        mx.fillStyle=`rgba(170,170,172,${0.2+0.15*(i%2)})`;
+        mx.beginPath(); mx.arc(x-r*0.4,y-r*0.4,r*0.4,0,Math.PI*2); mx.fill();
+      }
+      const idata = mx.getImageData(0,0,512,512);
+      for (let i=0;i<idata.data.length;i+=4){
+        const n=(Math.sin(i*0.0013)*Math.cos(i*0.00071)*14)|0;
+        idata.data[i]  =Math.min(255,Math.max(0,idata.data[i]+n));
+        idata.data[i+1]=Math.min(255,Math.max(0,idata.data[i+1]+n));
+        idata.data[i+2]=Math.min(255,Math.max(0,idata.data[i+2]+n));
+      }
+      mx.putImageData(idata,0,0);
+      const moonTex = new THREE.CanvasTexture(mc);
+      const moonMat = new THREE.MeshBasicMaterial({ map: moonTex });
+      const moonMesh = new THREE.Mesh(moonGeom, moonMat);
+      scene.add(moonMesh);
+      refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
+
+      // ── Unified RAF: ring rotation + moon orbit ──
       refs.shouldAnimate = true;
       const animate = () => {
         if (!refs.shouldAnimate) return;
-        try { if (refs.ringMesh) refs.ringMesh.rotation.z += 0.0008; } catch (_) {}
+        try {
+          if (refs.ringMesh) refs.ringMesh.rotation.z += 0.0008;
+          if (refs.moonMesh) {
+            const t = Date.now() * 0.00008;
+            refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
+          }
+        } catch (_) {}
         refs.frame = requestAnimationFrame(animate);
       };
       animate();
@@ -142,14 +208,17 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
         if (scene) {
           if (refs.glowMesh) scene.remove(refs.glowMesh);
           if (refs.ringMesh) scene.remove(refs.ringMesh);
+          if (refs.moonMesh) scene.remove(refs.moonMesh);
         }
         refs.glowGeom?.dispose(); refs.glowMat?.dispose();
         refs.ringGeom?.dispose(); refs.ringMat?.dispose();
+        refs.moonGeom?.dispose(); refs.moonTex?.dispose(); refs.moonMat?.dispose();
       } catch (_) {}
       finally {
         refs.shouldAnimate = false; refs.frame = null;
-        refs.glowMesh = refs.ringMesh = null;
+        refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
         refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
+        refs.moonGeom = refs.moonMat = refs.moonTex = null;
       }
     };
   }, []);
@@ -176,29 +245,10 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
     g.pointOfView(HOME_POV, 1000);
   }, []);
 
-  // ── Route arcs: frozen after first sim load, cleared on sim→live transition ──
-  const [stableArcs, setStableArcs] = useState([]);
-  const arcsInitialized = useRef(false);
-  const prevSourceRef = useRef(source);
-
-  useEffect(() => {
-    if (prevSourceRef.current === 'simulated' && source === 'live') {
-      setStableArcs([]);
-      arcsInitialized.current = false;
-    }
-    prevSourceRef.current = source;
-  }, [source]);
-
-  useEffect(() => {
-    if (arcsInitialized.current || !flights.length) return;
-    const routed = flights.filter(f => f.srcLat && f.dstLat);
-    if (!routed.length) return;
-    const arcs = routed.map(f => flightRouteArc(f)).filter(Boolean);
-    if (arcs.length > 0) {
-      arcsInitialized.current = true;
-      setStableArcs(arcs);
-    }
-  }, [flights]);
+  // Trail arcs: origin → current position, updated on every flights refresh
+  const arcs = useMemo(() =>
+    flights.filter(f => f.srcLat && f.lat).map(flightTrailArc).filter(Boolean),
+  [flights]);
 
   // Pan globe when feed card is clicked
   useEffect(() => {
@@ -214,8 +264,6 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
     }
     onFlightClick?.(obj);
   }, [onFlightClick]);
-
-  const arcInitialGap = useCallback(arc => arc.progress ?? 0, []);
 
   const hubRings = useMemo(() => [
     ...CARGO_HUBS.filter(h => h.tier <= 2).map(h => ({
@@ -269,14 +317,14 @@ export default function FlightsGlobe({ flights = [], source, onFlightClick, focu
         }}
         onCustomLayerClick={handleFlightClick}
         customLayerLabel={flightLabel}
-        arcsData={stableArcs}
+        arcsData={arcs}
         arcColor="color"
-        arcDashLength={0.55}
-        arcDashGap={0.45}
-        arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={4500}
-        arcStroke={0.25}
-        arcAltitudeAutoScale={0.2}
+        arcDashLength={0.5}
+        arcDashGap={0.5}
+        arcDashInitialGap={0}
+        arcDashAnimateTime={3500}
+        arcStroke={0.22}
+        arcAltitudeAutoScale={0.15}
         arcCurveResolution={24}
         ringsData={hubRings}
         ringColor="color"

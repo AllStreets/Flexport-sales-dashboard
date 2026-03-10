@@ -1440,7 +1440,9 @@ app.get('/api/flights', async (req, res) => {
   const now = Date.now();
   const CACHE_TTL = 45_000;
   const forceSim = req.query.mode === 'sim';
-  if (!forceSim && now - _flightCache.ts < CACHE_TTL && _flightCache.flights.length > 0) {
+  // Only serve cached live data; simulated positions are derived from Date.now()
+  // so they must be computed fresh each call — otherwise planes don't move on refresh.
+  if (!forceSim && _flightCache.source === 'live' && now - _flightCache.ts < CACHE_TTL && _flightCache.flights.length > 0) {
     return res.json({ flights: _flightCache.flights, source: _flightCache.source });
   }
   if (!forceSim) {
@@ -1480,7 +1482,7 @@ app.get('/api/flights', async (req, res) => {
     }
   }
   const simFlights = buildSimulatedFlights();
-  _flightCache = { flights: simFlights, ts: now, source: 'simulated' };
+  // Don't write simulated data to cache — fresh positions on every request
   res.json({ flights: simFlights, source: 'simulated' });
 });
 
