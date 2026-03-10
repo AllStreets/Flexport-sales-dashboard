@@ -1101,29 +1101,55 @@ app.get('/api/vessels', (req, res) => {
   if (vessels.length > 0) {
     return res.json({ source: 'live', vessels: vessels.slice(0, 100) });
   }
-  // Simulated fallback — 60 vessels along key shipping lanes
-  const LANES = [
-    { srcLat: 31.2, srcLng: 121.5, dstLat: 33.7, dstLng: -118.2 },
-    { srcLat: 10.8, srcLng: 106.7, dstLat: 33.7, dstLng: -118.2 },
-    { srcLat: 1.35, srcLng: 103.8, dstLat: 33.7, dstLng: -118.2 },
-    { srcLat: 31.2, srcLng: 121.5, dstLat: 40.7, dstLng: -74.0  },
-    { srcLat: 19.0, srcLng: 72.8,  dstLat: 51.9, dstLng: 4.5    },
-    { srcLat: 31.2, srcLng: 121.5, dstLat: 51.9, dstLng: 4.5    },
-    { srcLat: -23.5, srcLng: -46.6, dstLat: 51.9, dstLng: 4.5   },
-    { srcLat: 3.1, srcLng: 101.7,  dstLat: 40.7, dstLng: -74.0  },
+  // Simulated fallback — 250 vessels on real SHIPPING_LANES trade routes
+  const PORT_NAMES = {
+    '31.2,121.5': 'Shanghai', '10.8,106.7': 'Ho Chi Minh City',
+    '35.7,139.7': 'Tokyo', '35.1,129.0': 'Busan', '25.0,121.5': 'Taipei',
+    '1.35,103.8': 'Singapore', '-34.4,18.5': 'Cape Town', '51.9,4.5': 'Rotterdam',
+    '33.7,-118.2': 'Los Angeles', '40.7,-74.0': 'New York', '19.0,72.8': 'Mumbai',
+    '41.0,28.9': 'Istanbul', '29.7,-95.0': 'Houston', '-23.5,-46.6': 'Santos',
+    '-12.0,-77.1': 'Callao', '-33.9,151.2': 'Sydney', '-29.9,31.0': 'Durban',
+    '25.0,55.1': 'Jebel Ali', '3.1,101.7': 'Port Klang', '22.3,114.2': 'Hong Kong',
+    '19.4,-99.1': 'Mexico City', '-34.4,18.5': 'Cape Town',
+  };
+  function portName(lat, lng) {
+    const key = `${lat},${lng}`;
+    return PORT_NAMES[key] || `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lng).toFixed(1)}°${lng >= 0 ? 'E' : 'W'}`;
+  }
+  // Skip Red Sea direct lane — vessels reroute via Cape post-Houthi attacks
+  const simLanes = SHIPPING_LANES.filter(l => !l.label?.includes('Red Sea Risk'));
+  const VESSEL_NAMES = [
+    'EVER ACCORD','OOCL EUROPE','MSC GÜLSÜN','CMA CGM BRAZIL','COSCO SHIPPING UNIVERSE',
+    'HMM ALGECIRAS','YANG MING WITNESS','ONE APUS','ZIM KINGSTON','MAERSK ESSEX',
+    'HYUNDAI PRIDE','PIL VICTORIA','EVERGREEN ZENITH','APL DANUBE','HAPAG CAIRO',
+    'MSC DIANA','CMA CGM THALASSA','COSCO NAGOYA','EVERGREEN FORTUNE','MSC OSCAR',
+    'MAERSK MC-KINNEY','OOCL HONG KONG','MED SHIPPING','YANG MING UBERTY',
+    'ONE STORK','ZIM LUANDA','APL TEMASEK','HYUNDAI BRAVE','PIL EUROPE','HAPAG BERLIN',
   ];
-  const types = ['Container', 'Container', 'Container', 'Tanker', 'Bulk Carrier'];
+  const SIM_TYPES = ['Container', 'Container', 'Container', 'Container', 'Tanker', 'Bulk Carrier'];
   const simVessels = [];
-  for (let i = 0; i < 40; i++) {
-    const lane = LANES[i % LANES.length];
-    const t = ((i * 0.17 + Date.now() * 0.000001) % 1);
+  for (let i = 0; i < 250; i++) {
+    const lane = simLanes[i % simLanes.length];
+    const t = ((i * 0.13 + i * i * 0.0003 + Date.now() * 0.0000008) % 1);
+    const lat = lane.src_lat + (lane.dst_lat - lane.src_lat) * t;
+    const lng = lane.src_lng + (lane.dst_lng - lane.src_lng) * t;
+    const dlat = lane.dst_lat - lane.src_lat;
+    const dlng = lane.dst_lng - lane.src_lng;
+    const suffix = i >= VESSEL_NAMES.length ? ` ${Math.floor(i / VESSEL_NAMES.length) + 1}` : '';
     simVessels.push({
-      mmsi: 900000000 + i, name: `SIM VESSEL ${i + 1}`,
-      lat: lane.srcLat + (lane.dstLat - lane.srcLat) * t,
-      lng: lane.srcLng + (lane.dstLng - lane.srcLng) * t,
-      sog: 14 + (i % 6),
-      cog: Math.atan2(lane.dstLat - lane.srcLat, lane.dstLng - lane.srcLng) * 180 / Math.PI,
-      type: types[i % types.length], destination: 'SIMULATED', ts: Date.now(), simulated: true,
+      mmsi: 900000000 + i,
+      name: VESSEL_NAMES[i % VESSEL_NAMES.length] + suffix,
+      lat, lng,
+      sog: 14 + (i % 7),
+      cog: Math.atan2(dlat, dlng) * 180 / Math.PI,
+      type: SIM_TYPES[i % SIM_TYPES.length],
+      destination: portName(lane.dst_lat, lane.dst_lng),
+      srcLat: lane.src_lat, srcLng: lane.src_lng,
+      dstLat: lane.dst_lat, dstLng: lane.dst_lng,
+      srcName: portName(lane.src_lat, lane.src_lng),
+      dstName: portName(lane.dst_lat, lane.dst_lng),
+      progress: t,
+      ts: Date.now(), simulated: true,
     });
   }
   res.json({ source: 'simulated', vessels: simVessels });
