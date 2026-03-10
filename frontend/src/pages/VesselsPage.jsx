@@ -1,6 +1,26 @@
 // frontend/src/pages/VesselsPage.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Component } from 'react';
 import { RiShipLine, RiRefreshLine, RiWifiLine } from 'react-icons/ri';
+
+class GlobeErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e) { console.error('VesselsGlobe WebGL error:', e); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: '#334155', fontFamily: "'JetBrains Mono', monospace" }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.1em' }}>RENDERER ERROR — WEBGL CONTEXT LOST</div>
+          <button
+            style={{ fontSize: 9, background: 'none', border: '1px solid rgba(0,212,255,0.2)', color: '#00d4ff', padding: '5px 14px', cursor: 'pointer', borderRadius: 4, letterSpacing: '0.08em' }}
+            onClick={() => this.setState({ error: null })}
+          >RELOAD GLOBE</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import VesselsGlobe from '../components/VesselsGlobe';
 import VGPanel from '../components/VGPanel';
 import './VesselsPage.css';
@@ -80,13 +100,15 @@ export default function VesselsPage() {
       <div className="vg-body">
         <div className="vg-globe-wrap" ref={wrapRef}>
           {dims.w > 0 && (
-            <VesselsGlobe
-              vessels={vessels}
-              ports={ports}
-              onVesselClick={setSelectedVessel}
-              width={dims.w}
-              height={dims.h}
-            />
+            <GlobeErrorBoundary>
+              <VesselsGlobe
+                vessels={vessels}
+                ports={ports}
+                onVesselClick={setSelectedVessel}
+                width={dims.w}
+                height={dims.h}
+              />
+            </GlobeErrorBoundary>
           )}
           <div className="vg-legend">
             <span style={{ color: '#00d4ff' }}>■ Container</span>

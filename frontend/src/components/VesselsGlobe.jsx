@@ -13,7 +13,7 @@ const DISRUPTION_ZONES = [
 const HOME_POV = { lat: 20, lng: 10, altitude: 2.2 };
 
 function vesselColor(type) {
-  // AIS live data uses numeric type codes (70=Cargo, 80=Tanker); sim data uses strings
+  // Handle both AIS numeric codes (70=Cargo, 80=Tanker) and string labels
   let t = '';
   if (typeof type === 'number') {
     if (type >= 80 && type < 90) t = 'Tanker';
@@ -32,39 +32,29 @@ function portStatusColor(status) {
   return '#10b981';
 }
 
-// Port-to-port arc: bright arc srcPort→vessel, dim arc vessel→dstPort
-function portToPortArcs(vessel) {
-  if (!vessel.srcLat || !vessel.dstLat) return [];
+// Traveled arc only — no 'remaining' arc (arcDashAnimateTime=0 crashes WebGL shader)
+function traveledArc(vessel) {
+  if (!vessel.srcLat || !vessel.dstLat) return null;
   const color = vesselColor(vessel.type);
-  const dimColor = color.replace(/[\d.]+\)$/, '0.12)');
-  return [
-    {
-      startLat: vessel.srcLat, startLng: vessel.srcLng,
-      endLat: vessel.lat, endLng: vessel.lng,
-      color: [color, color],
-      mmsi: vessel.mmsi, part: 'traveled',
-    },
-    {
-      startLat: vessel.lat, startLng: vessel.lng,
-      endLat: vessel.dstLat, endLng: vessel.dstLng,
-      color: [dimColor, dimColor],
-      mmsi: vessel.mmsi, part: 'remaining',
-    },
-  ];
+  return {
+    startLat: vessel.srcLat, startLng: vessel.srcLng,
+    endLat: vessel.lat, endLng: vessel.lng,
+    color: [color, color],
+    mmsi: vessel.mmsi,
+  };
 }
 
 export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, width, height }) {
   const globeRef = useRef(null);
 
-  // Single ref object for all Three.js scene objects — crash-safe across React strict-mode double-mount
+  // Single ref object for all Three.js scene objects — safe across React strict-mode double-mount
   const threeRefs = useRef({
     frame: null,
     glowMesh: null, glowGeom: null, glowMat: null,
     ringMesh: null, ringGeom: null, ringMat: null,
-    moonMesh: null, moonGeom: null, moonMat: null,
+    moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
   });
 
-  // Atmosphere glow + equatorial ring + orbiting moon
   useEffect(() => {
     const refs = threeRefs.current;
     const timer = setTimeout(() => {
@@ -92,25 +82,20 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
       scene.add(ringMesh);
       refs.ringMesh = ringMesh; refs.ringGeom = ringGeom; refs.ringMat = ringMat;
 
-      // ── Moon — same texture + orbit as homepage ──
+      // ── Moon (same texture + orbit as homepage, MeshBasicMaterial for GPU efficiency) ──
       const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
-
-      // Build moon surface texture via canvas
       const mc = document.createElement('canvas');
       mc.width = 512; mc.height = 512;
       const mx = mc.getContext('2d');
-      // base — varied grey highland/lowland
       const baseG = mx.createRadialGradient(220, 180, 30, 256, 256, 300);
       baseG.addColorStop(0, '#c8c8c8'); baseG.addColorStop(0.35, '#a0a0a0');
       baseG.addColorStop(0.7, '#7c7c7c'); baseG.addColorStop(1, '#606060');
       mx.fillStyle = baseG; mx.fillRect(0, 0, 512, 512);
-      // mare (dark volcanic plains)
       [[190,155,90],[310,200,70],[145,295,55],[360,330,50],[240,390,40]].forEach(([x,y,r]) => {
         const g = mx.createRadialGradient(x,y,0,x,y,r);
         g.addColorStop(0,'rgba(48,50,58,0.75)'); g.addColorStop(1,'rgba(48,50,58,0)');
         mx.fillStyle = g; mx.fillRect(0,0,512,512);
       });
-      // large craters with rim + floor + central peak
       [[110,75,42],[365,145,36],[195,360,30],[445,290,26],[70,340,32],[300,420,22]].forEach(([x,y,r]) => {
         const ej = mx.createRadialGradient(x,y,r*0.8,x,y,r*1.6);
         ej.addColorStop(0,'rgba(185,185,185,0.25)'); ej.addColorStop(1,'rgba(185,185,185,0)');
@@ -124,7 +109,6 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         mx.fillStyle=fl; mx.beginPath(); mx.arc(x,y,r*0.62,0,Math.PI*2); mx.fill();
         mx.fillStyle='rgba(195,195,198,0.7)'; mx.beginPath(); mx.arc(x,y,r*0.07,0,Math.PI*2); mx.fill();
       });
-      // medium craters
       for (let i=0;i<18;i++){
         const x=18+(i*47+i*i*13)%476, y=18+(i*61+i*i*7)%476, r=5+(i*11)%16;
         const g=mx.createRadialGradient(x,y,0,x,y,r);
@@ -132,7 +116,6 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         g.addColorStop(1,'rgba(130,130,134,0)');
         mx.fillStyle=g; mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
       }
-      // small craters
       for (let i=0;i<40;i++){
         const x=5+(i*83+i*i*17)%502, y=5+(i*71+i*i*23)%502, r=1.5+(i*5)%5;
         mx.fillStyle=`rgba(60,62,65,${0.5+0.3*(i%3)/2})`;
@@ -140,7 +123,6 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         mx.fillStyle=`rgba(170,170,172,${0.2+0.15*(i%2)})`;
         mx.beginPath(); mx.arc(x-r*0.4,y-r*0.4,r*0.4,0,Math.PI*2); mx.fill();
       }
-      // surface grain
       const idata = mx.getImageData(0,0,512,512);
       for (let i=0;i<idata.data.length;i+=4){
         const n=(Math.sin(i*0.0013)*Math.cos(i*0.00071)*14)|0;
@@ -150,20 +132,17 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
       }
       mx.putImageData(idata,0,0);
       const moonTex = new THREE.CanvasTexture(mc);
-      const moonMat = new THREE.MeshStandardMaterial({ map: moonTex, roughness: 0.92, metalness: 0.0 });
+      // MeshBasicMaterial: no lighting pass needed, much lighter GPU load than MeshStandardMaterial
+      const moonMat = new THREE.MeshBasicMaterial({ map: moonTex });
       const moonMesh = new THREE.Mesh(moonGeom, moonMat);
       scene.add(moonMesh);
-      refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat;
+      refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
 
-      // ── Animate ring + moon orbit (same elliptical params as homepage) ──
+      // ── Unified RAF: ring rotation + moon orbit ──
       const animate = () => {
         ringMesh.rotation.z += 0.001;
         const t = Date.now() * 0.00008;
-        moonMesh.position.set(
-          Math.cos(t) * 165,
-          Math.sin(t * 0.28) * 28,
-          Math.sin(t) * 165
-        );
+        moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
         refs.frame = requestAnimationFrame(animate);
       };
       animate();
@@ -181,14 +160,13 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
       }
       refs.glowGeom?.dispose(); refs.glowMat?.dispose();
       refs.ringGeom?.dispose(); refs.ringMat?.dispose();
-      refs.moonGeom?.dispose();
-      refs.moonMat?.map?.dispose();
-      refs.moonMat?.dispose();
+      refs.moonGeom?.dispose(); refs.moonTex?.dispose(); refs.moonMat?.dispose();
       refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
+      refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
+      refs.moonGeom = refs.moonMat = refs.moonTex = null;
     };
   }, []);
 
-  // Auto-rotate
   useEffect(() => {
     const timer = setTimeout(() => {
       const g = globeRef.current;
@@ -215,22 +193,28 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     ...v, color: vesselColor(v.type), size: 0.3,
   })), [vessels]);
 
-  // Cap at 60 vessels for arcs — 500 animated TubeGeometry objects exhaust WebGL memory
+  // 20 arcs max — each arc is a TubeGeometry rebuilt on every vessel refresh;
+  // keeping this low prevents WebGL memory exhaustion
   const trailData = useMemo(() =>
-    vessels.slice(0, 60).flatMap(v => portToPortArcs(v)), [vessels]);
+    vessels
+      .filter(v => v.srcLat && v.dstLat)
+      .slice(0, 20)
+      .map(v => traveledArc(v))
+      .filter(Boolean),
+  [vessels]);
 
-  // Port rings from live data (disrupted/congested ports)
-  const portRings = useMemo(() => ports
-    .filter(p => p.status === 'disruption' || p.status === 'congestion')
-    .map(p => ({
-      lat: p.lat, lng: p.lng,
-      maxRadius: p.status === 'disruption' ? 4 : 2.5,
-      propagationSpeed: p.status === 'disruption' ? 3 : 1.5,
-      repeatPeriod: p.status === 'disruption' ? 800 : 1400,
-      color: portStatusColor(p.status),
-    })), [ports]);
-
-  const allRings = useMemo(() => [...DISRUPTION_ZONES, ...portRings], [portRings]);
+  // Only disruption-status port rings + the 3 fixed disruption zones (max 8 rings total)
+  const allRings = useMemo(() => {
+    const portDisruptRings = ports
+      .filter(p => p.status === 'disruption')
+      .slice(0, 5)
+      .map(p => ({
+        lat: p.lat, lng: p.lng,
+        maxRadius: 3.5, propagationSpeed: 2.5, repeatPeriod: 850,
+        color: '#ef4444',
+      }));
+    return [...DISRUPTION_ZONES, ...portDisruptRings];
+  }, [ports]);
 
   const portPoints = useMemo(() => ports.map(p => ({
     ...p, dotColor: portStatusColor(p.status),
@@ -251,7 +235,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
   }, []);
 
   const vesselLabel = useCallback((v) =>
-    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${v.name || 'MMSI ' + v.mmsi}</strong><br/>${v.type || 'Unknown'} · ${(v.sog || 0).toFixed(1)} kn${v.dstName ? '<br/>' + (v.srcName || '') + ' → ' + v.dstName : ''}</div>`,
+    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${v.name || 'MMSI ' + v.mmsi}</strong><br/>${String(v.type || 'Unknown')} · ${(v.sog || 0).toFixed(1)} kn${v.dstName ? '<br/>' + (v.srcName || '') + ' → ' + v.dstName : ''}</div>`,
   []);
 
   return (
@@ -276,10 +260,10 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         onPointClick={handleVesselClick}
         arcsData={trailData}
         arcColor="color"
-        arcDashLength={d => d.part === 'remaining' ? 0.04 : 0.5}
-        arcDashGap={d => d.part === 'remaining' ? 0.08 : 0.06}
-        arcDashAnimateTime={d => d.part === 'remaining' ? 0 : 3500}
-        arcStroke={d => d.part === 'remaining' ? 0.12 : 0.22}
+        arcDashLength={0.4}
+        arcDashGap={0.07}
+        arcDashAnimateTime={3000}
+        arcStroke={0.22}
         arcAltitudeAutoScale={0.15}
         arcCurveResolution={20}
         ringsData={allRings}
