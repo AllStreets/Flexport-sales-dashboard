@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import PortStatusBar from './components/PortStatusBar';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
@@ -10,6 +10,7 @@ import MarketMapPage from './pages/MarketMapPage';
 import TariffCalculatorPage from './pages/TariffCalculatorPage';
 import ResearchPage from './pages/ResearchPage';
 import TeamPage from './pages/TeamPage';
+import VesselsPage from './pages/VesselsPage';
 import SettingsPage from './pages/SettingsPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
@@ -45,6 +46,7 @@ function Particles() {
 }
 
 export default function App() {
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => (localStorage.getItem('sdr_ui_sidebar_default') || 'collapsed') === 'collapsed'
   );
@@ -126,6 +128,13 @@ export default function App() {
         return;
       }
 
+      // Ctrl+Shift+T — Navigate to Team
+      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        navigate('/team');
+        return;
+      }
+
       // Escape — close topmost open modal/overlay
       if (e.key === 'Escape') {
         if (emailState.open) { setEmailState({ open: false, prospect: null, trigger: '' }); return; }
@@ -167,6 +176,7 @@ export default function App() {
                 onOpenEmailComposer={handleOpenEmailComposer}
               />
             } />
+            <Route path="/vessels" element={<VesselsPage />} />
             <Route path="/trade" element={<TradePage />} />
             <Route path="/account/:id" element={
               <Account360Page

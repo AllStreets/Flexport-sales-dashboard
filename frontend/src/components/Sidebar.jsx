@@ -2,17 +2,17 @@
 import { NavLink } from 'react-router-dom';
 import {
   RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine,
-  RiSettings3Line, RiSearchEyeLine, RiTeamLine,
+  RiSettings3Line, RiSearchEyeLine, RiTeamLine, RiShipLine,
 } from 'react-icons/ri';
 import './Sidebar.css';
 
 const NAV = [
   { to: '/',            Icon: RiGlobalLine,          label: 'Home'                },
+  { to: '/vessels',     Icon: RiShipLine,             label: 'Vessels'             },
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'          },
-  { to: '/tariff',      Icon: RiPercentLine,          label: 'Tariff Calculator'   },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
-  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
   { to: '/research',    Icon: RiSearchEyeLine,        label: 'Research'            },
+  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Dashboard'       },
   { to: '/team',        Icon: RiTeamLine,             label: 'Team'                },
 ];
 
