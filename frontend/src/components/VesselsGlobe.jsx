@@ -33,22 +33,26 @@ function portStatusColor(status) {
 }
 
 // Full-route arc: srcPort→dstPort, always the complete route length.
-// arcDashInitialGap=vessel.progress places the moving scanner gap at the
-// vessel's current position. arcDashLength=0.85 keeps 85% of each arc
-// lit at all times — ~212 of 250 arcs always visible, no synchronized flashes.
+// arcDashInitialGap=vessel.progress phases each arc to a different cycle position.
+// arcDashLength=0.55 + arcDashGap=0.45: large enough dark window to read as
+// motion without making arcs invisible. Gradient color (bright at origin →
+// dim at destination) gives each arc a directional "flow" feel.
+function dimColor(color) {
+  return color.replace(/[\d.]+\)$/, '0.18)');
+}
 function fullRouteArc(vessel) {
   if (!vessel.srcLat || !vessel.dstLat) return null;
-  const color = vesselColor(vessel.type);
+  const bright = vesselColor(vessel.type);
   return {
     startLat: vessel.srcLat, startLng: vessel.srcLng,
     endLat: vessel.dstLat,   endLng: vessel.dstLng,
-    color: [color, color],
+    color: [bright, dimColor(bright)],
     mmsi: vessel.mmsi,
     progress: vessel.progress ?? 0,
   };
 }
 
-export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, focusTarget, width, height }) {
+export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, focusTarget, source, width, height }) {
   const globeRef = useRef(null);
 
   // Single ref object for all Three.js scene objects — safe across React strict-mode double-mount
@@ -225,6 +229,19 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
   // Decorative background routes are valid regardless of live/sim state.
   const [stableArcs, setStableArcs] = useState([]);
   const arcsInitialized = useRef(false);
+  const prevSourceRef = useRef(source);
+
+  // Clear arcs when switching from simulated → live. Live AIS vessels have no
+  // route data, so simulated arcs would be orphaned and misleading on the globe.
+  // Reset arcsInitialized so arcs reinit if user switches back to simulated.
+  useEffect(() => {
+    if (prevSourceRef.current === 'simulated' && source === 'live') {
+      setStableArcs([]);
+      arcsInitialized.current = false;
+    }
+    prevSourceRef.current = source;
+  }, [source]);
+
   useEffect(() => {
     if (arcsInitialized.current || !vessels.length) return;
     // Only init from simulated vessels (which carry route data)
@@ -306,13 +323,13 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         onPointClick={handleVesselClick}
         arcsData={stableArcs}
         arcColor="color"
-        arcDashLength={0.85}
-        arcDashGap={0.15}
+        arcDashLength={0.55}
+        arcDashGap={0.45}
         arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={10000}
-        arcStroke={0.22}
-        arcAltitudeAutoScale={0.15}
-        arcCurveResolution={20}
+        arcDashAnimateTime={5000}
+        arcStroke={0.28}
+        arcAltitudeAutoScale={0.22}
+        arcCurveResolution={24}
         ringsData={allRings}
         ringColor="color"
         ringMaxRadius="maxRadius"

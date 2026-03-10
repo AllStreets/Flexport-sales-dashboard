@@ -131,6 +131,7 @@ export default function VesselsPage() {
                 ports={ports}
                 onVesselClick={setSelectedVessel}
                 focusTarget={focusTarget}
+                source={source}
                 width={dims.w}
                 height={dims.h}
               />
