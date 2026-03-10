@@ -116,7 +116,7 @@ export default function FlightsPage() {
         <div className="fg-airspace-badges">
           <span className="fg-az-badge red">Ukraine</span>
           <span className="fg-az-badge amber">Russia</span>
-          <span className="fg-az-badge amber">Iran</span>
+          <span className="fg-az-badge red">Iran</span>
         </div>
       </div>
 

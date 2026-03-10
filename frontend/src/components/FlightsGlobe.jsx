@@ -32,7 +32,7 @@ const CARGO_HUBS = [
 const AIRSPACE_RESTRICTIONS = [
   { lat: 50.5, lng: 30.5, label: 'Ukraine', color: '#ef4444', maxRadius: 5,   propagationSpeed: 2,   repeatPeriod: 1000 },
   { lat: 64.0, lng: 60.0, label: 'Russia',  color: '#f59e0b', maxRadius: 4,   propagationSpeed: 1.5, repeatPeriod: 1200 },
-  { lat: 32.0, lng: 53.0, label: 'Iran',    color: '#f59e0b', maxRadius: 3,   propagationSpeed: 1.8, repeatPeriod: 900  },
+  { lat: 32.0, lng: 53.0, label: 'Iran',    color: '#ef4444', maxRadius: 3,   propagationSpeed: 1.8, repeatPeriod: 900  },
 ];
 
 const HOME_POV = { lat: 25, lng: 10, altitude: 2.2 };
