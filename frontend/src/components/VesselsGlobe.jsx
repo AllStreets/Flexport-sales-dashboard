@@ -170,15 +170,19 @@ export default function VesselsGlobe({ vessels = [], onVesselClick, width, heigh
     };
   }, []);
 
-  // Auto-rotate with damping
+  // Auto-rotate with damping — deferred to match globe async init
   useEffect(() => {
-    const g = globeRef.current;
-    if (!g) return;
-    const controls = g.controls();
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.3;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
+    const timer = setTimeout(() => {
+      const g = globeRef.current;
+      if (!g) return;
+      const controls = g.controls();
+      if (!controls) return;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.3;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+    }, 600);
+    return () => clearTimeout(timer);
   }, []);
 
   const vesselPoints = useMemo(() => vessels.map(v => ({
