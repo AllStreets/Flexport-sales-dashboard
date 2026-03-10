@@ -1041,6 +1041,22 @@ let _vesselCache = {};
 let _aisWs = null;
 let _aisReconnectDelay = 10000; // exponential backoff, resets to 10s on successful open
 
+// Periodic cache maintenance — NOT per-message. Running cleanup on every WebSocket
+// message is O(n_cache) and at global AIS feed rates (1000s msg/min) it saturates
+// the Node.js event loop, making all HTTP endpoints unresponsive.
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const k of Object.keys(_vesselCache)) {
+    if (!_vesselCache[k]?.ts || _vesselCache[k].ts < cutoff) delete _vesselCache[k];
+  }
+  // Cap at 500 vessels — prevents memory growth on dense global feed
+  const keys = Object.keys(_vesselCache);
+  if (keys.length > 500) {
+    keys.sort((a, b) => (_vesselCache[a]?.ts || 0) - (_vesselCache[b]?.ts || 0));
+    keys.slice(0, keys.length - 500).forEach(k => delete _vesselCache[k]);
+  }
+}, 5 * 60 * 1000); // every 5 minutes
+
 function connectAisStream() {
   const key = process.env.AISSTREAM_API_KEY;
   if (!key) return;
@@ -1081,10 +1097,7 @@ function connectAisStream() {
           callsign: stat.CallSign?.trim(),
         };
       }
-      const cutoff = Date.now() - 30 * 60 * 1000;
-      Object.keys(_vesselCache).forEach(k => {
-        if (_vesselCache[k].ts && _vesselCache[k].ts < cutoff) delete _vesselCache[k];
-      });
+      // (cache cleanup moved to 5-min setInterval — not per-message)
     } catch {}
   });
 
@@ -1101,11 +1114,9 @@ connectAisStream();
 
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
-  if (vessels.length >= 50) {
-    // Only serve live data once we have meaningful coverage (≥50 vessels).
-    // Partial connections (aisstream connects briefly then 503s) leave <50 in cache
-    // and would cause simulated→live→simulated flip, which races with the RAF loop.
-    return res.json({ source: 'live', vessels: vessels.slice(0, 150) });
+  if (vessels.length >= 100) {
+    // Only serve live data with substantial coverage (≥100 vessels).
+    return res.json({ source: 'live', vessels: vessels.slice(0, 200) });
   }
   // Great-circle interpolation — prevents vessels crossing land or taking wrong-hemisphere paths
   function greatCirclePoint(lat1d, lng1d, lat2d, lng2d, t) {
