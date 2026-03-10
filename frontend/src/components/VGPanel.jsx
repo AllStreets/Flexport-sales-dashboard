@@ -40,10 +40,22 @@ function generateEvent(vessel) {
   return { name, detail: `${vessel.type || 'Vessel'} in transit`, speed: spd, warn: false, ts: Date.now() };
 }
 
+// Normalize AIS vessel type: live vessels use numeric codes (70=Container, 80=Tanker),
+// simulated vessels use strings. Optional chaining only guards null/undefined — NOT
+// non-string types, so (70)?.includes('Tanker') still throws. Convert explicitly.
+function vesselTypeStr(v) {
+  if (typeof v.type === 'number') {
+    if (v.type >= 80 && v.type < 90) return 'Tanker';
+    if (v.type >= 70 && v.type < 80) return 'Container';
+    return '';
+  }
+  return String(v.type || '');
+}
+
 function VGStats({ vessels, ports = [] }) {
-  const ctr = vessels.filter(v => !v.type?.includes('Tanker') && !v.type?.includes('Bulk')).length;
-  const tnk = vessels.filter(v => v.type?.includes('Tanker')).length;
-  const blk = vessels.filter(v => v.type?.includes('Bulk')).length;
+  const ctr = vessels.filter(v => { const t = vesselTypeStr(v); return !t.includes('Tanker') && !t.includes('Bulk'); }).length;
+  const tnk = vessels.filter(v => vesselTypeStr(v).includes('Tanker')).length;
+  const blk = vessels.filter(v => vesselTypeStr(v).includes('Bulk')).length;
   const alerts = ports.length > 0
     ? ports.filter(p => p.status === 'disruption').length
     : vessels.filter(v => DISRUPTION_CHECK.some(z => deg(z, v) < z.r)).length;

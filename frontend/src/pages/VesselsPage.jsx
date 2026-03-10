@@ -21,6 +21,16 @@ class GlobeErrorBoundary extends Component {
     return this.props.children;
   }
 }
+
+class PanelErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e) { console.error('VGPanel error:', e); }
+  render() {
+    if (this.state.error) return null; // silently hide panel on error rather than crash app
+    return this.props.children;
+  }
+}
 import VesselsGlobe from '../components/VesselsGlobe';
 import VGPanel from '../components/VGPanel';
 import './VesselsPage.css';
@@ -120,12 +130,14 @@ export default function VesselsPage() {
           </div>
           <div className="vg-scanline" />
         </div>
-        <VGPanel
-          vessels={vessels}
-          ports={ports}
-          selectedVessel={selectedVessel}
-          onClearVessel={() => setSelectedVessel(null)}
-        />
+        <PanelErrorBoundary>
+          <VGPanel
+            vessels={vessels}
+            ports={ports}
+            selectedVessel={selectedVessel}
+            onClearVessel={() => setSelectedVessel(null)}
+          />
+        </PanelErrorBoundary>
       </div>
     </div>
   );
