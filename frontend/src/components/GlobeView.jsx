@@ -107,34 +107,68 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       glowMatRef.current = glowMat;
 
       const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
-      const moonMat = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0.0 });
-      new THREE.TextureLoader().load(
-        'https://unpkg.com/three-globe/example/img/earth-night.jpg', // fallback while moon loads
-        () => {},
-        () => {}
-      );
-      new THREE.TextureLoader().load(
-        'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg',
-        (tex) => { moonMat.map = tex; moonMat.needsUpdate = true; },
-        undefined,
-        () => {
-          // fallback: procedural grey crater texture via canvas
-          const size = 256;
-          const canvas = document.createElement('canvas');
-          canvas.width = size; canvas.height = size;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#7a7a7a';
-          ctx.fillRect(0, 0, size, size);
-          const craters = [[80,60,22],[180,100,18],[130,180,14],[50,170,10],[200,200,16],[100,120,8],[160,50,12],[220,140,9]];
-          craters.forEach(([x,y,r]) => {
-            const g = ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);
-            g.addColorStop(0,'#999'); g.addColorStop(0.4,'#5a5a5a'); g.addColorStop(1,'#707070');
-            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-          });
-          const fallbackTex = new THREE.CanvasTexture(canvas);
-          moonMat.map = fallbackTex; moonMat.needsUpdate = true;
-        }
-      );
+
+      // Build moon surface texture synchronously via canvas — no external URLs
+      const mc = document.createElement('canvas');
+      mc.width = 512; mc.height = 512;
+      const mx = mc.getContext('2d');
+      // base — varied grey highland/lowland
+      const baseG = mx.createRadialGradient(220, 180, 30, 256, 256, 300);
+      baseG.addColorStop(0, '#c8c8c8'); baseG.addColorStop(0.35, '#a0a0a0');
+      baseG.addColorStop(0.7, '#7c7c7c'); baseG.addColorStop(1, '#606060');
+      mx.fillStyle = baseG; mx.fillRect(0, 0, 512, 512);
+      // mare (dark volcanic plains)
+      [[190,155,90],[310,200,70],[145,295,55],[360,330,50],[240,390,40]].forEach(([x,y,r]) => {
+        const g = mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(48,50,58,0.75)'); g.addColorStop(1,'rgba(48,50,58,0)');
+        mx.fillStyle = g; mx.fillRect(0,0,512,512);
+      });
+      // large craters with rim + floor + central peak
+      [[110,75,42],[365,145,36],[195,360,30],[445,290,26],[70,340,32],[300,420,22]].forEach(([x,y,r]) => {
+        // ejecta blanket
+        const ej = mx.createRadialGradient(x,y,r*0.8,x,y,r*1.6);
+        ej.addColorStop(0,'rgba(185,185,185,0.25)'); ej.addColorStop(1,'rgba(185,185,185,0)');
+        mx.fillStyle=ej; mx.beginPath(); mx.arc(x,y,r*1.6,0,Math.PI*2); mx.fill();
+        // bright rim
+        const rim = mx.createRadialGradient(x,y,r*0.55,x,y,r*1.05);
+        rim.addColorStop(0,'rgba(60,62,68,0)'); rim.addColorStop(0.6,'rgba(175,175,178,0.55)');
+        rim.addColorStop(1,'rgba(175,175,178,0)');
+        mx.fillStyle=rim; mx.beginPath(); mx.arc(x,y,r*1.05,0,Math.PI*2); mx.fill();
+        // dark floor
+        const fl = mx.createRadialGradient(x-r*0.15,y-r*0.1,0,x,y,r*0.62);
+        fl.addColorStop(0,'rgba(78,80,86,0.95)'); fl.addColorStop(1,'rgba(58,60,66,0.88)');
+        mx.fillStyle=fl; mx.beginPath(); mx.arc(x,y,r*0.62,0,Math.PI*2); mx.fill();
+        // central peak
+        mx.fillStyle='rgba(195,195,198,0.7)'; mx.beginPath(); mx.arc(x,y,r*0.07,0,Math.PI*2); mx.fill();
+      });
+      // medium craters
+      for (let i=0;i<18;i++){
+        const x=18+(i*47+i*i*13)%476, y=18+(i*61+i*i*7)%476, r=5+(i*11)%16;
+        const g=mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(62,64,70,0.9)'); g.addColorStop(0.75,'rgba(158,158,162,0.4)');
+        g.addColorStop(1,'rgba(130,130,134,0)');
+        mx.fillStyle=g; mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+      }
+      // small craters / pockmarks
+      for (let i=0;i<40;i++){
+        const x=5+(i*83+i*i*17)%502, y=5+(i*71+i*i*23)%502, r=1.5+(i*5)%5;
+        mx.fillStyle=`rgba(60,62,65,${0.5+0.3*(i%3)/2})`;
+        mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+        mx.fillStyle=`rgba(170,170,172,${0.2+0.15*(i%2)})`;
+        mx.beginPath(); mx.arc(x-r*0.4,y-r*0.4,r*0.4,0,Math.PI*2); mx.fill();
+      }
+      // surface grain overlay
+      const idata = mx.getImageData(0,0,512,512);
+      for (let i=0;i<idata.data.length;i+=4){
+        const n=(Math.sin(i*0.0013)*Math.cos(i*0.00071)*14)|0;
+        idata.data[i]  =Math.min(255,Math.max(0,idata.data[i]+n));
+        idata.data[i+1]=Math.min(255,Math.max(0,idata.data[i+1]+n));
+        idata.data[i+2]=Math.min(255,Math.max(0,idata.data[i+2]+n));
+      }
+      mx.putImageData(idata,0,0);
+      const moonTex = new THREE.CanvasTexture(mc);
+
+      const moonMat = new THREE.MeshStandardMaterial({ map: moonTex, roughness: 0.92, metalness: 0.0 });
       const moonMesh = new THREE.Mesh(moonGeom, moonMat);
       scene.add(moonMesh);
       moonMeshRef.current = moonMesh;
@@ -164,7 +198,7 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
       glowGeomRef.current?.dispose();
       glowMatRef.current?.dispose();
       moonGeomRef.current?.dispose();
-      if (moonMatRef.current?.map) moonMatRef.current.map.dispose();
+      moonMatRef.current?.map?.dispose();
       moonMatRef.current?.dispose();
     };
   }, []);
