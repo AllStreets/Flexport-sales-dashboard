@@ -1,5 +1,5 @@
 // frontend/src/components/VesselsGlobe.jsx
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react'; // useMemo kept for vesselPoints + trailData
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 
@@ -56,75 +56,6 @@ function trailArcs(vessel, steps = 3) {
 export default function VesselsGlobe({ vessels = [], onVesselClick, width, height }) {
   const globeRef = useRef(null);
 
-  // Build canvas globe texture — deep ocean focused, no external URLs
-  const globeTexture = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = 2048; c.height = 1024;
-    const ctx = c.getContext('2d');
-
-    // Deep ocean base
-    const oceanGrad = ctx.createLinearGradient(0, 0, 0, 1024);
-    oceanGrad.addColorStop(0, '#020810');
-    oceanGrad.addColorStop(0.5, '#03111e');
-    oceanGrad.addColorStop(1, '#020810');
-    ctx.fillStyle = oceanGrad;
-    ctx.fillRect(0, 0, 2048, 1024);
-
-    // Ocean depth variation patches
-    [[1024, 512, 400], [400, 350, 250], [1500, 600, 300], [700, 150, 180]].forEach(([x, y, r]) => {
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, 'rgba(1,10,21,0.6)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, 2048, 1024);
-    });
-
-    // Land masses — flat muted grey-green ellipses
-    ctx.fillStyle = '#0d1c18';
-    const LAND = [
-      // North America
-      [180, 180, 220, 280],
-      // South America
-      [260, 440, 120, 240],
-      // Europe
-      [820, 140, 120, 140],
-      // Africa
-      [860, 310, 160, 300],
-      // Asia
-      [960, 100, 480, 280],
-      // Australia
-      [1360, 540, 180, 160],
-      // Greenland
-      [320, 60, 120, 120],
-    ];
-    LAND.forEach(([x, y, w, h]) => {
-      ctx.beginPath();
-      ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Coastline shimmer
-    ctx.strokeStyle = 'rgba(0,212,255,0.07)';
-    ctx.lineWidth = 2;
-    LAND.forEach(([x, y, w, h]) => {
-      ctx.beginPath();
-      ctx.ellipse(x + w / 2, y + h / 2, w / 2 + 3, h / 2 + 3, 0, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-
-    // Latitude/longitude grid — very faint
-    ctx.strokeStyle = 'rgba(0,212,255,0.03)';
-    ctx.lineWidth = 1;
-    for (let lat = -80; lat <= 80; lat += 20) {
-      const y = (90 - lat) / 180 * 1024;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(2048, y); ctx.stroke();
-    }
-    for (let lng = -180; lng <= 180; lng += 30) {
-      const x = (lng + 180) / 360 * 2048;
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke();
-    }
-
-    return c.toDataURL();
-  }, []);
 
   // Custom atmosphere shader + rotating equatorial ring
   useEffect(() => {
@@ -214,10 +145,12 @@ export default function VesselsGlobe({ vessels = [], onVesselClick, width, heigh
       ref={globeRef}
       width={width}
       height={height}
-      globeImageUrl={globeTexture}
+      globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+      bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+      backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
       backgroundColor="rgba(0,0,0,0)"
-      atmosphereColor="rgba(0,140,255,0.18)"
-      atmosphereAltitude={0.22}
+      atmosphereColor="rgba(0,180,255,0.25)"
+      atmosphereAltitude={0.25}
       pointsData={vesselPoints}
       pointLat="lat"
       pointLng="lng"
