@@ -395,8 +395,8 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
         globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         backgroundColor="rgba(0,0,0,0)"
-        atmosphereColor="rgba(140,90,220,0.28)"
-        atmosphereAltitude={0.22}
+        atmosphereColor="rgba(0,180,255,0.25)"
+        atmosphereAltitude={0.25}
         customLayerData={flights}
         customThreeObject={makePlaneSprite}
         customThreeObjectUpdate={(sprite, f, globeRadius) => {
