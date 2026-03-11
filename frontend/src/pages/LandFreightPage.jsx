@@ -110,8 +110,8 @@ export default function LandFreightPage() {
             </GlobeErrorBoundary>
           )}
           <div className="lg-legend">
-            <span style={{ color: '#facc15' }}>&#9632; Regular Truck</span>
-            <span style={{ color: '#a3e635' }}>&#9632; Tank Truck</span>
+            <span style={{ color: '#cbd5e1' }}>&#9632; Regular Truck</span>
+            <span style={{ color: '#fb923c' }}>&#9632; Tank Truck</span>
             <span style={{ color: '#00d4ff' }}>&#9679; Distribution Hub</span>
             <span style={{ color: '#10b981' }}>&#9679; Port Clear</span>
             <span style={{ color: '#f59e0b' }}>&#9679; Port Congested</span>

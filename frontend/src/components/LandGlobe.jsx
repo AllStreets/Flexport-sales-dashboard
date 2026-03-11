@@ -2,11 +2,13 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
+import { RiRefreshLine } from 'react-icons/ri';
 
-const REGULAR_COLOR = 'rgba(250,204,21,0.9)';
-const TANK_COLOR    = 'rgba(163,230,53,0.9)';
-const REGULAR_DIM   = 'rgba(250,204,21,0.05)';
-const TANK_DIM      = 'rgba(163,230,53,0.05)';
+// Silver for regular trucks, orange for tanks — distinct from all vessel/plane/port colors
+const REGULAR_COLOR = 'rgba(203,213,225,0.9)';  // slate-300 silver
+const TANK_COLOR    = 'rgba(251,146,60,0.9)';   // orange-400
+const REGULAR_DIM   = 'rgba(203,213,225,0.05)';
+const TANK_DIM      = 'rgba(251,146,60,0.05)';
 
 const HOME_POV = { lat: 30, lng: 0, altitude: 2.2 };
 
@@ -32,79 +34,93 @@ const BORDER_CROSSINGS = [
   { name: 'Wagah (IN-PK)',         lat: 31.6,  lng: 74.6,  color: '#ef4444', maxRadius: 3.5, propagationSpeed: 2,   repeatPeriod: 750  },
 ];
 
-function truckColor(type) { return type === 'tank' ? TANK_COLOR : REGULAR_COLOR; }
-function truckDim(type)   { return type === 'tank' ? TANK_DIM   : REGULAR_DIM;   }
-
 function portStatusColor(status) {
   if (status === 'disruption') return '#ef4444';
   if (status === 'congestion') return '#f59e0b';
   return '#10b981';
 }
 
+// Great-circle SLERP — same formula as FlightsGlobe gcFlightPoint
 function gcPoint(lat1d, lng1d, lat2d, lng2d, t) {
   const R = Math.PI / 180;
   const lat1 = lat1d*R, lng1 = lng1d*R, lat2 = lat2d*R, lng2 = lng2d*R;
-  const cosDelta = Math.sin(lat1)*Math.sin(lat2) + Math.cos(lat1)*Math.cos(lat2)*Math.cos(lng2-lng1);
-  const delta = Math.acos(Math.max(-1, Math.min(1, cosDelta)));
-  if (delta < 1e-8) return { lat: lat1d, lng: lng1d, heading: 0 };
-  const sinD = Math.sin(delta);
-  const A = Math.sin((1-t)*delta)/sinD, B = Math.sin(t*delta)/sinD;
-  const x = A*Math.cos(lat1)*Math.cos(lng1) + B*Math.cos(lat2)*Math.cos(lng2);
-  const y = A*Math.cos(lat1)*Math.sin(lng1) + B*Math.cos(lat2)*Math.sin(lng2);
-  const z = A*Math.sin(lat1)                + B*Math.sin(lat2);
-  const lat = Math.atan2(z, Math.sqrt(x*x+y*y));
-  const lng = Math.atan2(y, x);
-  const t2 = Math.min(t + 0.001, 1);
-  const A2=Math.sin((1-t2)*delta)/sinD, B2=Math.sin(t2*delta)/sinD;
-  const x2=A2*Math.cos(lat1)*Math.cos(lng1)+B2*Math.cos(lat2)*Math.cos(lng2);
-  const y2=A2*Math.cos(lat1)*Math.sin(lng1)+B2*Math.cos(lat2)*Math.sin(lng2);
-  const z2=A2*Math.sin(lat1)+B2*Math.sin(lat2);
-  const lat2r=Math.atan2(z2,Math.sqrt(x2*x2+y2*y2)), lng2r=Math.atan2(y2,x2);
-  const heading = (Math.atan2(lng2r-lng, lat2r-lat) * 180 / Math.PI + 360) % 360;
-  return { lat: lat/R, lng: lng/R, heading };
+  const x1 = Math.cos(lat1)*Math.cos(lng1), y1 = Math.cos(lat1)*Math.sin(lng1), z1 = Math.sin(lat1);
+  const x2 = Math.cos(lat2)*Math.cos(lng2), y2 = Math.cos(lat2)*Math.sin(lng2), z2 = Math.sin(lat2);
+  const dot = Math.min(1, Math.max(-1, x1*x2 + y1*y2 + z1*z2));
+  const omega = Math.acos(dot);
+  if (omega < 0.0001) return { lat: lat1d, lng: lng1d, heading: 0 };
+  const s = Math.sin(omega);
+  const a = Math.sin((1-t)*omega)/s, b = Math.sin(t*omega)/s;
+  const x = a*x1 + b*x2, y = a*y1 + b*y2, z = a*z1 + b*z2;
+  const lat = Math.atan2(z, Math.sqrt(x*x + y*y)) / R;
+  const lng = Math.atan2(y, x) / R;
+  const t2 = Math.min(t + 0.01, 0.999);
+  const a2 = Math.sin((1-t2)*omega)/s, b2 = Math.sin(t2*omega)/s;
+  const x2p = a2*x1 + b2*x2, y2p = a2*y1 + b2*y2, z2p = a2*z1 + b2*z2;
+  const lat2p = Math.atan2(z2p, Math.sqrt(x2p*x2p + y2p*y2p)) / R;
+  const lng2p = Math.atan2(y2p, x2p) / R;
+  const dLng = ((lng2p - lng + 540) % 360 - 180) * R;
+  const heading = ((Math.atan2(
+    Math.sin(dLng),
+    Math.cos(lat*R)*Math.sin(lat2p*R) - Math.sin(lat*R)*Math.cos(lat2p*R)*Math.cos(dLng)
+  ) / R + 360) % 360);
+  return { lat, lng, heading };
 }
 
+function setSpritePos(sprite, lat, lng, alt, globeRadius) {
+  const phi   = (90 - lat)  * Math.PI / 180;
+  const theta = (90 - lng) * Math.PI / 180;
+  const r = globeRadius * (1 + alt);
+  const ps = Math.sin(phi);
+  sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
+}
+
+// Top-down truck sprite — compact silhouette with glow halo
 const _truckTexCache = {};
 function makeTruckCanvas(colorStr, isTank) {
   const key = colorStr + (isTank ? 'T' : 'R');
   if (_truckTexCache[key]) return _truckTexCache[key];
   const c = document.createElement('canvas');
-  c.width = 28; c.height = 56;
+  c.width = 28; c.height = 52;
   const ctx = c.getContext('2d');
 
-  const glow = ctx.createRadialGradient(14, 28, 2, 14, 28, 16);
-  glow.addColorStop(0, colorStr.replace(/[\d.]+\)$/, '0.25)'));
+  // Glow halo
+  const glow = ctx.createRadialGradient(14, 26, 2, 14, 26, 14);
+  glow.addColorStop(0, colorStr.replace(/[\d.]+\)$/, '0.22)'));
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 28, 56);
+  ctx.fillRect(0, 0, 28, 52);
 
   const bright = colorStr;
-  const dim    = colorStr.replace(/[\d.]+\)$/, '0.65)');
+  const mid    = colorStr.replace(/[\d.]+\)$/, '0.7)');
 
   // Cab
   ctx.fillStyle = bright;
-  ctx.fillRect(7, 2, 14, 13);
+  ctx.fillRect(7, 2, 14, 12);
   // Windshield
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.fillRect(9, 4, 10, 6);
 
   if (isTank) {
-    ctx.fillStyle = dim;
+    // Cylindrical tank body — ellipse
+    ctx.fillStyle = mid;
     ctx.beginPath();
-    ctx.ellipse(14, 38, 9, 17, 0, 0, Math.PI * 2);
+    ctx.ellipse(14, 36, 8, 15, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = colorStr.replace(/[\d.]+\)$/, '0.28)');
+    // Highlight sheen
+    ctx.fillStyle = colorStr.replace(/[\d.]+\)$/, '0.22)');
     ctx.beginPath();
-    ctx.ellipse(11, 34, 4, 8, -0.2, 0, Math.PI * 2);
+    ctx.ellipse(11, 32, 3.5, 7, -0.25, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    ctx.fillStyle = dim;
-    ctx.fillRect(7, 17, 14, 34);
-    ctx.strokeStyle = colorStr.replace(/[\d.]+\)$/, '0.3)');
+    // Rectangular trailer
+    ctx.fillStyle = mid;
+    ctx.fillRect(7, 16, 14, 30);
+    // Rear door line
+    ctx.strokeStyle = colorStr.replace(/[\d.]+\)$/, '0.28)');
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.moveTo(7, 41);
-    ctx.lineTo(21, 41);
+    ctx.moveTo(7, 38); ctx.lineTo(21, 38);
     ctx.stroke();
   }
 
@@ -112,98 +128,206 @@ function makeTruckCanvas(colorStr, isTank) {
   return c;
 }
 
-function setSpritePos(sprite, lat, lng, alt, globeRadius) {
-  const phi   = (90 - lat)  * Math.PI / 180;
-  const theta = (90 - lng) * Math.PI / 180;
-  const r = globeRadius * (1 + alt);
-  sprite.position.set(
-    r * Math.sin(phi) * Math.cos(theta),
-    r * Math.cos(phi),
-    r * Math.sin(phi) * Math.sin(theta),
-  );
+function makeTruckSprite(truck) {
+  const isTank   = truck.type === 'tank';
+  const colorStr = isTank ? TANK_COLOR : REGULAR_COLOR;
+  const key = colorStr + (isTank ? 'T' : 'R');
+  if (!_truckTexCache[key]) makeTruckCanvas(colorStr, isTank);
+  const mat = new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(_truckTexCache[key]),
+    transparent: true, depthWrite: false, sizeAttenuation: true,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(1.2, isTank ? 2.0 : 2.3, 1);
+  return sprite;
 }
 
-export default function LandGlobe({ trucks, ports, onTruckClick, focusTarget, width, height }) {
-  const globeRef  = useRef();
-  const threeRefs = useRef({ scene: null, camera: null, renderer: null, sprites: new Map() });
-  const rafRef    = useRef();
-  const moonSetupDone = useRef(false);
+export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focusTarget, width, height }) {
+  const globeRef  = useRef(null);
+  const threeRefs = useRef({
+    frame: null, shouldAnimate: false,
+    glowMesh: null, glowGeom: null, glowMat: null,
+    ringMesh: null, ringGeom: null, ringMat: null,
+    moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
+    sprites: new Map(),
+  });
 
-  const setupMoon = useCallback((scene, globeRadius) => {
-    if (moonSetupDone.current) return;
-    moonSetupDone.current = true;
-    const mc = document.createElement('canvas');
-    mc.width = 128; mc.height = 128;
-    const mctx = mc.getContext('2d');
-    const mg = mctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    mg.addColorStop(0, '#e2e8f0'); mg.addColorStop(0.6, '#cbd5e1'); mg.addColorStop(1, '#94a3b8');
-    mctx.fillStyle = mg; mctx.beginPath(); mctx.arc(64, 64, 64, 0, Math.PI * 2); mctx.fill();
-    for (let i = 0; i < 14; i++) {
-      const cx = 10 + Math.random() * 108, cy = 10 + Math.random() * 108, r = 2 + Math.random() * 8;
-      mctx.fillStyle = 'rgba(100,116,139,0.25)';
-      mctx.beginPath(); mctx.arc(cx, cy, r, 0, Math.PI * 2); mctx.fill();
-    }
-    const moonMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(globeRadius * 0.12, 16, 16),
-      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mc) }),
-    );
-    const orbitR = globeRadius * 3.5;
-    const orbitGeo = new THREE.BufferGeometry();
-    const pts = [];
-    for (let i = 0; i <= 128; i++) { const a = (i / 128) * Math.PI * 2; pts.push(Math.cos(a) * orbitR, 0, Math.sin(a) * orbitR); }
-    orbitGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    const orbitLine = new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.35 }));
-    scene.add(orbitLine);
-    scene.add(moonMesh);
-    const moonAngle = { v: 0 };
-    const animMoon = () => { moonAngle.v += 0.0003; moonMesh.position.set(Math.cos(moonAngle.v) * orbitR, 0, Math.sin(moonAngle.v) * orbitR); requestAnimationFrame(animMoon); };
-    animMoon();
+  // Clear sprite map when trucks data refreshes
+  useEffect(() => { threeRefs.current.sprites.clear(); }, [trucks]);
+
+  // Three.js scene setup — atmosphere glow, equatorial ring, moon, RAF loop
+  useEffect(() => {
+    const refs = threeRefs.current;
+    const timer = setTimeout(() => {
+      const g = globeRef.current;
+      if (!g?.scene) return;
+      const scene = g.scene();
+
+      // ── Atmosphere glow ──
+      const glowGeom = new THREE.SphereGeometry(105, 32, 32);
+      const glowMat = new THREE.ShaderMaterial({
+        uniforms: { c: { value: 0.22 }, p: { value: 4.5 } },
+        vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+        fragmentShader: `uniform float c; uniform float p; varying vec3 vNormal; void main() { float i = pow(c - dot(vNormal, vec3(0.0,0.0,1.0)), p); gl_FragColor = vec4(0.0,0.6,1.0,max(0.0,i)); }`,
+        side: THREE.FrontSide, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
+      });
+      const glowMesh = new THREE.Mesh(glowGeom, glowMat);
+      scene.add(glowMesh);
+      refs.glowMesh = glowMesh; refs.glowGeom = glowGeom; refs.glowMat = glowMat;
+
+      // ── Equatorial ring — same as Ocean/Air Freight ──
+      const ringGeom = new THREE.TorusGeometry(102, 0.5, 8, 64);
+      const ringMat  = new THREE.MeshBasicMaterial({ color: 0x004466, transparent: true, opacity: 0.4 });
+      const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+      ringMesh.rotation.x = Math.PI / 2;
+      scene.add(ringMesh);
+      refs.ringMesh = ringMesh; refs.ringGeom = ringGeom; refs.ringMat = ringMat;
+
+      // ── Moon (same detailed canvas texture as Ocean/Air Freight) ──
+      const moonGeom = new THREE.SphereGeometry(3.5, 32, 32);
+      const mc = document.createElement('canvas');
+      mc.width = 512; mc.height = 512;
+      const mx = mc.getContext('2d');
+      const baseG = mx.createRadialGradient(220, 180, 30, 256, 256, 300);
+      baseG.addColorStop(0, '#c8c8c8'); baseG.addColorStop(0.35, '#a0a0a0');
+      baseG.addColorStop(0.7, '#7c7c7c'); baseG.addColorStop(1, '#606060');
+      mx.fillStyle = baseG; mx.fillRect(0, 0, 512, 512);
+      [[190,155,90],[310,200,70],[145,295,55],[360,330,50],[240,390,40]].forEach(([x,y,r]) => {
+        const g = mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(48,50,58,0.75)'); g.addColorStop(1,'rgba(48,50,58,0)');
+        mx.fillStyle = g; mx.fillRect(0,0,512,512);
+      });
+      [[110,75,42],[365,145,36],[195,360,30],[445,290,26],[70,340,32],[300,420,22]].forEach(([x,y,r]) => {
+        const ej = mx.createRadialGradient(x,y,r*0.8,x,y,r*1.6);
+        ej.addColorStop(0,'rgba(185,185,185,0.25)'); ej.addColorStop(1,'rgba(185,185,185,0)');
+        mx.fillStyle=ej; mx.beginPath(); mx.arc(x,y,r*1.6,0,Math.PI*2); mx.fill();
+        const rim = mx.createRadialGradient(x,y,r*0.55,x,y,r*1.05);
+        rim.addColorStop(0,'rgba(60,62,68,0)'); rim.addColorStop(0.6,'rgba(175,175,178,0.55)');
+        rim.addColorStop(1,'rgba(175,175,178,0)');
+        mx.fillStyle=rim; mx.beginPath(); mx.arc(x,y,r*1.05,0,Math.PI*2); mx.fill();
+        const fl = mx.createRadialGradient(x-r*0.15,y-r*0.1,0,x,y,r*0.62);
+        fl.addColorStop(0,'rgba(78,80,86,0.95)'); fl.addColorStop(1,'rgba(58,60,66,0.88)');
+        mx.fillStyle=fl; mx.beginPath(); mx.arc(x,y,r*0.62,0,Math.PI*2); mx.fill();
+        mx.fillStyle='rgba(195,195,198,0.7)'; mx.beginPath(); mx.arc(x,y,r*0.07,0,Math.PI*2); mx.fill();
+      });
+      for (let i=0;i<18;i++){
+        const x=18+(i*47+i*i*13)%476, y=18+(i*61+i*i*7)%476, r=5+(i*11)%16;
+        const g=mx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,'rgba(62,64,70,0.9)'); g.addColorStop(0.75,'rgba(158,158,162,0.4)');
+        g.addColorStop(1,'rgba(130,130,134,0)');
+        mx.fillStyle=g; mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+      }
+      for (let i=0;i<40;i++){
+        const x=5+(i*83+i*i*17)%502, y=5+(i*71+i*i*23)%502, r=1.5+(i*5)%5;
+        mx.fillStyle=`rgba(60,62,65,${0.5+0.3*(i%3)/2})`;
+        mx.beginPath(); mx.arc(x,y,r,0,Math.PI*2); mx.fill();
+        mx.fillStyle=`rgba(170,170,172,${0.2+0.15*(i%2)})`;
+        mx.beginPath(); mx.arc(x-r*0.4,y-r*0.4,r*0.4,0,Math.PI*2); mx.fill();
+      }
+      const idata = mx.getImageData(0,0,512,512);
+      for (let i=0;i<idata.data.length;i+=4){
+        const n=(Math.sin(i*0.0013)*Math.cos(i*0.00071)*14)|0;
+        idata.data[i]  =Math.min(255,Math.max(0,idata.data[i]+n));
+        idata.data[i+1]=Math.min(255,Math.max(0,idata.data[i+1]+n));
+        idata.data[i+2]=Math.min(255,Math.max(0,idata.data[i+2]+n));
+      }
+      mx.putImageData(idata,0,0);
+      const moonTex = new THREE.CanvasTexture(mc);
+      const moonMat = new THREE.MeshBasicMaterial({ map: moonTex });
+      const moonMesh = new THREE.Mesh(moonGeom, moonMat);
+      scene.add(moonMesh);
+      refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
+
+      // ── Unified RAF: ring rotation + moon orbit + real-time sprite animation ──
+      refs.shouldAnimate = true;
+      const animate = () => {
+        if (!refs.shouldAnimate) return;
+        try {
+          if (refs.ringMesh) refs.ringMesh.rotation.z += 0.0008;
+          if (refs.moonMesh) {
+            const t = Date.now() * 0.00008;
+            refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
+          }
+          if (refs.sprites.size > 0) {
+            const now = Date.now();
+            for (const entry of refs.sprites.values()) {
+              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius } = entry;
+              const elapsed = (now - fetchTs) / 1000;
+              const t = (progress0 + elapsed / 86400) % 1;
+              const pt = gcPoint(srcLat, srcLng, dstLat, dstLng, t);
+              setSpritePos(sprite, pt.lat, pt.lng, 0.035, globeRadius);
+              sprite.material.rotation = -(pt.heading * Math.PI / 180);
+            }
+          }
+        } catch (_) {}
+        refs.frame = requestAnimationFrame(animate);
+      };
+      animate();
+    }, 600);
+
+    return () => {
+      try {
+        clearTimeout(timer);
+        refs.shouldAnimate = false;
+        if (refs.frame) cancelAnimationFrame(refs.frame);
+        refs.frame = null;
+        const scene = globeRef.current?.scene?.();
+        if (scene) {
+          if (refs.glowMesh) scene.remove(refs.glowMesh);
+          if (refs.ringMesh) scene.remove(refs.ringMesh);
+          if (refs.moonMesh) scene.remove(refs.moonMesh);
+        }
+        refs.glowGeom?.dispose(); refs.glowMat?.dispose();
+        refs.ringGeom?.dispose(); refs.ringMat?.dispose();
+        refs.moonGeom?.dispose(); refs.moonTex?.dispose(); refs.moonMat?.dispose();
+      } catch (_) {}
+      finally {
+        refs.shouldAnimate = false; refs.frame = null;
+        refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
+        refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
+        refs.moonGeom = refs.moonMat = refs.moonTex = null;
+        refs.sprites.clear();
+      }
+    };
   }, []);
 
-  const onGlobeReady = useCallback(() => {
+  // Auto-rotate + damping — same as Ocean/Air Freight
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const g = globeRef.current;
+      if (!g) return;
+      const controls = g.controls();
+      if (!controls) return;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.3;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleReset = useCallback(() => {
     const g = globeRef.current;
     if (!g) return;
-    const renderer    = g.renderer();
-    const scene       = g.scene();
-    const camera      = g.camera();
-    const globeRadius = g.getGlobeRadius();
-    threeRefs.current = { ...threeRefs.current, scene, camera, renderer };
-    setupMoon(scene, globeRadius);
-    g.pointOfView(HOME_POV, 1200);
-
-    const animate = () => {
-      rafRef.current = requestAnimationFrame(animate);
-      const refs = threeRefs.current;
-      if (refs.sprites.size > 0) {
-        const now = Date.now();
-        for (const entry of refs.sprites.values()) {
-          const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius: gr } = entry;
-          const elapsed = (now - fetchTs) / 1000;
-          const t = (progress0 + elapsed / 86400) % 1;
-          const pt = gcPoint(srcLat, srcLng, dstLat, dstLng, t);
-          setSpritePos(sprite, pt.lat, pt.lng, 0.035, gr);
-          sprite.material.rotation = -(pt.heading * Math.PI / 180);
-        }
-      }
-      renderer.render(scene, camera);
-    };
-    animate();
-  }, [setupMoon]);
-
-  useEffect(() => { threeRefs.current.sprites = new Map(); }, [trucks]);
+    g.controls().autoRotate = true;
+    g.controls().autoRotateSpeed = 0.3;
+    g.pointOfView(HOME_POV, 1000);
+  }, []);
 
   useEffect(() => {
     if (!focusTarget || !globeRef.current) return;
+    globeRef.current.controls().autoRotate = false;
     globeRef.current.pointOfView({ lat: focusTarget.lat, lng: focusTarget.lng, altitude: 0.8 }, 900);
   }, [focusTarget]);
-
-  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   const arcs = useMemo(() =>
     trucks.filter(t => t.lat && t.lng).map(t => ({
       startLat: t.srcLat, startLng: t.srcLng,
       endLat:   t.dstLat, endLng:   t.dstLng,
-      color: [truckDim(t.type), truckColor(t.type)],
+      color: [
+        (t.type === 'tank' ? TANK_DIM : REGULAR_DIM),
+        (t.type === 'tank' ? TANK_COLOR : REGULAR_COLOR),
+      ],
       id: t.id, progress: t.progress ?? 0,
     })),
   [trucks]);
@@ -211,13 +335,13 @@ export default function LandGlobe({ trucks, ports, onTruckClick, focusTarget, wi
   const allLabels = useMemo(() => [
     ...DISTRIBUTION_HUBS.map(h => ({
       lat: h.lat, lng: h.lng, text: h.code,
-      size: 0.5, color: 'rgba(0,212,255,0.75)',
-      dotRadius: 0.35, dotColor: '#00d4ff', type: 'hub',
+      size: 0.45, color: 'rgba(0,212,255,0.75)',
+      dotRadius: 0.32, type: 'hub',
     })),
     ...ports.map(p => ({
       lat: p.lat, lng: p.lng, text: p.name,
-      size: 0.4, color: portStatusColor(p.status),
-      dotRadius: 0.28, dotColor: portStatusColor(p.status), type: 'port',
+      size: 0.32, color: portStatusColor(p.status),
+      dotRadius: 0.25, type: 'port',
     })),
   ], [ports]);
 
@@ -236,62 +360,72 @@ export default function LandGlobe({ trucks, ports, onTruckClick, focusTarget, wi
     })),
   ], [ports]);
 
+  const truckLabel = useCallback(t =>
+    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${t.callsign}</strong><br/>${t.carrier} · ${t.type === 'tank' ? 'Tank' : 'Regular'}${t.destination ? '<br/>' + (t.origin || '') + ' \u2192 ' + t.destination : ''}</div>`,
+  []);
+
   return (
-    <Globe
-      ref={globeRef}
-      width={width}
-      height={height}
-      onGlobeReady={onGlobeReady}
-      globeImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-      backgroundColor="rgba(0,0,0,0)"
-      atmosphereColor="rgba(0,180,255,0.25)"
-      atmosphereAltitude={0.25}
+    <div style={{ position: 'relative', width, height }}>
+      <Globe
+        ref={globeRef}
+        width={width}
+        height={height}
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+        backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
+        backgroundColor="rgba(0,0,0,0)"
+        atmosphereColor="rgba(0,180,255,0.25)"
+        atmosphereAltitude={0.25}
 
-      arcsData={arcs}
-      arcStartLat="startLat" arcStartLng="startLng"
-      arcEndLat="endLat"     arcEndLng="endLng"
-      arcColor="color"
-      arcDashLength={0.35} arcDashGap={0.6} arcDashAnimateTime={4500}
-      arcStroke={0.4} arcAltitudeAutoScale={0.3}
+        customLayerData={trucks.filter(t => t.lat && t.lng)}
+        customThreeObject={makeTruckSprite}
+        customThreeObjectUpdate={(sprite, truck, globeRadius) => {
+          setSpritePos(sprite, truck.lat, truck.lng, 0.035, globeRadius);
+          sprite.material.rotation = -(truck.heading * Math.PI / 180);
+          threeRefs.current.sprites.set(truck.id, {
+            sprite, srcLat: truck.srcLat, srcLng: truck.srcLng,
+            dstLat: truck.dstLat, dstLng: truck.dstLng,
+            progress0: truck.progress ?? 0, fetchTs: Date.now(), globeRadius,
+          });
+        }}
+        onCustomLayerClick={obj => { globeRef.current?.controls()?.autoRotate && (globeRef.current.controls().autoRotate = false); onTruckClick?.(obj); }}
+        customLayerLabel={truckLabel}
 
-      labelsData={allLabels}
-      labelLat="lat" labelLng="lng" labelText="text"
-      labelSize="size" labelColor="color"
-      labelDotRadius="dotRadius" labelDotOrientation="bottom"
-      labelResolution={2} labelAltitude={0.005}
+        arcsData={arcs}
+        arcStartLat="startLat" arcStartLng="startLng"
+        arcEndLat="endLat"     arcEndLng="endLng"
+        arcColor="color"
+        arcDashLength={0.35} arcDashGap={0.6} arcDashAnimateTime={4500}
+        arcStroke={0.3} arcAltitudeAutoScale={0.25}
+        arcCurveResolution={24}
 
-      ringsData={allRings}
-      ringLat="lat" ringLng="lng"
-      ringMaxRadius="maxRadius"
-      ringPropagationSpeed="propagationSpeed"
-      ringRepeatPeriod="repeatPeriod"
-      ringColor="color"
-      ringResolution={48}
+        labelsData={allLabels}
+        labelLat="lat" labelLng="lng" labelText="text"
+        labelSize="size" labelColor="color"
+        labelDotRadius="dotRadius" labelDotOrientation="bottom"
+        labelResolution={2} labelAltitude={0.005}
 
-      customLayerData={trucks.filter(t => t.lat && t.lng)}
-      customThreeObject={truck => {
-        const isTank   = truck.type === 'tank';
-        const colorStr = isTank ? TANK_COLOR : REGULAR_COLOR;
-        const tex = new THREE.CanvasTexture(makeTruckCanvas(colorStr, isTank));
-        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
-        const s   = new THREE.Sprite(mat);
-        s.scale.set(1.4, isTank ? 2.4 : 2.8, 1);
-        return s;
-      }}
-      customThreeObjectUpdate={(sprite, truck) => {
-        const refs = threeRefs.current;
-        const gr   = globeRef.current?.getGlobeRadius?.() ?? 100;
-        setSpritePos(sprite, truck.lat, truck.lng, 0.035, gr);
-        sprite.material.rotation = -(truck.heading * Math.PI / 180);
-        refs.sprites.set(truck.id, {
-          sprite, globeRadius: gr,
-          srcLat: truck.srcLat, srcLng: truck.srcLng,
-          dstLat: truck.dstLat, dstLng: truck.dstLng,
-          progress0: truck.progress ?? 0,
-          fetchTs: Date.now() - ((truck.progress ?? 0) * 86400000),
-        });
-      }}
-      onCustomLayerClick={obj => onTruckClick?.(obj)}
-    />
+        ringsData={allRings}
+        ringLat="lat" ringLng="lng"
+        ringMaxRadius="maxRadius"
+        ringPropagationSpeed="propagationSpeed"
+        ringRepeatPeriod="repeatPeriod"
+        ringColor="color"
+        ringResolution={48}
+      />
+      <button
+        onClick={handleReset}
+        title="Reset globe view"
+        style={{
+          position: 'absolute', top: 14, right: 14, zIndex: 20,
+          width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(6,11,24,0.88)', border: '1px solid rgba(0,212,255,0.2)',
+          borderRadius: 6, cursor: 'pointer', color: '#334155', transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#00d4ff'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.5)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#334155'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.2)'; }}
+      >
+        <RiRefreshLine size={13} />
+      </button>
+    </div>
   );
 }

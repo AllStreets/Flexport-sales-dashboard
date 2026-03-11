@@ -58,8 +58,8 @@ function LGStats({ trucks }) {
       <div className="lg-stats-label">FLEET OVERVIEW</div>
       <div className="lg-stats-grid">
         <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#94a3b8' }}>{trucks.length}</span><span className="lg-stat-key">TOTAL</span></div>
-        <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#facc15' }}>{regular}</span><span className="lg-stat-key">REGULAR</span></div>
-        <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#a3e635' }}>{tank}</span><span className="lg-stat-key">TANK</span></div>
+        <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#cbd5e1' }}>{regular}</span><span className="lg-stat-key">REGULAR</span></div>
+        <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#fb923c' }}>{tank}</span><span className="lg-stat-key">TANK</span></div>
         <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#10b981', fontSize: 13 }}>{avgSpd || '\u2014'}</span><span className="lg-stat-key">AVG MPH</span></div>
       </div>
       {avgSpd > 0 && (
