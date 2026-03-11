@@ -180,6 +180,7 @@ export default function App() {
                 onOpenOutreach={handleOpenOutreach}
                 onStartLiveCall={handleStartLiveCall}
                 lastCallData={lastCallData}
+                onEndCall={handleEndCall}
                 onOpenEmailComposer={handleOpenEmailComposer}
               />
             } />

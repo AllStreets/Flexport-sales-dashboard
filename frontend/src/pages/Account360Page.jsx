@@ -267,7 +267,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
   const [callNotes, setCallNotes] = useState('');
   const [callIntel, setCallIntel] = useState(null);
   const [callIntelLoading, setCallIntelLoading] = useState(false);
-  const [callIntelOpen, setCallIntelOpen] = useState(false);
+  const [callIntelOpen, setCallIntelOpen] = useState(true);
   const [liveCallTimestamp, setLiveCallTimestamp] = useState(null);
   const liveCallApplied = useRef(false);
 
@@ -489,7 +489,11 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
         </div>
       </div>
 
-      {/* Call Intelligence Parser */}
+      {/* Call Notes & Intelligence Parser */}
+      <div className="a360-section-divider">
+        <RiFileTextLine size={14} />
+        Call Notes
+      </div>
       <div className="glass-card ci-panel">
         <button className="ci-toggle" onClick={() => setCallIntelOpen(o => !o)}>
           <RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
