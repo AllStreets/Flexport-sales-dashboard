@@ -583,7 +583,6 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
             )}
           </div>
         </div>
-      </div>
 
       {/* Call Prep Modal */}
       {showCallPrep && callPrep && (
