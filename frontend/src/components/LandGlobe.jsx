@@ -4,10 +4,10 @@ import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { RiRefreshLine } from 'react-icons/ri';
 
-// Silver for regular trucks, orange for tanks — distinct from all vessel/plane/port colors
-const REGULAR_COLOR = 'rgba(203,213,225,0.9)';  // slate-300 silver
+// Cyan for semi-trucks, orange for tanks
+const REGULAR_COLOR = 'rgba(0,212,255,0.9)';    // cyan — matches accent
 const TANK_COLOR    = 'rgba(251,146,60,0.9)';   // orange-400
-const REGULAR_DIM   = 'rgba(203,213,225,0.05)';
+const REGULAR_DIM   = 'rgba(0,212,255,0.05)';   // cyan trail
 const TANK_DIM      = 'rgba(251,146,60,0.05)';
 
 const HOME_POV = { lat: 30, lng: 0, altitude: 2.2 };
@@ -339,9 +339,9 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
           if (refs.sprites.size > 0) {
             const now = Date.now();
             for (const entry of refs.sprites.values()) {
-              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius } = entry;
+              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, cycleSecs, globeRadius } = entry;
               const elapsed = (now - fetchTs) / 1000;
-              const t = (progress0 + elapsed / 86400) % 1;
+              const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
               const pt = gcPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.035, globeRadius);
               const h = ((pt.heading || 0) + 360) % 360;
@@ -452,7 +452,7 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
   ], [ports]);
 
   const truckLabel = useCallback(t =>
-    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${t.callsign}</strong><br/>${t.carrier} · ${t.type === 'tank' ? 'Tank' : 'Regular'}${t.destination ? '<br/>' + (t.origin || '') + ' \u2192 ' + t.destination : ''}</div>`,
+    `<div style="color:#e2e8f0;font-size:11px;background:rgba(6,11,24,0.9);padding:4px 8px;border-radius:6px;border:1px solid rgba(0,212,255,0.25);font-family:'JetBrains Mono',monospace"><strong>${t.callsign}</strong><br/>${t.carrier} · ${t.type === 'tank' ? 'Tank' : 'Semi'}${t.destination ? '<br/>' + (t.origin || '') + ' \u2192 ' + t.destination : ''}</div>`,
   []);
 
   return (
@@ -476,10 +476,12 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
           const flipY = h > 90 && h <= 270;
           sprite.scale.set(4, flipY ? -1.85 : 1.85, 1);
           sprite.material.rotation = Math.PI / 2 - h * Math.PI / 180;
+          const seed = parseInt(String(truck.id).replace(/\D/g, ''), 10) || 0;
+          const cycleSecs = 60 + (seed % 241); // 60–300s per truck, same range as vessels
           threeRefs.current.sprites.set(truck.id, {
             sprite, srcLat: truck.srcLat, srcLng: truck.srcLng,
             dstLat: truck.dstLat, dstLng: truck.dstLng,
-            progress0: truck.progress ?? 0, fetchTs: Date.now(), globeRadius,
+            progress0: truck.progress ?? 0, fetchTs: Date.now(), cycleSecs, globeRadius,
           });
         }}
         onCustomLayerClick={obj => { globeRef.current?.controls()?.autoRotate && (globeRef.current.controls().autoRotate = false); onTruckClick?.(obj); }}

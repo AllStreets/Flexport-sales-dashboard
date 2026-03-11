@@ -58,7 +58,7 @@ function LGStats({ trucks }) {
       <div className="lg-stats-label">FLEET OVERVIEW</div>
       <div className="lg-stats-grid">
         <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#94a3b8' }}>{trucks.length}</span><span className="lg-stat-key">TOTAL</span></div>
-        <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#cbd5e1' }}>{regular}</span><span className="lg-stat-key">REGULAR</span></div>
+        <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#00d4ff' }}>{regular}</span><span className="lg-stat-key">SEMI</span></div>
         <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#fb923c' }}>{tank}</span><span className="lg-stat-key">TANK</span></div>
         <div className="lg-stat"><span className="lg-stat-val" style={{ color: '#10b981', fontSize: 13 }}>{avgSpd || '\u2014'}</span><span className="lg-stat-key">AVG MPH</span></div>
       </div>
@@ -154,7 +154,7 @@ function LGEventFeed({ trucks, selectedTruck, onClear, onFeedTruckClick }) {
         <div className="lg-truck-detail">
           <div className="lg-td-name">{selectedTruck.callsign}</div>
           <div className="lg-td-row"><span>Carrier</span><span>{selectedTruck.carrier}</span></div>
-          <div className="lg-td-row"><span>Type</span><span>{selectedTruck.type === 'tank' ? 'Tank Truck' : 'Regular Truck'}</span></div>
+          <div className="lg-td-row"><span>Type</span><span>{selectedTruck.type === 'tank' ? 'Tank Truck' : 'Semi-Truck'}</span></div>
           <div className="lg-td-row"><span>Speed</span><span>{selectedTruck.velocity || '\u2014'} mph</span></div>
           <div className="lg-td-row"><span>Heading</span><span>{selectedTruck.heading?.toFixed(0) ?? '\u2014'}{selectedTruck.heading != null ? '\u00b0' : ''}</span></div>
           <div className="lg-td-row"><span>Origin</span><span>{selectedTruck.origin || '\u2014'}</span></div>
