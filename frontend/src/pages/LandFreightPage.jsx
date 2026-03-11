@@ -1,6 +1,6 @@
 // frontend/src/pages/LandFreightPage.jsx
 import { useState, useEffect, useRef, Component } from 'react';
-import { RiTruckLine, RiRefreshLine } from 'react-icons/ri';
+import { RiTruckLine, RiRefreshLine, RiWifiLine } from 'react-icons/ri';
 
 class GlobeErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -84,6 +84,7 @@ export default function LandFreightPage() {
       <div className="lg-header">
         <RiTruckLine size={15} className="lg-header-icon" />
         <span className="lg-header-title">LAND FREIGHT</span>
+        <span className="lg-source-badge"><RiWifiLine size={9} /> SIMULATED</span>
         <span className="lg-truck-count">{trucks.length} trucks tracked</span>
         <button className="lg-refresh-btn" onClick={fetchTrucks} title="Refresh">
           <RiRefreshLine size={13} className={loading ? 'lg-spin' : ''} />
