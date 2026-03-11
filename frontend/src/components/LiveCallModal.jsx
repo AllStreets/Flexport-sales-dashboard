@@ -100,6 +100,18 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
       .catch(() => {});
   }, [prospect]);
 
+  // Auto-start mic if setting is enabled when call mode begins
+  useEffect(() => {
+    if (mode !== 'call') return;
+    if (localStorage.getItem('sdr_mic_autostart') !== 'true') return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    // Small delay to ensure UI is ready
+    const t = setTimeout(() => toggleMic(), 400);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
   // Timer
   useEffect(() => {
     if (!timerRunning) return;
@@ -208,7 +220,7 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
     recognition.start();
     setMicActive(true);
 
-    const freqMs = parseInt(localStorage.getItem('sdr_mic_frequency') || '20', 10) * 1000;
+    const freqMs = parseInt(localStorage.getItem('sdr_mic_frequency') || '30', 10) * 1000;
     predictTimerRef.current = setInterval(async () => {
       const currentTranscript = transcriptRef.current;
       if (!currentTranscript.trim() || !prospect) return;

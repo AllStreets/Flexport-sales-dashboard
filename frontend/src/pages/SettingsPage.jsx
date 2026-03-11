@@ -11,7 +11,7 @@ import {
   RiExternalLinkLine, RiBug2Line, RiKeyboardLine, RiGithubLine,
   RiTerminalLine, RiEyeLine, RiEyeOffLine, RiCheckLine, RiLayoutLine,
   RiShieldUserLine, RiContrastLine, RiFileCodeLine, RiSettings3Line,
-  RiCodeLine,
+  RiCodeLine, RiMicLine, RiBrainLine,
 } from 'react-icons/ri';
 import './SettingsPage.css';
 
@@ -751,11 +751,60 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
   );
 }
 
+function LiveCallSection() {
+  const [autostart, setAutostart] = useSetting('sdr_mic_autostart', false);
+  const [frequency, setFrequency] = useSetting('sdr_mic_frequency', 30);
+  const [saved,     setSaved]     = useState(false);
+  const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
+
+  return (
+    <>
+      <SettingCard title="Microphone AI Listener">
+        <SettingRow
+          label="Auto-start mic on call open"
+          description="Immediately begin AI listening when a Live Call modal opens"
+          icon={RiMicLine}
+        >
+          <SettingToggle value={autostart} onChange={(v) => { setAutostart(v); flash(); }} />
+        </SettingRow>
+        <SettingRow
+          label="AI prediction frequency"
+          description="How often the AI generates a suggested response based on transcript"
+          icon={RiBrainLine}
+        >
+          <select
+            className="setting-input setting-select"
+            value={frequency}
+            onChange={e => { setFrequency(Number(e.target.value)); flash(); }}
+          >
+            <option value={15}>Every 15 seconds</option>
+            <option value={30}>Every 30 seconds (default)</option>
+            <option value={60}>Every 60 seconds</option>
+            <option value={120}>Every 2 minutes</option>
+          </select>
+        </SettingRow>
+      </SettingCard>
+
+      <SettingCard title="How It Works">
+        <div className="setting-desc" style={{ lineHeight: 1.7 }}>
+          When the mic listener is active during a live call, it transcribes your conversation using the
+          browser's Web Speech API and periodically sends the transcript to the AI. The AI returns a
+          suggested next response, predicted objection, and recommended tone — displayed as a card below
+          the objection handler. No audio is stored or transmitted to external services.
+        </div>
+      </SettingCard>
+
+      <SavedFlash show={saved} />
+    </>
+  );
+}
+
 // ── Section config ────────────────────────────────────────────────────────────
 const SECTIONS = [
   { id: 'profile',      label: 'Profile',           Icon: RiUserSettingsLine, subtitle: 'Your SDR identity and contact info'           },
   { id: 'quota',        label: 'Quota Targets',     Icon: RiTrophyLine,       subtitle: 'Weekly activity and revenue goals'             },
   { id: 'notifications',label: 'Notifications',     Icon: RiBellLine,         subtitle: 'Alert and digest preferences'                  },
+  { id: 'livecall',     label: 'Live Call',         Icon: RiMicLine,          subtitle: 'Mic AI listener and prediction settings'       },
   { id: 'appearance',   label: 'Appearance',        Icon: RiPaletteLine,      subtitle: 'Colors, fonts, and layout density'             },
   { id: 'integrations', label: 'AI & Integrations', Icon: RiCpuLine,          subtitle: 'API keys and backend connectivity'             },
   { id: 'data',         label: 'Data & Privacy',    Icon: RiDatabaseLine,     subtitle: 'Export, retention, and data reset'             },
@@ -789,6 +838,7 @@ export default function SettingsPage() {
       case 'profile':       return <ProfileSection />;
       case 'quota':         return <QuotaSection />;
       case 'notifications': return <NotificationsSection />;
+      case 'livecall':      return <LiveCallSection />;
       case 'appearance':    return <AppearanceSection />;
       case 'integrations':  return <IntegrationsSection health={health} onTestHealth={testHealth} healthLoading={healthLoading} />;
       case 'data':          return <DataSection />;
