@@ -31,13 +31,6 @@ const DISTRIBUTION_HUBS = [
   { code: 'GRU', name: 'São Paulo',   lat: -23.55, lng: -46.63  },
 ];
 
-const BORDER_CROSSINGS = [
-  { name: 'Laredo / Nuevo Laredo', lat: 27.5,  lng: -99.5, color: '#10b981', maxRadius: 3.5, propagationSpeed: 2,   repeatPeriod: 800  },
-  { name: 'Dover / Calais',        lat: 51.1,  lng: 1.8,   color: '#f59e0b', maxRadius: 3,   propagationSpeed: 1.8, repeatPeriod: 1000 },
-  { name: 'Brest-Terespol',        lat: 52.1,  lng: 23.7,  color: '#ef4444', maxRadius: 4,   propagationSpeed: 2.5, repeatPeriod: 700  },
-  { name: 'Khorgos (CN-KZ)',       lat: 44.2,  lng: 80.2,  color: '#f59e0b', maxRadius: 3,   propagationSpeed: 1.5, repeatPeriod: 1100 },
-  { name: 'Wagah (IN-PK)',         lat: 31.6,  lng: 74.6,  color: '#ef4444', maxRadius: 3.5, propagationSpeed: 2,   repeatPeriod: 750  },
-];
 
 function portStatusColor(status) {
   if (status === 'disruption') return '#ef4444';
@@ -80,13 +73,17 @@ function setSpritePos(sprite, lat, lng, alt, globeRadius) {
   sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
 }
 
+// Reusable vectors — avoid per-frame allocations in the RAF loop
+const _rafWP = new THREE.Vector3();
+const _rafFP = new THREE.Vector3();
+
 // Side-profile semi-truck sprite — landscape canvas, truck faces RIGHT.
 // Rotation formula: PI/2 - heading*PI/180 orients the side-view correctly
 // with direction of travel on the globe.
 const _truckTexCache = {};
 
-function makeTruckCanvas(colorStr, isTank) {
-  const key = colorStr + (isTank ? 'T' : 'R');
+function makeTruckCanvas(colorStr) {
+  const key = colorStr;
   if (_truckTexCache[key]) return _truckTexCache[key];
 
   const W = 52, H = 24;
@@ -106,104 +103,54 @@ function makeTruckCanvas(colorStr, isTank) {
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
-  if (isTank) {
-    // ── TANK TRUCK ─────────────────────────────────────────────
-    // Chassis/frame
-    ctx.fillStyle = alpha('0.5');
-    ctx.fillRect(4, 13, 40, 4);
+  // ── SEMI TRUCK (both regular and tank use this shape, differ only in color) ──
+  // Trailer body
+  const trailerGrad = ctx.createLinearGradient(2, 4, 2, 18);
+  trailerGrad.addColorStop(0, alpha('0.55'));
+  trailerGrad.addColorStop(0.5, colorStr);
+  trailerGrad.addColorStop(1, alpha('0.45'));
+  ctx.fillStyle = trailerGrad;
+  ctx.beginPath();
+  ctx.roundRect(2, 5, 34, 12, 1);
+  ctx.fill();
 
-    // Tank cylinder (main body)
-    const tankGrad = ctx.createLinearGradient(4, 4, 4, 16);
-    tankGrad.addColorStop(0, alpha('0.5'));
-    tankGrad.addColorStop(0.3, colorStr);
-    tankGrad.addColorStop(0.7, colorStr);
-    tankGrad.addColorStop(1, alpha('0.4'));
-    ctx.fillStyle = tankGrad;
-    ctx.beginPath();
-    ctx.ellipse(24, 10, 20, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Tank highlight streak
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.beginPath();
-    ctx.ellipse(24, 6, 14, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cab (right side)
-    ctx.fillStyle = colorStr;
-    ctx.beginPath();
-    ctx.roundRect(36, 6, 13, 11, 2);
-    ctx.fill();
-
-    // Cab windshield
-    ctx.fillStyle = GLASS;
-    ctx.beginPath();
-    ctx.roundRect(45, 7, 4, 8, 1);
-    ctx.fill();
-
-    // Tank end cap (left)
-    ctx.strokeStyle = alpha('0.5');
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.ellipse(4, 10, 2, 8, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Hoop bands
-    ctx.strokeStyle = alpha('0.25');
-    ctx.lineWidth = 0.8;
-    for (const x of [14, 22, 30]) {
-      ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, 18); ctx.stroke();
-    }
-  } else {
-    // ── STANDARD SEMI TRUCK ────────────────────────────────────
-    // Trailer body
-    const trailerGrad = ctx.createLinearGradient(2, 4, 2, 18);
-    trailerGrad.addColorStop(0, alpha('0.55'));
-    trailerGrad.addColorStop(0.5, colorStr);
-    trailerGrad.addColorStop(1, alpha('0.45'));
-    ctx.fillStyle = trailerGrad;
-    ctx.beginPath();
-    ctx.roundRect(2, 5, 34, 12, 1);
-    ctx.fill();
-
-    // Trailer panel lines
-    ctx.strokeStyle = alpha('0.15');
-    ctx.lineWidth = 0.6;
-    for (const x of [10, 18, 26]) {
-      ctx.beginPath(); ctx.moveTo(x, 5); ctx.lineTo(x, 17); ctx.stroke();
-    }
-
-    // Rear tail lights
-    ctx.fillStyle = 'rgba(239,68,68,0.75)';
-    ctx.fillRect(1, 6, 2, 4);
-    ctx.fillRect(1, 13, 2, 4);
-
-    // Coupling
-    ctx.fillStyle = alpha('0.35');
-    ctx.fillRect(34, 9, 5, 4);
-
-    // Cab body
-    ctx.fillStyle = colorStr;
-    ctx.beginPath();
-    ctx.roundRect(37, 4, 13, 13, 2);
-    ctx.fill();
-
-    // Cab roof (slightly darker)
-    ctx.fillStyle = alpha('0.7');
-    ctx.fillRect(37, 4, 13, 4);
-
-    // Windshield
-    ctx.fillStyle = GLASS;
-    ctx.beginPath();
-    ctx.roundRect(46, 5, 4, 9, 1);
-    ctx.fill();
-
-    // Exhaust stack
-    ctx.fillStyle = 'rgba(200,210,230,0.7)';
-    ctx.fillRect(40, 1, 2, 5);
+  // Trailer panel lines
+  ctx.strokeStyle = alpha('0.15');
+  ctx.lineWidth = 0.6;
+  for (const x of [10, 18, 26]) {
+    ctx.beginPath(); ctx.moveTo(x, 5); ctx.lineTo(x, 17); ctx.stroke();
   }
 
-  // ── WHEELS (both types) ───────────────────────────────────────
+  // Rear tail lights
+  ctx.fillStyle = 'rgba(239,68,68,0.75)';
+  ctx.fillRect(1, 6, 2, 4);
+  ctx.fillRect(1, 13, 2, 4);
+
+  // Coupling
+  ctx.fillStyle = alpha('0.35');
+  ctx.fillRect(34, 9, 5, 4);
+
+  // Cab body
+  ctx.fillStyle = colorStr;
+  ctx.beginPath();
+  ctx.roundRect(37, 4, 13, 13, 2);
+  ctx.fill();
+
+  // Cab roof (slightly darker)
+  ctx.fillStyle = alpha('0.7');
+  ctx.fillRect(37, 4, 13, 4);
+
+  // Windshield
+  ctx.fillStyle = GLASS;
+  ctx.beginPath();
+  ctx.roundRect(46, 5, 4, 9, 1);
+  ctx.fill();
+
+  // Exhaust stack
+  ctx.fillStyle = 'rgba(200,210,230,0.7)';
+  ctx.fillRect(40, 1, 2, 5);
+
+  // ── WHEELS ────────────────────────────────────────────────────
   const wheel = (cx, cy) => {
     ctx.fillStyle = WHEEL_COLOR;
     ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
@@ -211,27 +158,41 @@ function makeTruckCanvas(colorStr, isTank) {
     ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2); ctx.fill();
   };
 
-  if (isTank) {
-    wheel(44, 19); // front axle
-    wheel(14, 19); // rear axle
-    wheel(24, 19); // mid axle
-  } else {
-    wheel(44, 19); // front (cab)
-    wheel(16, 19); // rear (trailer front)
-    wheel(24, 19); // rear (trailer back)
-  }
+  wheel(44, 19); // front (cab)
+  wheel(16, 19); // rear (trailer front)
+  wheel(24, 19); // rear (trailer back)
 
   _truckTexCache[key] = c;
   return c;
 }
 
+// Cache of horizontally-mirrored canvases (cab on LEFT) for left-facing trucks.
+const _mirrorCache = {};
+function getMirroredCanvas(colorStr) {
+  const key = colorStr + '_mirror';
+  if (_mirrorCache[key]) return _mirrorCache[key];
+  const src = makeTruckCanvas(colorStr);
+  const m = document.createElement('canvas');
+  m.width = src.width; m.height = src.height;
+  const ctx = m.getContext('2d');
+  ctx.translate(src.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(src, 0, 0);
+  _mirrorCache[key] = m;
+  return m;
+}
+
 function makeTruckSprite(truck) {
-  const isTank   = truck.type === 'tank';
-  const colorStr = isTank ? TANK_COLOR : REGULAR_COLOR;
-  const tex = new THREE.CanvasTexture(makeTruckCanvas(colorStr, isTank));
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, sizeAttenuation: true });
+  const colorStr = truck.type === 'tank' ? TANK_COLOR : REGULAR_COLOR;
+  // Two textures — right-facing (cab at right, default) and left-facing (mirrored).
+  // The RAF loop swaps material.map based on screen-space travel direction.
+  const texR = new THREE.CanvasTexture(makeTruckCanvas(colorStr));
+  const texL = new THREE.CanvasTexture(getMirroredCanvas(colorStr));
+  const mat = new THREE.SpriteMaterial({ map: texR, transparent: true, depthWrite: false, sizeAttenuation: true });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(4, 1.85, 1);  // smaller than before
+  sprite.scale.set(3, 1.39, 1);
+  sprite.userData.texR = texR;
+  sprite.userData.texL = texL;
   return sprite;
 }
 
@@ -354,16 +315,50 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
           }
           if (refs.sprites.size > 0) {
             const now = Date.now();
+            const cam = globeRef.current?.camera?.();
             for (const entry of refs.sprites.values()) {
               const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, cycleSecs, globeRadius } = entry;
               const elapsed = (now - fetchTs) / 1000;
               const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
               const pt = gcPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.035, globeRadius);
-              const h = ((pt.heading || 0) + 360) % 360;
-              const flipY = h > 90 && h <= 270;
-              sprite.scale.set(4, flipY ? -1.85 : 1.85, 1);
-              sprite.material.rotation = Math.PI / 2 - h * Math.PI / 180;
+
+              // OrbitControls rotates the CAMERA around the globe (the globe mesh stays
+              // at a fixed world position), so lat/lng → world-pos is always valid with
+              // no parent matrix transforms needed.
+              const phiC = (90 - pt.lat) * Math.PI / 180;
+              const thC  = (90 - pt.lng) * Math.PI / 180;
+              const rC   = globeRadius * 1.035;
+              _rafWP.set(rC * Math.sin(phiC) * Math.cos(thC), rC * Math.cos(phiC), rC * Math.sin(phiC) * Math.sin(thC));
+
+              const tFwd  = Math.min(t + 0.005, 0.999);
+              const ptFwd = gcPoint(srcLat, srcLng, dstLat, dstLng, tFwd);
+              const phiF  = (90 - ptFwd.lat) * Math.PI / 180;
+              const thF   = (90 - ptFwd.lng) * Math.PI / 180;
+              _rafFP.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
+
+              if (cam) {
+                // Project both points to NDC (reuse vectors to avoid allocation)
+                _rafWP.project(cam);
+                _rafFP.project(cam);
+                const dx = _rafFP.x - _rafWP.x;
+                const dy = _rafFP.y - _rafWP.y;
+                if (dx * dx + dy * dy > 1e-10) {
+                  const angle = Math.atan2(dy, dx);
+                  const goingLeft = Math.abs(angle) > Math.PI / 2;
+                  // Swap between right-facing and left-facing pre-drawn textures.
+                  // SpriteMaterial's UV transform (repeat/offset) is not applied by the
+                  // sprite shader, and negative scale.x is ignored (shader uses length()).
+                  // Pre-mirrored canvas is the only reliable way to flip a Three.js Sprite.
+                  const targetTex = goingLeft ? sprite.userData.texL : sprite.userData.texR;
+                  if (targetTex && sprite.material.map !== targetTex) {
+                    sprite.material.map = targetTex;
+                    sprite.material.needsUpdate = true;
+                  }
+                  sprite.scale.set(3, 1.39, 1);
+                  sprite.material.rotation = goingLeft ? angle - Math.PI : angle;
+                }
+              }
             }
           }
         } catch (_) {}
@@ -453,11 +448,6 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
   ], [ports]);
 
   const allRings = useMemo(() => [
-    ...BORDER_CROSSINGS.map(b => ({
-      lat: b.lat, lng: b.lng,
-      maxRadius: b.maxRadius, propagationSpeed: b.propagationSpeed,
-      repeatPeriod: b.repeatPeriod, color: b.color,
-    })),
     ...ports.filter(p => p.status !== 'clear').map(p => ({
       lat: p.lat, lng: p.lng,
       maxRadius: p.status === 'disruption' ? 4 : 3,
@@ -486,19 +476,22 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
         customLayerData={trucks.filter(t => t.lat && t.lng)}
         customThreeObject={makeTruckSprite}
         customThreeObjectUpdate={(sprite, truck, globeRadius) => {
-          setSpritePos(sprite, truck.lat, truck.lng, 0.035, globeRadius);
-          const h = ((truck.heading || 0) + 360) % 360;
-          // Westward trucks (heading 90°–270°) need Y-flip so wheels stay screen-bottom
-          const flipY = h > 90 && h <= 270;
-          sprite.scale.set(4, flipY ? -1.85 : 1.85, 1);
-          sprite.material.rotation = Math.PI / 2 - h * Math.PI / 180;
-          const seed = parseInt(String(truck.id).replace(/\D/g, ''), 10) || 0;
-          const cycleSecs = 60 + (seed % 241); // 60–300s per truck, same range as vessels
-          threeRefs.current.sprites.set(truck.id, {
-            sprite, srcLat: truck.srcLat, srcLng: truck.srcLng,
-            dstLat: truck.dstLat, dstLng: truck.dstLng,
-            progress0: truck.progress ?? 0, fetchTs: Date.now(), cycleSecs, globeRadius,
-          });
+          // Re-register whenever the sprite object reference changes (react-globe.gl creates
+          // new Three.js objects when data refreshes, so we must detect the new reference).
+          // After registration the RAF loop owns position/rotation/scale every frame —
+          // we don't touch those here so auto-rotation can't overwrite the RAF's work.
+          const existing = threeRefs.current.sprites.get(truck.id);
+          if (!existing || existing.sprite !== sprite) {
+            setSpritePos(sprite, truck.lat, truck.lng, 0.035, globeRadius);
+            sprite.scale.set(3, 1.39, 1);
+            const seed = parseInt(String(truck.id).replace(/\D/g, ''), 10) || 0;
+            const cycleSecs = 60 + (seed % 241);
+            threeRefs.current.sprites.set(truck.id, {
+              sprite, srcLat: truck.srcLat, srcLng: truck.srcLng,
+              dstLat: truck.dstLat, dstLng: truck.dstLng,
+              progress0: truck.progress ?? 0, fetchTs: Date.now(), cycleSecs, globeRadius,
+            });
+          }
         }}
         onCustomLayerClick={obj => { globeRef.current?.controls()?.autoRotate && (globeRef.current.controls().autoRotate = false); onTruckClick?.(obj); }}
         customLayerLabel={truckLabel}

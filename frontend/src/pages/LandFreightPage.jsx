@@ -117,7 +117,6 @@ export default function LandFreightPage() {
             <span style={{ color: '#10b981' }}>&#9679; Port Clear</span>
             <span style={{ color: '#f59e0b' }}>&#9679; Port Congested</span>
             <span style={{ color: '#ef4444' }}>&#9679; Disruption</span>
-            <span style={{ color: '#f59e0b' }}>&#9675; Border Crossing</span>
           </div>
           <div className="lg-scanline" />
         </div>
