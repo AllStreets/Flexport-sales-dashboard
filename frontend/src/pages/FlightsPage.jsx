@@ -38,6 +38,63 @@ import './FlightsPage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
+// Attempts live ADS-B via backend, then browser-side proxy if Railway IP is blocked
+async function fetchFlightsWithFallback(API) {
+  // Step 1: Try backend (works on localhost; may fall back to sim on Railway)
+  let backendData;
+  try {
+    const r = await fetch(`${API}/api/flights`);
+    backendData = await r.json();
+  } catch (_) {
+    backendData = { source: 'sim', flights: [] };
+  }
+
+  if (backendData.source === 'live' && backendData.flights?.length > 0) {
+    return backendData;
+  }
+
+  // Step 2: Backend returned sim — try browser-side OpenSky using token from backend
+  try {
+    const tokenRes = await fetch(`${API}/api/opensky-token`);
+    if (!tokenRes.ok) throw new Error('no token');
+    const { token } = await tokenRes.json();
+
+    const osRes = await fetch('https://opensky-network.org/api/states/all', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!osRes.ok) throw new Error(`OpenSky ${osRes.status}`);
+    const data = await osRes.json();
+    const states = (data?.states || []).filter(s =>
+      s[5] != null && s[6] != null && !s[8]
+    );
+    if (states.length >= 20) {
+      return {
+        source: 'live',
+        flights: states.slice(0, 300).map(s => ({
+          id: s[0],
+          callsign: (s[1] || '').trim(),
+          isCargo: true,
+          lat: s[6],
+          lng: s[5],
+          altitude: s[13] || 10000,
+          velocity: s[9] ? Math.round(s[9] * 1.944) : 460,
+          heading: s[10] || 0,
+        })),
+      };
+    }
+  } catch (_) {
+    // Browser-side fetch also failed — use sim
+  }
+
+  // Step 3: Fallback — fetch sim explicitly
+  try {
+    const r = await fetch(`${API}/api/flights?mode=sim`);
+    return r.json();
+  } catch (_) {
+    return backendData; // return whatever we had
+  }
+}
+
 export default function FlightsPage() {
   const [flights, setFlights]           = useState([]);
   const [ports, setPorts]               = useState([]);
@@ -52,9 +109,10 @@ export default function FlightsPage() {
 
   const fetchFlights = () => {
     setLoading(true);
-    const qs = forcedSimRef.current ? '?mode=sim' : '';
-    fetch(`${API}/api/flights${qs}`)
-      .then(r => r.json())
+    const fetchPromise = forcedSimRef.current
+      ? fetch(`${API}/api/flights?mode=sim`).then(r => r.json())
+      : fetchFlightsWithFallback(API);
+    fetchPromise
       .then(d => { setFlights(d.flights || []); setSource(d.source); setLoading(false); })
       .catch(() => setLoading(false));
   };

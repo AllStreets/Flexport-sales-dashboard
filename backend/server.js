@@ -1439,6 +1439,17 @@ async function getOpenSkyToken() {
   }
 }
 
+// Token proxy: lets the browser call OpenSky directly using the user's IP (bypasses Railway IP blocks)
+app.get('/api/opensky-token', async (req, res) => {
+  try {
+    const token = await getOpenSkyToken();
+    if (!token) return res.status(503).json({ error: 'OpenSky credentials not configured' });
+    res.json({ token, expires_in: 300 });
+  } catch (e) {
+    res.status(503).json({ error: e.message });
+  }
+});
+
 function buildSimulatedFlights() {
   const now = Date.now();
   const flights = [];
@@ -1527,8 +1538,9 @@ app.get('/api/flights', async (req, res) => {
         _flightCache = { flights, ts: now, source: 'live' };
         return res.json({ flights, source: 'live' });
       }
-    } catch (e) {
-      console.warn('[flights] OpenSky fetch failed:', e.message);
+    } catch (liveErr) {
+      console.error('[flights] Live ADS-B failed:', liveErr?.response?.status, liveErr?.message?.slice(0, 120));
+      // fall through to simulated data
     }
   }
   const simFlights = buildSimulatedFlights();
