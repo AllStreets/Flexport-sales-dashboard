@@ -211,8 +211,8 @@ export default function FlightsPage() {
             </GlobeErrorBoundary>
           )}
           <div className="fg-legend">
-            <span style={{ color: '#fb7185' }}>&#9632; Cargo</span>
-            <span style={{ color: '#a78bfa' }}>&#9632; Passenger</span>
+            <span style={{ color: '#00d4ff' }}>&#9632; Cargo</span>
+            <span style={{ color: '#825adc' }}>&#9632; Passenger</span>
             <span style={{ color: '#00d4ff' }}>&#9679; Hub (Tier 1)</span>
             <span style={{ color: 'rgba(0,212,255,0.5)' }}>&#9679; Hub (Tier 2)</span>
             <span style={{ color: '#10b981' }}>&#9679; Port Clear</span>
