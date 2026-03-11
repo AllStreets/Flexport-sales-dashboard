@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { RiFlashlightLine, RiArrowRightLine } from 'react-icons/ri';
+import { RiFlashlightLine, RiArrowRightLine, RiCloseLine, RiMapPin2Line, RiShipLine } from 'react-icons/ri';
 import './MarketMapPage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -132,6 +132,13 @@ const STAGE_COLORS = {
 
 const ICP_COLOR = s => s >= 85 ? '#10b981' : s >= 70 ? '#f59e0b' : '#ef4444';
 
+// Truncate long names so they fit within their node label area
+const truncateName = (name) => {
+  if (!name) return '';
+  const parts = name.split(' ').slice(0, 2).join(' ');
+  return parts.length > 12 ? parts.slice(0, 11) + '\u2026' : parts;
+};
+
 // ── Node Graph ────────────────────────────────────────────────────────────────
 function NodeGraph({ sector, onProspectClick }) {
   const [visible, setVisible]     = useState(false);
@@ -200,7 +207,7 @@ function NodeGraph({ sector, onProspectClick }) {
   const allProspects = sector.prospects || [];
   const subs = meta.subsegments;
 
-  const W = 680, H = 600;
+  const W = 720, H = 640;
   const cx = W / 2, cy = H / 2;
   const R1 = 148;
   const R2 = 82;
@@ -300,7 +307,7 @@ function NodeGraph({ sector, onProspectClick }) {
                   />
                   <text x={px} y={py + pr + 9} textAnchor="middle"
                     fill="#94a3b8" fontSize="6" fontFamily="'Space Grotesk', sans-serif"
-                  >{p.name?.split(' ').slice(0, 2).join(' ') ?? ''}</text>
+                  >{truncateName(p.name)}</text>
                 </g>
               );
             })}
@@ -330,6 +337,9 @@ function NodeGraph({ sector, onProspectClick }) {
 export default function MarketMapPage() {
   const [sectors, setSectors] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companySignals, setCompanySignals] = useState([]);
+  const [signalsLoading, setSignalsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -343,6 +353,25 @@ export default function MarketMapPage() {
       .catch(() => setSectors([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // When a company is selected, fetch signals and filter by company name
+  useEffect(() => {
+    if (!selectedCompany) { setCompanySignals([]); return; }
+    setSignalsLoading(true);
+    axios.get(`${API}/api/signals`)
+      .then(r => {
+        const all = Array.isArray(r.data) ? r.data : [];
+        const name = selectedCompany.name?.toLowerCase() || '';
+        // Try to find signals mentioning the company name; fall back to all signals
+        const matched = all.filter(s =>
+          s.title?.toLowerCase().includes(name) ||
+          s.company?.toLowerCase().includes(name)
+        );
+        setCompanySignals(matched.length > 0 ? matched : all.slice(0, 4));
+      })
+      .catch(() => setCompanySignals([]))
+      .finally(() => setSignalsLoading(false));
+  }, [selectedCompany]);
 
   if (loading) {
     return (
@@ -370,7 +399,7 @@ export default function MarketMapPage() {
             <button
               key={s.sector}
               className={`mm-sector-card${selected?.sector === s.sector ? ' active' : ''}`}
-              onClick={() => setSelected(s)}
+              onClick={() => { setSelected(s); setSelectedCompany(null); }}
             >
               {selected?.sector === s.sector && <div className="mm-active-bar" />}
               <div className="mm-sector-name">{s.sector}</div>
@@ -391,7 +420,10 @@ export default function MarketMapPage() {
             <div className="mm-graph-wrap">
               <NodeGraph
                 sector={selected}
-                onProspectClick={id => navigate(`/account/${id}`)}
+                onProspectClick={id => {
+                  const company = selected?.prospects?.find(p => p.id === id) || null;
+                  setSelectedCompany(company);
+                }}
               />
             </div>
             <div className="mm-legend-row">
@@ -408,9 +440,108 @@ export default function MarketMapPage() {
         )}
       </div>
 
-      {/* ── Right: Sector Intelligence ──────────────────────────────────── */}
+      {/* ── Right: Company Detail (when selected) or Sector Intelligence ─── */}
       <div className="mm-right">
-        {selected && meta ? (
+        {selectedCompany ? (
+          /* ── Company detail panel ── */
+          <>
+            <div className="mm-panel-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>Company Detail</span>
+              <button className="mm-close-btn" onClick={() => setSelectedCompany(null)} title="Back to sector">
+                <RiCloseLine size={14} />
+              </button>
+            </div>
+
+            <div className="mm-company-header">
+              <div className="mm-company-name">{selectedCompany.name}</div>
+              <div className="mm-company-meta-row">
+                <span className="mm-prospect-stage-dot"
+                  style={{ background: STAGE_COLORS[selectedCompany.pipeline_stage] || STAGE_COLORS.new, width: 8, height: 8 }}
+                />
+                <span className="mm-company-stage">
+                  {(selectedCompany.pipeline_stage || 'new').replace('_', ' ')}
+                </span>
+                <span className="mm-company-icp" style={{ color: ICP_COLOR(selectedCompany.icp_score) }}>
+                  ICP {selectedCompany.icp_score}
+                </span>
+              </div>
+            </div>
+
+            <div className="mm-stat-grid">
+              <div className="mm-stat-card">
+                <div className="mm-stat-label">Revenue</div>
+                <div className="mm-stat-val" style={{ color: '#00d4ff', fontSize: 12 }}>
+                  {selectedCompany.estimated_revenue || '—'}
+                </div>
+              </div>
+              <div className="mm-stat-card">
+                <div className="mm-stat-label">Employees</div>
+                <div className="mm-stat-val" style={{ color: '#10b981', fontSize: 12 }}>
+                  {selectedCompany.employee_count || '—'}
+                </div>
+              </div>
+            </div>
+
+            {Array.isArray(selectedCompany.import_origins) && selectedCompany.import_origins.length > 0 && (
+              <div className="mm-section-card">
+                <div className="mm-section-label">
+                  <RiMapPin2Line size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                  Import Origins
+                </div>
+                <div className="mm-origin-tags">
+                  {selectedCompany.import_origins.map(o => (
+                    <span key={o} className="mm-origin-tag">{o}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(selectedCompany.primary_lanes) && selectedCompany.primary_lanes.length > 0 && (
+              <div className="mm-section-card">
+                <div className="mm-section-label">
+                  <RiShipLine size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                  Primary Lanes
+                </div>
+                <div className="mm-origin-tags">
+                  {selectedCompany.primary_lanes.map(l => (
+                    <span key={l} className="mm-origin-tag mm-lane-tag">{l}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Signal timeline */}
+            <div className="mm-section-card mm-signal-section">
+              <div className="mm-section-label">
+                <RiFlashlightLine size={11} color="#f59e0b" style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                Signal Timeline
+              </div>
+              {signalsLoading && <div className="mm-empty-hint">Loading signals…</div>}
+              {!signalsLoading && companySignals.length === 0 && (
+                <div className="mm-empty-hint">No signals found.</div>
+              )}
+              {!signalsLoading && companySignals.slice(0, 5).map((s, i) => (
+                <div key={i} className="mm-signal-item">
+                  <div className="mm-signal-date">
+                    {(s.publishedAt || s.published_at)
+                      ? new Date(s.publishedAt || s.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : 'Recent'}
+                  </div>
+                  <div className="mm-signal-text">{s.title || s.headline || s.summary || '—'}</div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              className="mm-view-account-btn"
+              onClick={() => navigate(`/account/${selectedCompany.id}`)}
+            >
+              View Full Account
+              <RiArrowRightLine size={13} />
+            </button>
+          </>
+        ) : selected && meta ? (
+          /* ── Sector intelligence panel ── */
           <>
             <div className="mm-panel-title">Sector Intelligence</div>
 
