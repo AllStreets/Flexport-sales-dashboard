@@ -2,7 +2,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine,
-  RiSettings3Line, RiSearchEyeLine, RiShipLine, RiPlaneLine,
+  RiSettings3Line, RiSearchEyeLine, RiShipLine, RiPlaneLine, RiTruckLine,
 } from 'react-icons/ri';
 import './Sidebar.css';
 
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/',            Icon: RiGlobalLine,          label: 'Home'                },
   { to: '/vessels',     Icon: RiShipLine,             label: 'Ocean Freight'       },
   { to: '/flights',     Icon: RiPlaneLine,            label: 'Air Freight'         },
+  { to: '/land',        Icon: RiTruckLine,            label: 'Land Freight'        },
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'          },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence'  },
   { to: '/research',    Icon: RiSearchEyeLine,        label: 'Quick Research'      },

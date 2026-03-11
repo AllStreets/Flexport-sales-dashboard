@@ -11,6 +11,7 @@ import TariffCalculatorPage from './pages/TariffCalculatorPage';
 import ResearchPage from './pages/ResearchPage';
 import VesselsPage from './pages/VesselsPage';
 import FlightsPage from './pages/FlightsPage';
+import LandFreightPage from './pages/LandFreightPage';
 import SettingsPage from './pages/SettingsPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
 import BattleCardsModal from './components/BattleCardsModal';
@@ -171,6 +172,7 @@ export default function App() {
             } />
             <Route path="/vessels" element={<VesselsPage />} />
             <Route path="/flights" element={<FlightsPage />} />
+            <Route path="/land" element={<LandFreightPage />} />
             <Route path="/trade" element={<TradePage />} />
             <Route path="/account/:id" element={
               <Account360Page
