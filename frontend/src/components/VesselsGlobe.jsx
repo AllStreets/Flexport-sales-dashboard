@@ -375,8 +375,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         ref={globeRef}
         width={width}
         height={height}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-        bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         backgroundColor="rgba(0,0,0,0)"
         atmosphereColor="rgba(0,180,255,0.25)"
