@@ -1,8 +1,13 @@
 // frontend/src/components/FlightsGlobe.jsx
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { RiRefreshLine } from 'react-icons/ri';
+
+const GLOBE_TEXTURES = {
+  'blue-marble': '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+  'night':       '//unpkg.com/three-globe/example/img/earth-night.jpg',
+};
 
 const CARGO_HUBS = [
   { code: 'MEM', name: 'Memphis',      lat: 35.04,  lng: -89.98,  tier: 1 },
@@ -141,6 +146,17 @@ function makePlaneSprite(flight) {
 
 export default function FlightsGlobe({ flights = [], ports = [], source, onFlightClick, focusTarget, width, height }) {
   const globeRef = useRef(null);
+  const [globeTexture, setGlobeTexture] = useState(
+    () => GLOBE_TEXTURES[localStorage.getItem('sdr_globe_texture_air')] || GLOBE_TEXTURES['night']
+  );
+  useEffect(() => {
+    const handler = e => {
+      if (e.key === 'sdr_globe_texture_air')
+        setGlobeTexture(GLOBE_TEXTURES[e.newValue] || GLOBE_TEXTURES['night']);
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
   const threeRefs = useRef({
     frame: null, shouldAnimate: false,
     glowMesh: null, glowGeom: null, glowMat: null,
@@ -392,7 +408,7 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
         ref={globeRef}
         width={width}
         height={height}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+        globeImageUrl={globeTexture}
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         backgroundColor="rgba(0,0,0,0)"
         atmosphereColor="rgba(0,180,255,0.25)"

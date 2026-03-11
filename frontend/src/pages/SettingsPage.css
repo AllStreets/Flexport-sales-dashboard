@@ -755,3 +755,45 @@
   color: #475569;
   font-family: 'Space Grotesk', sans-serif;
 }
+
+/* ── Globe texture picker ─────────────────────────────────────────────────────── */
+.globe-texture-picker {
+  display: flex;
+  gap: 5px;
+}
+
+.globe-texture-opt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #64748b;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.globe-texture-opt:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+}
+
+.globe-texture-opt.selected {
+  border-color: rgba(0, 212, 255, 0.45);
+  background: rgba(0, 212, 255, 0.07);
+  color: #00d4ff;
+}
+
+.globe-texture-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}

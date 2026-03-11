@@ -11,7 +11,7 @@ import {
   RiExternalLinkLine, RiBug2Line, RiKeyboardLine, RiGithubLine,
   RiTerminalLine, RiEyeLine, RiEyeOffLine, RiCheckLine, RiLayoutLine,
   RiShieldUserLine, RiContrastLine, RiFileCodeLine, RiSettings3Line,
-  RiCodeLine, RiMicLine, RiBrainLine,
+  RiCodeLine, RiMicLine, RiBrainLine, RiGlobalLine,
 } from 'react-icons/ri';
 import './SettingsPage.css';
 
@@ -300,12 +300,21 @@ const ACCENT_PRESETS = [
   { color: '#ef4444', label: 'Red'             },
 ];
 
+const GLOBE_TEXTURE_OPTS = [
+  { value: 'blue-marble', label: 'Blue Marble', dot: '#1a6fa8' },
+  { value: 'night',       label: 'Night',       dot: '#0d1f3c' },
+];
+
 function AppearanceSection() {
-  const [accent,     setAccent]     = useSetting('sdr_ui_accent',          '#00d4ff');
-  const [sidebar,    setSidebar]    = useSetting('sdr_ui_sidebar_default', 'collapsed');
-  const [animations, setAnimations] = useSetting('sdr_ui_animations',      true);
-  const [density,    setDensity]    = useSetting('sdr_ui_density',         'normal');
-  const [saved,      setSaved]      = useState(false);
+  const [accent,       setAccent]       = useSetting('sdr_ui_accent',              '#00d4ff');
+  const [sidebar,      setSidebar]      = useSetting('sdr_ui_sidebar_default',     'collapsed');
+  const [animations,   setAnimations]   = useSetting('sdr_ui_animations',          true);
+  const [density,      setDensity]      = useSetting('sdr_ui_density',             'normal');
+  const [homeTexture,  setHomeTexture]  = useSetting('sdr_globe_texture_home',     'blue-marble');
+  const [oceanTexture, setOceanTexture] = useSetting('sdr_globe_texture_ocean',    'night');
+  const [airTexture,   setAirTexture]   = useSetting('sdr_globe_texture_air',      'night');
+  const [landTexture,  setLandTexture]  = useSetting('sdr_globe_texture_land',     'night');
+  const [saved,        setSaved]        = useState(false);
 
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
@@ -370,6 +379,38 @@ function AppearanceSection() {
         <SettingRow label="KPI Count-up Animation" description="Animate numbers on page load" icon={RiSparklingLine}>
           <SettingToggle value={animations} onChange={(v) => { setAnimations(v); flash(); }} />
         </SettingRow>
+      </SettingCard>
+
+      <SettingCard title="Globe Textures">
+        <div className="setting-desc" style={{ marginBottom: 12 }}>
+          Choose the map texture displayed on each 3D globe. Changes apply when you navigate to that page.
+        </div>
+        {[
+          { label: 'Home',          val: homeTexture,  setter: setHomeTexture,  storageKey: 'sdr_globe_texture_home'  },
+          { label: 'Ocean Freight', val: oceanTexture, setter: setOceanTexture, storageKey: 'sdr_globe_texture_ocean' },
+          { label: 'Air Freight',   val: airTexture,   setter: setAirTexture,   storageKey: 'sdr_globe_texture_air'   },
+          { label: 'Land Freight',  val: landTexture,  setter: setLandTexture,  storageKey: 'sdr_globe_texture_land'  },
+        ].map(({ label, val, setter, storageKey }) => (
+          <SettingRow key={label} label={label} icon={RiGlobalLine}>
+            <div className="globe-texture-picker">
+              {GLOBE_TEXTURE_OPTS.map(({ value, label: optLabel, dot }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`globe-texture-opt${val === value ? ' selected' : ''}`}
+                  onClick={() => {
+                    setter(value);
+                    flash();
+                    window.dispatchEvent(new StorageEvent('storage', { key: storageKey, newValue: value }));
+                  }}
+                >
+                  <span className="globe-texture-dot" style={{ background: dot }} />
+                  {optLabel}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
+        ))}
       </SettingCard>
 
       <SavedFlash show={saved} />

@@ -7,6 +7,11 @@ import './GlobeView.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+const GLOBE_TEXTURES = {
+  'blue-marble': '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+  'night':       '//unpkg.com/three-globe/example/img/earth-night.jpg',
+};
+
 const OVERLAY_MODES = ['standard', 'tariff'];
 const OVERLAY_ICONS = { standard: RiGlobalLine, tariff: RiPercentLine };
 const OVERLAY_LABELS = { standard: 'Standard', tariff: 'Tariff Risk' };
@@ -16,6 +21,17 @@ const statusColor = s => s === 'disruption' ? '#ef4444' : s === 'congestion' ? '
 export default function GlobeView({ selectedProspect, onPortClick, fullscreen = false, onEnterFullscreen }) {
   const globeRef = useRef(null);
   const [globeData, setGlobeData] = useState({ shippingLanes: [], ports: [] });
+  const [globeTexture, setGlobeTexture] = useState(
+    () => GLOBE_TEXTURES[localStorage.getItem('sdr_globe_texture_home')] || GLOBE_TEXTURES['blue-marble']
+  );
+  useEffect(() => {
+    const handler = e => {
+      if (e.key === 'sdr_globe_texture_home')
+        setGlobeTexture(GLOBE_TEXTURES[e.newValue] || GLOBE_TEXTURES['blue-marble']);
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
   const [overlayMode, setOverlayMode] = useState(0);
   const [portDetail, setPortDetail] = useState(null);
   const getDimensions = (fs) => ({
@@ -305,7 +321,7 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
         ref={globeRef}
         width={dimensions.w}
         height={dimensions.h}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+        globeImageUrl={globeTexture}
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         atmosphereColor="rgba(0, 180, 255, 0.25)"
         atmosphereAltitude={0.18}

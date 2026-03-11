@@ -1,8 +1,13 @@
 // frontend/src/components/VesselsGlobe.jsx
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 import { RiRefreshLine } from 'react-icons/ri';
+
+const GLOBE_TEXTURES = {
+  'blue-marble': '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+  'night':       '//unpkg.com/three-globe/example/img/earth-night.jpg',
+};
 
 const DISRUPTION_ZONES = [
   { lat: 26.5, lng: 56.5, label: 'Strait of Hormuz', color: '#ef4444', maxRadius: 5, propagationSpeed: 3, repeatPeriod: 700 },
@@ -140,6 +145,17 @@ function makeShipSprite(vessel) {
 
 export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, focusTarget, source, width, height }) {
   const globeRef = useRef(null);
+  const [globeTexture, setGlobeTexture] = useState(
+    () => GLOBE_TEXTURES[localStorage.getItem('sdr_globe_texture_ocean')] || GLOBE_TEXTURES['night']
+  );
+  useEffect(() => {
+    const handler = e => {
+      if (e.key === 'sdr_globe_texture_ocean')
+        setGlobeTexture(GLOBE_TEXTURES[e.newValue] || GLOBE_TEXTURES['night']);
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
 
   // Single ref object for all Three.js scene objects — safe across React strict-mode double-mount
   const threeRefs = useRef({
@@ -375,7 +391,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         ref={globeRef}
         width={width}
         height={height}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+        globeImageUrl={globeTexture}
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         backgroundColor="rgba(0,0,0,0)"
         atmosphereColor="rgba(0,180,255,0.25)"
