@@ -276,7 +276,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
     setPipelined(false);
     setCallNotes('');
     setCallIntel(null);
-    setCallIntelOpen(false);
+    setCallIntelOpen(true);
     setLiveCallTimestamp(null);
     liveCallApplied.current = false;
     setCallPrep(null);
@@ -347,8 +347,15 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes, companyName: data?.prospect?.name, model: aiModel }),
       });
-      setCallIntel(await r.json());
-    } catch { }
+      const json = await r.json();
+      if (!r.ok) {
+        setCallIntel({ error: true, message: json?.error || `Server error ${r.status}` });
+      } else {
+        setCallIntel(json);
+      }
+    } catch (err) {
+      setCallIntel({ error: true, message: err?.message || 'Network error — could not reach server' });
+    }
     finally { setCallIntelLoading(false); }
   }, [callNotes, data, aiModel]);
 
@@ -521,6 +528,14 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
               </button>
             ) : (
               <p className="a360-empty" style={{ marginTop: 8 }}>AI features disabled in Settings.</p>
+            )}
+            {!callIntel && !callIntelLoading && !callNotes.trim() && (
+              <p className="ci-empty">Type or paste call notes above, then click Analyze Call to extract pain points, objections, and next steps.</p>
+            )}
+            {callIntel?.error && (
+              <div className="ci-error">
+                Analysis failed: {callIntel.message}. Check that your OpenAI API key is configured on the server.
+              </div>
             )}
             {callIntel && !callIntel.error && (
               <div className="ci-results">
