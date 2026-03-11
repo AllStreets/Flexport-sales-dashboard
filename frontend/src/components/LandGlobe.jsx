@@ -337,23 +337,27 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
               const thF   = (90 - ptFwd.lng) * Math.PI / 180;
               _rafFP.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
 
-              // Always keep sprites horizontal — rotation = 0 unconditionally.
-              sprite.material.rotation = 0;
               sprite.scale.set(3, 1.39, 1);
 
               if (cam) {
-                // Project to NDC to determine left/right for texture swap only.
+                // Project to NDC to get screen-space travel angle.
                 _rafWP.project(cam);
                 _rafFP.project(cam);
                 const dx = _rafFP.x - _rafWP.x;
                 const dy = _rafFP.y - _rafWP.y;
                 if (dx * dx + dy * dy > 1e-10) {
-                  const goingLeft = Math.abs(Math.atan2(dy, dx)) > Math.PI / 2;
+                  const angle = Math.atan2(dy, dx);
+                  const goingLeft = Math.abs(angle) > Math.PI / 2;
+                  // Rotate sprite to face direction of travel (cab leads).
+                  sprite.material.rotation = goingLeft ? angle - Math.PI : angle;
+                  // Swap to correct facing texture.
                   const targetTex = goingLeft ? sprite.userData.texL : sprite.userData.texR;
                   if (targetTex && sprite.material.map !== targetTex) {
                     sprite.material.map = targetTex;
                     sprite.material.needsUpdate = true;
                   }
+                } else {
+                  sprite.material.rotation = 0;
                 }
               }
             }
