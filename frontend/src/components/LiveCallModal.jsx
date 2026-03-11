@@ -148,7 +148,7 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
 
   const endCall = () => {
     setTimerRunning(false);
-    if (onEndCall && prospect && notes.trim()) {
+    if (onEndCall && prospect) {
       onEndCall({ prospectId: prospect.id, notes: notes.trim(), timestamp: Date.now() });
     }
     onClose();

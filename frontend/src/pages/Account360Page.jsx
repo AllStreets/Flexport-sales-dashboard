@@ -354,16 +354,18 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
 
   // Auto-populate CI parser when live call data arrives for this account
   useEffect(() => {
-    if (!lastCallData?.notes || liveCallApplied.current) return;
+    if (!lastCallData || liveCallApplied.current) return;
     if (String(lastCallData.prospectId) !== String(id)) return;
     if (!data) return; // wait for account data to load
     liveCallApplied.current = true;
-    const notes = lastCallData.notes;
+    const notes = lastCallData.notes || '';
     setCallNotes(notes);
     setCallIntelOpen(true);
     const ts = new Date(lastCallData.timestamp);
     setLiveCallTimestamp(ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    setTimeout(() => analyzeCall(notes), 150);
+    if (notes.trim()) {
+      setTimeout(() => analyzeCall(notes), 150);
+    }
   }, [lastCallData, id, data, analyzeCall]);
 
   const p = data?.prospect;
