@@ -267,7 +267,6 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
   const [callNotes, setCallNotes] = useState('');
   const [callIntel, setCallIntel] = useState(null);
   const [callIntelLoading, setCallIntelLoading] = useState(false);
-  const [callIntelOpen, setCallIntelOpen] = useState(true);
   const [liveCallTimestamp, setLiveCallTimestamp] = useState(null);
   const liveCallApplied = useRef(false);
 
@@ -276,7 +275,6 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
     setPipelined(false);
     setCallNotes('');
     setCallIntel(null);
-    setCallIntelOpen(true);
     setLiveCallTimestamp(null);
     liveCallApplied.current = false;
     setCallPrep(null);
@@ -367,7 +365,6 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
     liveCallApplied.current = true;
     const notes = lastCallData.notes || '';
     setCallNotes(notes);
-    setCallIntelOpen(true);
     const ts = new Date(lastCallData.timestamp);
     setLiveCallTimestamp(ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     if (notes.trim()) {
@@ -504,40 +501,38 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
         Call Notes
       </div>
       <div className="glass-card ci-panel">
-        <button className="ci-toggle" onClick={() => setCallIntelOpen(o => !o)}>
-          <RiFileTextLine size={13} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+        <div className="ci-header">
+          <RiFileTextLine size={13} />
           Call Intelligence Parser
           {liveCallTimestamp && (
             <span className="ci-live-badge">Live call · {liveCallTimestamp}</span>
           )}
-          <span className="ci-toggle-hint">{callIntelOpen ? '▲ collapse' : '▼ expand'}</span>
-        </button>
-        {callIntelOpen && (
-          <div className="ci-body">
-            <p className="ci-desc">Paste raw call notes below. AI extracts pain points, objections, signals, and next steps.</p>
-            <textarea
-              className="ci-textarea"
-              placeholder="Paste call notes here..."
-              value={callNotes}
-              onChange={e => setCallNotes(e.target.value)}
-              rows={5}
-            />
-            {aiEnabled ? (
-              <button className="btn-primary ci-btn" onClick={analyzeCall} disabled={callIntelLoading || !callNotes.trim()}>
-                {callIntelLoading ? 'Analyzing...' : <><RiFlashlightLine size={12} style={{ verticalAlign: 'middle', marginRight: 5 }} />Analyze Call</>}
-              </button>
-            ) : (
-              <p className="a360-empty" style={{ marginTop: 8 }}>AI features disabled in Settings.</p>
-            )}
-            {!callIntel && !callIntelLoading && !callNotes.trim() && (
-              <p className="ci-empty">Type or paste call notes above, then click Analyze Call to extract pain points, objections, and next steps.</p>
-            )}
-            {callIntel?.error && (
-              <div className="ci-error">
-                Analysis failed: {callIntel.message}. Check that your OpenAI API key is configured on the server.
-              </div>
-            )}
-            {callIntel && !callIntel.error && (
+        </div>
+        <div className="ci-body">
+          <p className="ci-desc">Paste raw call notes below. AI extracts pain points, objections, signals, and next steps.</p>
+          <textarea
+            className="ci-textarea"
+            placeholder="Paste call notes here..."
+            value={callNotes}
+            onChange={e => setCallNotes(e.target.value)}
+            rows={5}
+          />
+          {aiEnabled ? (
+            <button className="btn-primary ci-btn" onClick={analyzeCall} disabled={callIntelLoading || !callNotes.trim()}>
+              {callIntelLoading ? 'Analyzing...' : <><RiFlashlightLine size={12} style={{ verticalAlign: 'middle', marginRight: 5 }} />Analyze Call</>}
+            </button>
+          ) : (
+            <p className="a360-empty" style={{ marginTop: 8 }}>AI features disabled in Settings.</p>
+          )}
+          {!callIntel && !callIntelLoading && !callNotes.trim() && (
+            <p className="ci-empty">Paste call notes above, then click Analyze Call to extract pain points, objections, and next steps.</p>
+          )}
+          {callIntel?.error && (
+            <div className="ci-error">
+              Analysis failed: {callIntel.message}. Check that your OpenAI API key is configured on the server.
+            </div>
+          )}
+          {callIntel && !callIntel.error && (
               <div className="ci-results">
                 <div className="ci-submitted-notes">
                   <div className="ci-result-label">Submitted Notes</div>
@@ -587,7 +582,7 @@ export default function Account360Page({ onAddToPipeline, onOpenOutreach, onStar
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Call Prep Modal */}

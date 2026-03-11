@@ -261,7 +261,7 @@
   color: #00d4ff; border-radius: 9px;
   padding: 9px 16px; font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all 0.2s;
-  margin-bottom: 16px;
+  flex: 1;
 }
 .lcm-gen-btn:hover:not(:disabled) { background: rgba(0,212,255,0.18); }
 .lcm-gen-btn:disabled { opacity: 0.5; cursor: default; }
@@ -375,6 +375,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 16px;
 }
 
 .lcm-mic-btn {
