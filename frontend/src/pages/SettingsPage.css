@@ -6,6 +6,7 @@
   gap: 0;
   min-height: calc(100vh - 52px);
   font-family: 'Space Grotesk', sans-serif;
+  overflow: hidden;
 }
 
 /* ── Left nav rail ───────────────────────────────────────────────────────────── */
@@ -87,6 +88,8 @@
   flex-direction: column;
   gap: 20px;
   max-width: 760px;
+  overflow-y: auto;
+  height: calc(100vh - 52px);
 }
 
 /* ── Section header ──────────────────────────────────────────────────────────── */
