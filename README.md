@@ -11,13 +11,15 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 | Route | Page | Description |
 |---|---|---|
 | `/` | Home | Interactive 3D globe with live shipping lanes and port disruption rings, signal ticker, Today's Playbook (priority follow-up list), Hot Prospects panel, Signal Feed with AI outreach matching |
-| `/vessels` | Ocean Command | Live AIS vessel tracking globe — 200 real vessels (AISstream) or 250 simulated vessels on 62 great-circle trade routes. Animated route arcs with directional color gradient, vessel type coloring (Container/Tanker/Bulk), port disruption rings. Right panel: Fleet Overview stats, live event feed (clickable — pans globe to vessel), container tracker (Terminal49 API), vessel detail with ship flag + country. Live/simulated toggle on the header badge. |
+| `/flights` | Air Freight | Live ADS-B globe — real aircraft via OpenSky Network OAuth2 (falls back to 200+ simulated planes on 40 global routes). Animated plane sprites with rose/violet coloring, great-circle arc trails, per-plane random cycle speeds (45–240s). Dark atmosphere, night texture. Right panel: Fleet Overview, departure/destination feed, route stats. |
+| `/land` | Land Freight | Simulated land freight globe — 340 trucks on 85 global highway corridors. Truck sprites (side-profile canvas, silver for regular / orange for tank) with Y-flip for westward heading so wheels are always viewer-facing. Right panel: Fleet Overview, Carrier Watch, Hot Corridors, Live Event Feed. |
+| `/vessels` | Ocean Freight | Live AIS vessel tracking globe — 200 real vessels (AISstream) or 250 simulated vessels on 62 great-circle trade routes. Animated route arcs, vessel type coloring (Container/Tanker/Bulk), port disruption rings. Right panel: Fleet Overview, live event feed, container tracker (Terminal49), vessel detail. Live/simulated badge. |
 | `/trade` | Trade Intelligence Terminal | Bloomberg-style macro terminal — FRED live data, 20-route container spot rates, port congestion table, live FX rates, tariff tables, route optimizer, §301 actions, trade policy calendar, earnings trigger event monitor |
-| `/account/:id` | Account 360 | Full prospect deep-dive — animated supply chain diagram with correct US port routing by primary lane, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser (auto-populates from Live Call notes) |
+| `/account/:id` | Account 360 | Full prospect deep-dive — animated supply chain diagram with correct US port routing, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser (always visible; auto-populates from Live Call notes) |
 | `/performance` | SDR Performance | 365-day activity heatmap, quota attainment rings, activity funnel, win/loss chart and logger, follow-up radar, pipeline velocity, recent activity feed |
-| `/market` | Market Map | Zoomable radial SVG node graph of 136 prospects by sector with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations |
+| `/market` | Market Map | Zoomable radial SVG node graph of 136 prospects by sector with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations, signal timeline per company |
 | `/tariff` | Tariff Calculator | Landed cost modeling — origin country, product HS code, cargo value, weight, Ocean FCL vs Air mode; §301 + reciprocal tariff breakdown, SDR angle generator, HS code lookup |
-| `/settings` | Settings | Profile, quota targets, notifications, appearance (accent color, density), AI model selection, API key status, data export, keyboard shortcuts reference |
+| `/settings` | Settings | Profile, quota targets, notifications, Live Call (mic auto-start, AI prediction frequency), appearance (accent color, density), AI model selection, API key status, data export, keyboard shortcuts reference |
 
 ---
 
@@ -49,14 +51,18 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── GlobeView.jsx               # Home page globe — shipping lanes, port rings, prospect arcs
-│   │   │   ├── VesselsGlobe.jsx            # Ocean Command globe — live AIS, animated route arcs
-│   │   │   ├── VGPanel.jsx                 # Ocean Command right panel — fleet stats, event feed, container tracker
-│   │   │   ├── LiveCallModal.jsx           # Live call assistant — timer, talk track, objection AI, notes
+│   │   │   ├── VesselsGlobe.jsx            # Ocean Freight globe — live AIS, animated great-circle routes
+│   │   │   ├── VGPanel.jsx                 # Ocean Freight right panel — fleet stats, event feed, container tracker
+│   │   │   ├── FlightsGlobe.jsx            # Air Freight globe — live ADS-B / simulated planes, arc trails
+│   │   │   ├── FGPanel.jsx                 # Air Freight right panel
+│   │   │   ├── LandGlobe.jsx               # Land Freight globe — 340 truck sprites on 85 highway corridors
+│   │   │   ├── LGPanel.jsx                 # Land Freight right panel — carrier watch, hot corridors, event feed
+│   │   │   ├── LiveCallModal.jsx           # Live call assistant — timer, talk track, objection AI, mic AI listener, notes
 │   │   │   ├── PipelineKanban.jsx          # Drag-and-drop deal board (@dnd-kit)
 │   │   │   ├── BattleCardsModal.jsx        # Competitive intelligence overlay
 │   │   │   ├── OutreachSequenceModal.jsx   # AI multi-touch outreach sequence builder
 │   │   │   ├── PortStatusBar.jsx           # Sticky header with port ticker + global action buttons
-│   │   │   ├── Sidebar.jsx                 # Collapsible nav sidebar
+│   │   │   ├── Sidebar.jsx                 # Collapsible nav sidebar (Home/Air/Land/Ocean/Market/Trade/Research)
 │   │   │   ├── AnalysisPanel.jsx           # Inline AI analysis on Home
 │   │   │   ├── SignalFeed.jsx              # Live supply chain signals with AI outreach match
 │   │   │   ├── SignalTicker.jsx            # Scrolling signal ticker (hourly refresh)
@@ -65,7 +71,9 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   │   │   └── ProspectSearch.jsx          # Filters + AI natural language search
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx / .css
-│   │   │   ├── VesselsPage.jsx / .css      # Ocean Command page
+│   │   │   ├── FlightsPage.jsx / .css      # Air Freight page
+│   │   │   ├── LandFreightPage.jsx / .css  # Land Freight page
+│   │   │   ├── VesselsPage.jsx / .css      # Ocean Freight page
 │   │   │   ├── TradePage.jsx / .css
 │   │   │   ├── Account360Page.jsx / .css
 │   │   │   ├── PerformancePage.jsx / .css
@@ -163,6 +171,9 @@ cd frontend && npm run dev
 | GET | `/api/market-map` | Prospects grouped by sector with pipeline stage |
 | GET | `/api/globe-data` | Shipping lanes + dynamic port congestion for Home globe |
 | GET | `/api/vessels` | Live AIS vessels (AISstream, ≥100 vessels) or 250 simulated vessels on 62 trade routes. `?mode=sim` forces simulated. |
+| GET | `/api/flights` | Live ADS-B aircraft (OpenSky Network OAuth2) or 200+ simulated planes on 40 routes. `?mode=sim` forces simulated. |
+| GET | `/api/opensky-token` | Proxies an OpenSky OAuth2 bearer token to the browser (bypasses datacenter IP restrictions) |
+| GET | `/api/trucks` | 340 simulated trucks on 85 global highway corridors (4 trucks/lane) |
 | GET | `/api/account360/:id` | Full account — prospect + NewsAPI signal timeline |
 | GET | `/api/hot-prospects` | Top 8 by opportunity score (ICP + pipeline stage bonus) |
 | GET | `/api/followup-radar` | Overdue contacts sorted by ICP score (`?days=N`) |
@@ -175,6 +186,7 @@ cd frontend && npm run dev
 | POST | `/api/analyze` | AI prospect analysis — profile, pain points, outreach angle, value props, decision makers |
 | POST | `/api/call-prep` | AI call prep — opening hook, discovery questions, objection responses, CTA |
 | POST | `/api/call-intelligence` | AI call notes parser — pain points, signals, objections, next steps, sentiment, deal probability |
+| POST | `/api/call-predict` | AI mic listener prediction — suggested next response, predicted objection, tone recommendation |
 | POST | `/api/objection` | AI objection handler — counter + follow-up question |
 | POST | `/api/map-plan` | AI mutual action plan — milestone timeline + 90-day success criteria |
 | POST | `/api/generate-sequence` | AI 4-touch outreach sequence (email + LinkedIn + call) |
@@ -209,8 +221,10 @@ FRED_API_KEY=your_fred_key                 # Optional — FRED macro data charts
 NEWS_API_KEY=your_newsapi_key              # Optional — live signal feed + trigger events
 SERPER_API_KEY=your_serper_key             # Optional — prospect web enrichment
 EXCHANGE_RATE_API_KEY=your_key             # Optional — live FX rates
-AISSTREAM_API_KEY=your_key                 # Optional — live AIS vessel positions (Ocean Command)
-TERMINAL49_API_KEY=your_key                # Optional — container tracking (Ocean Command)
+AISSTREAM_API_KEY=your_key                 # Optional — live AIS vessel positions (Ocean Freight)
+TERMINAL49_API_KEY=your_key                # Optional — container tracking (Ocean Freight)
+OPENSKY_CLIENT_ID=your_client_id           # Optional — live ADS-B flights (Air Freight)
+OPENSKY_CLIENT_SECRET=your_client_secret   # Optional — live ADS-B flights (Air Freight)
 FRONTEND_URL=https://your-app.vercel.app   # Required for production CORS
 PORT=5001
 ```
