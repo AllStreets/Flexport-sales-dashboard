@@ -84,127 +84,137 @@ function makeTruckCanvas(colorStr, isTank) {
   const key = colorStr + (isTank ? 'T' : 'R');
   if (_truckTexCache[key]) return _truckTexCache[key];
 
-  // Landscape canvas: truck faces RIGHT (cab=right, trailer=left)
-  const W = 80, H = 38;
+  const W = 52, H = 24;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const ctx = c.getContext('2d');
 
-  const a = s => colorStr.replace(/[\d.]+\)$/, `${s})`);
-  const WHEEL  = 'rgba(12,12,22,0.95)';
-  const RIM    = 'rgba(90,100,130,0.75)';
-  const GLASS  = 'rgba(0,0,0,0.55)';
-  const CHROME = 'rgba(210,220,235,0.8)';
+  const alpha = (a) => colorStr.replace(/[\d.]+\)$/, `${a})`);
+  const WHEEL_COLOR = 'rgba(15,15,25,0.95)';
+  const RIM_COLOR = 'rgba(100,110,140,0.8)';
+  const GLASS = 'rgba(120,180,255,0.35)';
 
-  // Glow halo
-  const glow = ctx.createRadialGradient(48, 18, 4, 48, 18, 22);
-  glow.addColorStop(0, a('0.2')); glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-
-  // ── TRAILER (x 2–38, y 8–26) ──────────────────────────────
-  ctx.fillStyle = a('0.65');
-  ctx.fillRect(4, 8, 36, 18);
-  // Trailer edge outline
-  ctx.strokeStyle = a('0.28'); ctx.lineWidth = 0.8;
-  ctx.strokeRect(4, 8, 36, 18);
-  // Vertical panel ribs
-  ctx.strokeStyle = a('0.14'); ctx.lineWidth = 0.7;
-  for (const x of [12, 20, 28]) {
-    ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, 26); ctx.stroke();
-  }
-  // Rear tail lights
-  ctx.fillStyle = 'rgba(239,68,68,0.7)';
-  ctx.fillRect(2, 10, 3, 5);
-  ctx.fillRect(2, 19, 3, 5);
+  // Subtle glow
+  const glow = ctx.createRadialGradient(28, 10, 2, 28, 10, 18);
+  glow.addColorStop(0, alpha('0.18'));
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
 
   if (isTank) {
-    // ── TANK BODY (rounded cylinder, x 4–40) ──────────────
-    // Overdraw trailer area with rounded tank
-    const tg = ctx.createLinearGradient(4, 5, 4, 30);
-    tg.addColorStop(0, a('0.45'));
-    tg.addColorStop(0.25, colorStr);
-    tg.addColorStop(0.75, colorStr);
-    tg.addColorStop(1, a('0.4'));
-    ctx.fillStyle = tg;
+    // ── TANK TRUCK ─────────────────────────────────────────────
+    // Chassis/frame
+    ctx.fillStyle = alpha('0.5');
+    ctx.fillRect(4, 13, 40, 4);
+
+    // Tank cylinder (main body)
+    const tankGrad = ctx.createLinearGradient(4, 4, 4, 16);
+    tankGrad.addColorStop(0, alpha('0.5'));
+    tankGrad.addColorStop(0.3, colorStr);
+    tankGrad.addColorStop(0.7, colorStr);
+    tankGrad.addColorStop(1, alpha('0.4'));
+    ctx.fillStyle = tankGrad;
     ctx.beginPath();
-    ctx.ellipse(22, 17, 20, 11, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.ellipse(24, 10, 20, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tank highlight streak
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.ellipse(24, 6, 14, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cab (right side)
+    ctx.fillStyle = colorStr;
+    ctx.beginPath();
+    ctx.roundRect(36, 6, 13, 11, 2);
+    ctx.fill();
+
+    // Cab windshield
+    ctx.fillStyle = GLASS;
+    ctx.beginPath();
+    ctx.roundRect(45, 7, 4, 8, 1);
+    ctx.fill();
+
+    // Tank end cap (left)
+    ctx.strokeStyle = alpha('0.5');
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(4, 10, 2, 8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
     // Hoop bands
-    ctx.strokeStyle = a('0.3'); ctx.lineWidth = 1;
-    for (const x of [10, 18, 26, 34]) {
-      ctx.beginPath(); ctx.moveTo(x, 7); ctx.lineTo(x, 27); ctx.stroke();
+    ctx.strokeStyle = alpha('0.25');
+    ctx.lineWidth = 0.8;
+    for (const x of [14, 22, 30]) {
+      ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, 18); ctx.stroke();
     }
-    // Top highlight
-    const sh = ctx.createLinearGradient(4, 5, 4, 13);
-    sh.addColorStop(0, 'rgba(255,255,255,0.13)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = sh;
-    ctx.beginPath(); ctx.ellipse(22, 17, 20, 11, 0, 0, Math.PI * 2); ctx.fill();
-    // Rear cap
-    ctx.strokeStyle = a('0.4'); ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.ellipse(4, 17, 2, 10, 0, 0, Math.PI * 2); ctx.fill();
+  } else {
+    // ── STANDARD SEMI TRUCK ────────────────────────────────────
+    // Trailer body
+    const trailerGrad = ctx.createLinearGradient(2, 4, 2, 18);
+    trailerGrad.addColorStop(0, alpha('0.55'));
+    trailerGrad.addColorStop(0.5, colorStr);
+    trailerGrad.addColorStop(1, alpha('0.45'));
+    ctx.fillStyle = trailerGrad;
+    ctx.beginPath();
+    ctx.roundRect(2, 5, 34, 12, 1);
+    ctx.fill();
+
+    // Trailer panel lines
+    ctx.strokeStyle = alpha('0.15');
+    ctx.lineWidth = 0.6;
+    for (const x of [10, 18, 26]) {
+      ctx.beginPath(); ctx.moveTo(x, 5); ctx.lineTo(x, 17); ctx.stroke();
+    }
+
+    // Rear tail lights
+    ctx.fillStyle = 'rgba(239,68,68,0.75)';
+    ctx.fillRect(1, 6, 2, 4);
+    ctx.fillRect(1, 13, 2, 4);
+
+    // Coupling
+    ctx.fillStyle = alpha('0.35');
+    ctx.fillRect(34, 9, 5, 4);
+
+    // Cab body
+    ctx.fillStyle = colorStr;
+    ctx.beginPath();
+    ctx.roundRect(37, 4, 13, 13, 2);
+    ctx.fill();
+
+    // Cab roof (slightly darker)
+    ctx.fillStyle = alpha('0.7');
+    ctx.fillRect(37, 4, 13, 4);
+
+    // Windshield
+    ctx.fillStyle = GLASS;
+    ctx.beginPath();
+    ctx.roundRect(46, 5, 4, 9, 1);
+    ctx.fill();
+
+    // Exhaust stack
+    ctx.fillStyle = 'rgba(200,210,230,0.7)';
+    ctx.fillRect(40, 1, 2, 5);
   }
 
-  // ── COUPLING (x 38–44) ────────────────────────────────────
-  ctx.fillStyle = a('0.4');
-  ctx.fillRect(38, 15, 7, 6);
-
-  // ── CAB (x 42–76, y 5–27) ─────────────────────────────────
-  // Cab body
-  ctx.fillStyle = colorStr;
-  ctx.beginPath();
-  ctx.moveTo(44, 27); ctx.lineTo(44, 7);
-  ctx.quadraticCurveTo(44, 5, 47, 5);
-  ctx.lineTo(70, 5);
-  ctx.quadraticCurveTo(76, 5, 76, 11);
-  ctx.lineTo(76, 27);
-  ctx.closePath(); ctx.fill();
-
-  // Cab roof bevel (darker top strip)
-  ctx.fillStyle = a('0.7');
-  ctx.fillRect(44, 5, 32, 5);
-
-  // Windshield (front-facing glass, right side of cab)
-  ctx.fillStyle = GLASS;
-  ctx.beginPath();
-  ctx.moveTo(70, 6); ctx.lineTo(75, 12); ctx.lineTo(75, 22); ctx.lineTo(70, 22);
-  ctx.closePath(); ctx.fill();
-
-  // Driver side window
-  ctx.fillStyle = GLASS;
-  ctx.fillRect(49, 7, 18, 12);
-
-  // Door divider
-  ctx.strokeStyle = a('0.22'); ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(57, 7); ctx.lineTo(57, 27); ctx.stroke();
-
-  // Cab step / running board
-  ctx.fillStyle = a('0.45');
-  ctx.fillRect(45, 25, 26, 3);
-
-  // Front bumper / grill
-  ctx.fillStyle = CHROME;
-  ctx.fillRect(74, 16, 5, 10);
-  ctx.fillStyle = a('0.35');
-  ctx.fillRect(75, 18, 3, 7);
-
-  // Exhaust stack (chrome pipe rising from cab roof)
-  ctx.fillStyle = CHROME;
-  ctx.fillRect(51, 0, 3, 8);
-  ctx.fillRect(50, 0, 5, 2); // stack cap
-
-  // Side mirror (small arm on door)
-  ctx.fillStyle = a('0.8');
-  ctx.fillRect(72, 11, 5, 3);
-
-  // ── WHEELS ────────────────────────────────────────────────
-  const wheel = (cx, cy, r) => {
-    ctx.fillStyle = WHEEL;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = RIM;
-    ctx.beginPath(); ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2); ctx.fill();
+  // ── WHEELS (both types) ───────────────────────────────────────
+  const wheel = (cx, cy) => {
+    ctx.fillStyle = WHEEL_COLOR;
+    ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = RIM_COLOR;
+    ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2); ctx.fill();
   };
-  wheel(64, 34, 5);   // front steer axle
-  wheel(20, 34, 5);   // rear drive axle (front)
-  wheel(30, 34, 5);   // rear drive axle (back)
+
+  if (isTank) {
+    wheel(44, 19); // front axle
+    wheel(14, 19); // rear axle
+    wheel(24, 19); // mid axle
+  } else {
+    wheel(44, 19); // front (cab)
+    wheel(16, 19); // rear (trailer front)
+    wheel(24, 19); // rear (trailer back)
+  }
 
   _truckTexCache[key] = c;
   return c;
@@ -216,8 +226,7 @@ function makeTruckSprite(truck) {
   const tex = new THREE.CanvasTexture(makeTruckCanvas(colorStr, isTank));
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, sizeAttenuation: true });
   const sprite = new THREE.Sprite(mat);
-  // Landscape scale — width > height to match side-profile canvas aspect ratio
-  sprite.scale.set(5, 2.4, 1);
+  sprite.scale.set(4, 1.85, 1);  // smaller than before
   return sprite;
 }
 
@@ -335,7 +344,10 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
               const t = (progress0 + elapsed / 86400) % 1;
               const pt = gcPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.035, globeRadius);
-              sprite.material.rotation = Math.PI / 2 - pt.heading * Math.PI / 180;
+              const h = ((pt.heading || 0) + 360) % 360;
+              const flipY = h > 90 && h <= 270;
+              sprite.scale.set(4, flipY ? -1.85 : 1.85, 1);
+              sprite.material.rotation = Math.PI / 2 - h * Math.PI / 180;
             }
           }
         } catch (_) {}
@@ -459,7 +471,11 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
         customThreeObject={makeTruckSprite}
         customThreeObjectUpdate={(sprite, truck, globeRadius) => {
           setSpritePos(sprite, truck.lat, truck.lng, 0.035, globeRadius);
-          sprite.material.rotation = Math.PI / 2 - truck.heading * Math.PI / 180;
+          const h = ((truck.heading || 0) + 360) % 360;
+          // Westward trucks (heading 90°–270°) need Y-flip so wheels stay screen-bottom
+          const flipY = h > 90 && h <= 270;
+          sprite.scale.set(4, flipY ? -1.85 : 1.85, 1);
+          sprite.material.rotation = Math.PI / 2 - h * Math.PI / 180;
           threeRefs.current.sprites.set(truck.id, {
             sprite, srcLat: truck.srcLat, srcLng: truck.srcLng,
             dstLat: truck.dstLat, dstLng: truck.dstLng,
