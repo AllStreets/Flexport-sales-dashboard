@@ -337,26 +337,23 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
               const thF   = (90 - ptFwd.lng) * Math.PI / 180;
               _rafFP.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
 
+              // Always keep sprites horizontal — rotation = 0 unconditionally.
+              sprite.material.rotation = 0;
+              sprite.scale.set(3, 1.39, 1);
+
               if (cam) {
-                // Project both points to NDC (reuse vectors to avoid allocation)
+                // Project to NDC to determine left/right for texture swap only.
                 _rafWP.project(cam);
                 _rafFP.project(cam);
                 const dx = _rafFP.x - _rafWP.x;
                 const dy = _rafFP.y - _rafWP.y;
                 if (dx * dx + dy * dy > 1e-10) {
-                  const angle = Math.atan2(dy, dx);
-                  const goingLeft = Math.abs(angle) > Math.PI / 2;
-                  // Swap between right-facing and left-facing pre-drawn textures.
-                  // SpriteMaterial's UV transform (repeat/offset) is not applied by the
-                  // sprite shader, and negative scale.x is ignored (shader uses length()).
-                  // Pre-mirrored canvas is the only reliable way to flip a Three.js Sprite.
+                  const goingLeft = Math.abs(Math.atan2(dy, dx)) > Math.PI / 2;
                   const targetTex = goingLeft ? sprite.userData.texL : sprite.userData.texR;
                   if (targetTex && sprite.material.map !== targetTex) {
                     sprite.material.map = targetTex;
                     sprite.material.needsUpdate = true;
                   }
-                  sprite.scale.set(3, 1.39, 1);
-                  sprite.material.rotation = goingLeft ? angle - Math.PI : angle;
                 }
               }
             }

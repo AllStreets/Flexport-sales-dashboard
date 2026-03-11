@@ -273,7 +273,7 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
               const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
               const pt = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.04, globeRadius);
-              sprite.material.rotation = -(pt.heading * Math.PI / 180);
+              sprite.material.rotation = 0;
             }
           }
         } catch (_) {}
@@ -430,7 +430,7 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
             threeRefs.current.sprites.delete(f.id);
             setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
           }
-          sprite.material.rotation = -((f.heading ?? 0) * Math.PI / 180);
+          sprite.material.rotation = 0;
         }}
         onCustomLayerClick={handleFlightClick}
         customLayerLabel={flightLabel}

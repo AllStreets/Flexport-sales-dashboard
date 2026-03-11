@@ -1578,21 +1578,23 @@ cron.schedule('0 0 * * *', () => {
   refreshAllTradeCache().catch(e => console.error('[CRON] Refresh failed:', e.message));
 }, { timezone: 'America/New_York' });
 
-// ── Land Freight — 79 highway corridors, 316 simulated trucks ────────────────
+// ── Land Freight — 110 highway corridors, ~340 simulated trucks ──────────────
+// count field = trucks on that lane (default 4). Busiest corridors use 2 to
+// avoid visual bunching; new secondary/international routes use 3.
 const TRUCK_LANES = [
-  // ── North America — US Interstate ──
-  { sl: 34.0, sg: -118.2, dl: 40.7, dg: -74.0,  sn: 'Los Angeles', dn: 'New York',        type: 'regular', carrier: 'JB Hunt'      },
-  { sl: 41.9, sg: -87.6,  dl: 34.0, dg: -118.2, sn: 'Chicago',     dn: 'Los Angeles',     type: 'regular', carrier: 'Schneider'    },
-  { sl: 40.7, sg: -74.0,  dl: 41.9, dg: -87.6,  sn: 'New York',    dn: 'Chicago',         type: 'regular', carrier: 'Werner'       },
+  // ── North America — US Interstate (high-volume: count 2) ──
+  { sl: 34.0, sg: -118.2, dl: 40.7, dg: -74.0,  sn: 'Los Angeles', dn: 'New York',        type: 'regular', carrier: 'JB Hunt',      count: 2 },
+  { sl: 41.9, sg: -87.6,  dl: 34.0, dg: -118.2, sn: 'Chicago',     dn: 'Los Angeles',     type: 'regular', carrier: 'Schneider',    count: 2 },
+  { sl: 40.7, sg: -74.0,  dl: 41.9, dg: -87.6,  sn: 'New York',    dn: 'Chicago',         type: 'regular', carrier: 'Werner',       count: 2 },
+  { sl: 33.7, sg: -84.4,  dl: 41.9, dg: -87.6,  sn: 'Atlanta',     dn: 'Chicago',         type: 'regular', carrier: 'XPO',          count: 2 },
+  { sl: 32.8, sg: -96.8,  dl: 41.9, dg: -87.6,  sn: 'Dallas',      dn: 'Chicago',         type: 'regular', carrier: 'JB Hunt',      count: 2 },
+  { sl: 34.0, sg: -118.2, dl: 32.8, dg: -96.8,  sn: 'Los Angeles', dn: 'Dallas',          type: 'regular', carrier: 'Schneider',    count: 2 },
+  { sl: 33.7, sg: -84.4,  dl: 32.8, dg: -96.8,  sn: 'Atlanta',     dn: 'Dallas',          type: 'regular', carrier: 'JB Hunt',      count: 2 },
+  { sl: 32.8, sg: -96.8,  dl: 33.7, dg: -84.4,  sn: 'Dallas',      dn: 'Atlanta',         type: 'regular', carrier: 'Werner',       count: 2 },
+  { sl: 41.9, sg: -87.6,  dl: 35.1, dg: -90.0,  sn: 'Chicago',     dn: 'Memphis',         type: 'regular', carrier: 'Old Dominion', count: 2 },
+  { sl: 29.8, sg: -95.4,  dl: 32.8, dg: -96.8,  sn: 'Houston',     dn: 'Dallas',          type: 'tank',    carrier: 'Schneider',    count: 2 },
+  // ── US Interstate (standard) ──
   { sl: 25.8, sg: -80.2,  dl: 33.7, dg: -84.4,  sn: 'Miami',       dn: 'Atlanta',         type: 'regular', carrier: 'Old Dominion' },
-  { sl: 33.7, sg: -84.4,  dl: 41.9, dg: -87.6,  sn: 'Atlanta',     dn: 'Chicago',         type: 'regular', carrier: 'XPO'          },
-  { sl: 33.7, sg: -84.4,  dl: 32.8, dg: -96.8,  sn: 'Atlanta',     dn: 'Dallas',          type: 'regular', carrier: 'JB Hunt'      },
-  { sl: 32.8, sg: -96.8,  dl: 33.7, dg: -84.4,  sn: 'Dallas',      dn: 'Atlanta',         type: 'regular', carrier: 'Werner'       },
-  { sl: 34.0, sg: -118.2, dl: 32.8, dg: -96.8,  sn: 'Los Angeles', dn: 'Dallas',          type: 'regular', carrier: 'Schneider'    },
-  { sl: 32.8, sg: -96.8,  dl: 41.9, dg: -87.6,  sn: 'Dallas',      dn: 'Chicago',         type: 'regular', carrier: 'JB Hunt'      },
-  { sl: 29.8, sg: -95.4,  dl: 32.8, dg: -96.8,  sn: 'Houston',     dn: 'Dallas',          type: 'tank',    carrier: 'Schneider'    },
-  { sl: 29.8, sg: -95.4,  dl: 29.95,dg: -90.1,  sn: 'Houston',     dn: 'New Orleans',     type: 'tank',    carrier: 'Werner'       },
-  { sl: 41.9, sg: -87.6,  dl: 35.1, dg: -90.0,  sn: 'Chicago',     dn: 'Memphis',         type: 'regular', carrier: 'Old Dominion' },
   { sl: 35.1, sg: -90.0,  dl: 33.7, dg: -84.4,  sn: 'Memphis',     dn: 'Atlanta',         type: 'regular', carrier: 'XPO'          },
   { sl: 34.0, sg: -118.2, dl: 33.4, dg: -112.1, sn: 'Los Angeles', dn: 'Phoenix',         type: 'regular', carrier: 'JB Hunt'      },
   { sl: 33.4, sg: -112.1, dl: 32.8, dg: -96.8,  sn: 'Phoenix',     dn: 'Dallas',          type: 'regular', carrier: 'Werner'       },
@@ -1604,24 +1606,45 @@ const TRUCK_LANES = [
   { sl: 42.3, sg: -83.1,  dl: 40.7, dg: -74.0,  sn: 'Detroit',     dn: 'New York',        type: 'regular', carrier: 'JB Hunt'      },
   { sl: 40.7, sg: -74.0,  dl: 39.0, dg: -76.6,  sn: 'New York',    dn: 'Baltimore',       type: 'regular', carrier: 'Old Dominion' },
   { sl: 36.2, sg: -115.2, dl: 34.0, dg: -118.2, sn: 'Las Vegas',   dn: 'Los Angeles',     type: 'regular', carrier: 'Werner'       },
+  { sl: 29.8, sg: -95.4,  dl: 29.95,dg: -90.1,  sn: 'Houston',     dn: 'New Orleans',     type: 'tank',    carrier: 'Werner'       },
   { sl: 29.8, sg: -95.4,  dl: 30.3, dg: -97.7,  sn: 'Houston',     dn: 'Austin',          type: 'tank',    carrier: 'Schneider'    },
+  // ── US secondary corridors (count 3) ──
+  { sl: 44.9, sg: -93.2,  dl: 41.9, dg: -87.6,  sn: 'Minneapolis', dn: 'Chicago',         type: 'regular', carrier: 'JB Hunt',      count: 3 },
+  { sl: 35.2, sg: -80.8,  dl: 33.7, dg: -84.4,  sn: 'Charlotte',   dn: 'Atlanta',         type: 'regular', carrier: 'Old Dominion', count: 3 },
+  { sl: 30.3, sg: -81.7,  dl: 25.8, dg: -80.2,  sn: 'Jacksonville',dn: 'Miami',           type: 'regular', carrier: 'XPO',          count: 3 },
+  { sl: 36.2, sg: -86.8,  dl: 33.7, dg: -84.4,  sn: 'Nashville',   dn: 'Atlanta',         type: 'regular', carrier: 'Werner',       count: 3 },
+  { sl: 39.8, sg: -86.1,  dl: 41.9, dg: -87.6,  sn: 'Indianapolis',dn: 'Chicago',         type: 'regular', carrier: 'Schneider',    count: 3 },
+  { sl: 40.8, sg: -111.9, dl: 39.7, dg: -104.9, sn: 'Salt Lake City',dn: 'Denver',        type: 'regular', carrier: 'JB Hunt',      count: 3 },
+  { sl: 37.8, sg: -122.4, dl: 34.0, dg: -118.2, sn: 'San Francisco',dn: 'Los Angeles',    type: 'regular', carrier: 'Werner',       count: 3 },
+  { sl: 45.5, sg: -122.7, dl: 47.6, dg: -122.3, sn: 'Portland',    dn: 'Seattle',         type: 'regular', carrier: 'Schneider',    count: 3 },
+  { sl: 29.4, sg: -98.5,  dl: 29.8, dg: -95.4,  sn: 'San Antonio', dn: 'Houston',         type: 'tank',    carrier: 'XPO',          count: 3 },
+  { sl: 38.6, sg: -90.2,  dl: 41.9, dg: -87.6,  sn: 'St. Louis',   dn: 'Chicago',         type: 'regular', carrier: 'Old Dominion', count: 3 },
+  { sl: 36.2, sg: -86.8,  dl: 35.1, dg: -90.0,  sn: 'Nashville',   dn: 'Memphis',         type: 'regular', carrier: 'JB Hunt',      count: 3 },
+  { sl: 35.2, sg: -89.9,  dl: 32.3, dg: -90.2,  sn: 'Memphis',     dn: 'Jackson MS',      type: 'tank',    carrier: 'Werner',       count: 3 },
   // ── US–Mexico NAFTA ──
   { sl: 27.5, sg: -99.5,  dl: 19.4, dg: -99.1,  sn: 'Laredo',      dn: 'Mexico City',     type: 'regular', carrier: 'XPO'          },
   { sl: 31.8, sg: -106.4, dl: 25.7, dg: -100.3, sn: 'El Paso',     dn: 'Monterrey',       type: 'regular', carrier: 'DB Schenker'  },
   { sl: 32.5, sg: -117.0, dl: 20.7, dg: -103.3, sn: 'Tijuana',     dn: 'Guadalajara',     type: 'tank',    carrier: 'Werner'       },
   { sl: 32.8, sg: -96.8,  dl: 27.5, dg: -99.5,  sn: 'Dallas',      dn: 'Laredo',          type: 'regular', carrier: 'JB Hunt'      },
   { sl: 29.8, sg: -95.4,  dl: 27.5, dg: -99.5,  sn: 'Houston',     dn: 'Laredo',          type: 'tank',    carrier: 'Schneider'    },
+  { sl: 19.4, sg: -99.1,  dl: 20.7, dg: -103.3, sn: 'Mexico City', dn: 'Guadalajara',     type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 20.7, sg: -103.3, dl: 20.5, dg: -100.4, sn: 'Guadalajara', dn: 'Querétaro',       type: 'regular', carrier: 'DB Schenker',  count: 3 },
   // ── US–Canada ──
   { sl: 42.3, sg: -83.1,  dl: 43.7, dg: -79.4,  sn: 'Detroit',     dn: 'Toronto',         type: 'regular', carrier: 'XPO'          },
   { sl: 47.6, sg: -122.3, dl: 49.3, dg: -123.1, sn: 'Seattle',     dn: 'Vancouver',       type: 'regular', carrier: 'JB Hunt'      },
   { sl: 43.7, sg: -79.4,  dl: 45.5, dg: -73.6,  sn: 'Toronto',     dn: 'Montreal',        type: 'regular', carrier: 'DB Schenker'  },
   { sl: 49.3, sg: -123.1, dl: 51.0, dg: -114.1, sn: 'Vancouver',   dn: 'Calgary',         type: 'regular', carrier: 'Werner'       },
   { sl: 51.0, sg: -114.1, dl: 53.5, dg: -113.5, sn: 'Calgary',     dn: 'Edmonton',        type: 'tank',    carrier: 'Schneider'    },
+  { sl: 45.5, sg: -73.6,  dl: 46.8, dg: -71.2,  sn: 'Montreal',    dn: 'Quebec City',     type: 'regular', carrier: 'DHL Freight',  count: 3 },
   // ── South America ──
   { sl: -23.5,sg: -46.6,  dl: -34.6,dg: -58.4,  sn: 'São Paulo',   dn: 'Buenos Aires',    type: 'regular', carrier: 'DHL Freight'  },
   { sl: -23.5,sg: -46.6,  dl: -19.9,dg: -43.9,  sn: 'São Paulo',   dn: 'Belo Horizonte',  type: 'regular', carrier: 'DHL Freight'  },
   { sl: -12.0,sg: -77.0,  dl: -33.5,dg: -70.6,  sn: 'Lima',        dn: 'Santiago',        type: 'tank',    carrier: 'DB Schenker'  },
-  // ── Europe ──
+  { sl: -22.9,sg: -43.2,  dl: -23.5,dg: -46.6,  sn: 'Rio de Janeiro',dn: 'São Paulo',     type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 4.7,  sg: -74.1,  dl: 6.2,  dg: -75.6,  sn: 'Bogotá',      dn: 'Medellín',        type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: -34.6,sg: -58.4,  dl: -32.9,dg: -68.8,  sn: 'Buenos Aires',dn: 'Mendoza',         type: 'tank',    carrier: 'DHL Freight',  count: 3 },
+  { sl: 10.5, sg: -66.9,  dl: 4.7,  dg: -74.1,  sn: 'Caracas',     dn: 'Bogotá',          type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  // ── Europe (core) ──
   { sl: 51.5, sg: -0.1,   dl: 48.9, dg: 2.3,    sn: 'London',      dn: 'Paris',           type: 'regular', carrier: 'DB Schenker'  },
   { sl: 48.9, sg: 2.3,    dl: 50.8, dg: 4.4,    sn: 'Paris',       dn: 'Brussels',        type: 'regular', carrier: 'DHL Freight'  },
   { sl: 50.8, sg: 4.4,    dl: 52.4, dg: 4.9,    sn: 'Brussels',    dn: 'Amsterdam',       type: 'regular', carrier: 'DB Schenker'  },
@@ -1642,6 +1665,14 @@ const TRUCK_LANES = [
   { sl: 51.9, sg: 4.5,    dl: 50.1, dg: 8.7,    sn: 'Rotterdam',   dn: 'Frankfurt',       type: 'tank',    carrier: 'DHL Freight'  },
   { sl: 59.3, sg: 18.1,   dl: 59.9, dg: 10.7,   sn: 'Stockholm',   dn: 'Oslo',            type: 'regular', carrier: 'DB Schenker'  },
   { sl: 60.2, sg: 24.9,   dl: 59.3, dg: 18.1,   sn: 'Helsinki',    dn: 'Stockholm',       type: 'regular', carrier: 'DHL Freight'  },
+  // ── Europe (secondary, count 3) ──
+  { sl: 51.5, sg: -0.1,   dl: 50.1, dg: 8.7,    sn: 'London',      dn: 'Frankfurt',       type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 47.4, sg: 8.5,    dl: 50.1, dg: 8.7,    sn: 'Zurich',      dn: 'Frankfurt',       type: 'tank',    carrier: 'DHL Freight',  count: 3 },
+  { sl: 50.1, sg: 14.4,   dl: 48.2, dg: 16.4,   sn: 'Prague',      dn: 'Vienna',          type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 42.7, sg: 23.3,   dl: 41.0, dg: 28.9,   sn: 'Sofia',       dn: 'Istanbul',        type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 55.7, sg: 12.6,   dl: 53.6, dg: 10.0,   sn: 'Copenhagen',  dn: 'Hamburg',         type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 38.0, sg: 23.7,   dl: 41.0, dg: 28.9,   sn: 'Athens',      dn: 'Istanbul',        type: 'regular', carrier: 'XPO',          count: 3 },
+  { sl: 44.8, sg: 20.5,   dl: 42.7, dg: 23.3,   sn: 'Belgrade',    dn: 'Sofia',           type: 'regular', carrier: 'DHL Freight',  count: 3 },
   // ── Turkey / Middle East ──
   { sl: 41.0, sg: 28.9,   dl: 39.9, dg: 32.9,   sn: 'Istanbul',    dn: 'Ankara',          type: 'regular', carrier: 'DB Schenker'  },
   { sl: 39.9, sg: 32.9,   dl: 35.7, dg: 51.4,   sn: 'Ankara',      dn: 'Tehran',          type: 'tank',    carrier: 'DHL Freight'  },
@@ -1649,6 +1680,7 @@ const TRUCK_LANES = [
   { sl: 25.2, sg: 55.3,   dl: 24.7, dg: 46.7,   sn: 'Dubai',       dn: 'Riyadh',          type: 'tank',    carrier: 'XPO'          },
   { sl: 25.2, sg: 55.3,   dl: 23.6, dg: 58.6,   sn: 'Dubai',       dn: 'Muscat',          type: 'regular', carrier: 'DHL Freight'  },
   { sl: 30.1, sg: 31.2,   dl: 31.2, dg: 29.9,   sn: 'Cairo',       dn: 'Alexandria',      type: 'regular', carrier: 'DB Schenker'  },
+  { sl: 31.9, sg: 35.9,   dl: 24.7, dg: 46.7,   sn: 'Amman',       dn: 'Riyadh',          type: 'tank',    carrier: 'DHL Freight',  count: 3 },
   // ── China ──
   { sl: 31.2, sg: 121.5,  dl: 39.9, dg: 116.4,  sn: 'Shanghai',    dn: 'Beijing',         type: 'regular', carrier: 'DHL Freight'  },
   { sl: 39.9, sg: 116.4,  dl: 23.1, dg: 113.3,  sn: 'Beijing',     dn: 'Guangzhou',       type: 'regular', carrier: 'DB Schenker'  },
@@ -1658,25 +1690,46 @@ const TRUCK_LANES = [
   { sl: 34.3, sg: 108.9,  dl: 39.5, dg: 76.0,   sn: "Xi'an",       dn: 'Kashgar',         type: 'regular', carrier: 'DB Schenker'  },
   { sl: 39.5, sg: 76.0,   dl: 43.3, dg: 76.9,   sn: 'Kashgar',     dn: 'Almaty',          type: 'regular', carrier: 'DHL Freight'  },
   { sl: 43.3, sg: 76.9,   dl: 55.8, dg: 37.6,   sn: 'Almaty',      dn: 'Moscow',          type: 'regular', carrier: 'DB Schenker'  },
+  { sl: 23.1, sg: 113.3,  dl: 22.5, dg: 114.1,  sn: 'Guangzhou',   dn: 'Shenzhen',        type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 31.2, sg: 121.5,  dl: 30.3, dg: 120.2,  sn: 'Shanghai',    dn: 'Hangzhou',        type: 'regular', carrier: 'DB Schenker',  count: 3 },
   // ── Russia ──
   { sl: 55.8, sg: 37.6,   dl: 52.2, dg: 21.0,   sn: 'Moscow',      dn: 'Warsaw',          type: 'regular', carrier: 'DHL Freight'  },
   { sl: 55.8, sg: 37.6,   dl: 59.9, dg: 30.3,   sn: 'Moscow',      dn: 'St. Petersburg',  type: 'regular', carrier: 'DB Schenker'  },
+  { sl: 55.8, sg: 37.6,   dl: 56.9, dg: 60.6,   sn: 'Moscow',      dn: 'Yekaterinburg',   type: 'tank',    carrier: 'DHL Freight',  count: 3 },
   // ── India ──
   { sl: 28.6, sg: 77.2,   dl: 19.1, dg: 72.9,   sn: 'Delhi',       dn: 'Mumbai',          type: 'regular', carrier: 'DHL Freight'  },
   { sl: 28.6, sg: 77.2,   dl: 22.6, dg: 88.4,   sn: 'Delhi',       dn: 'Kolkata',         type: 'regular', carrier: 'DB Schenker'  },
   { sl: 19.1, sg: 72.9,   dl: 12.9, dg: 77.6,   sn: 'Mumbai',      dn: 'Bangalore',       type: 'regular', carrier: 'DHL Freight'  },
   { sl: 12.9, sg: 77.6,   dl: 13.1, dg: 80.3,   sn: 'Bangalore',   dn: 'Chennai',         type: 'regular', carrier: 'XPO'          },
+  { sl: 22.6, sg: 88.4,   dl: 26.2, dg: 92.9,   sn: 'Kolkata',     dn: 'Guwahati',        type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 17.4, sg: 78.5,   dl: 19.1, dg: 72.9,   sn: 'Hyderabad',   dn: 'Mumbai',          type: 'tank',    carrier: 'DB Schenker',  count: 3 },
   // ── SE Asia ──
   { sl: 13.8, sg: 100.5,  dl: 3.1,  dg: 101.7,  sn: 'Bangkok',     dn: 'Kuala Lumpur',    type: 'regular', carrier: 'DHL Freight'  },
   { sl: 3.1,  sg: 101.7,  dl: 1.4,  dg: 103.8,  sn: 'Kuala Lumpur',dn: 'Singapore',       type: 'regular', carrier: 'DB Schenker'  },
   { sl: 10.8, sg: 106.7,  dl: 11.6, dg: 104.9,  sn: 'Ho Chi Minh', dn: 'Phnom Penh',      type: 'regular', carrier: 'DHL Freight'  },
+  { sl: 21.0, sg: 105.8,  dl: 10.8, dg: 106.7,  sn: 'Hanoi',       dn: 'Ho Chi Minh',     type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 13.8, sg: 100.5,  dl: 16.9, dg: 100.0,  sn: 'Bangkok',     dn: 'Chiang Mai',      type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: -6.2, sg: 106.8,  dl: -7.3, dg: 112.7,  sn: 'Jakarta',     dn: 'Surabaya',        type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  // ── East Asia ──
+  { sl: 37.6, sg: 127.0,  dl: 35.2, dg: 129.1,  sn: 'Seoul',       dn: 'Busan',           type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 35.7, sg: 139.7,  dl: 34.7, dg: 135.5,  sn: 'Tokyo',       dn: 'Osaka',           type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 24.5, sg: 118.1,  dl: 23.1, dg: 113.3,  sn: 'Xiamen',      dn: 'Guangzhou',       type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  // ── Pakistan / Central Asia ──
+  { sl: 24.9, sg: 67.0,   dl: 31.5, dg: 74.3,   sn: 'Karachi',     dn: 'Lahore',          type: 'tank',    carrier: 'DB Schenker',  count: 3 },
   // ── Australia ──
   { sl: -33.9,sg: 151.2,  dl: -37.8,dg: 144.9,  sn: 'Sydney',      dn: 'Melbourne',       type: 'regular', carrier: 'DB Schenker'  },
   { sl: -37.8,sg: 144.9,  dl: -34.9,dg: 138.6,  sn: 'Melbourne',   dn: 'Adelaide',        type: 'regular', carrier: 'DHL Freight'  },
+  { sl: -33.9,sg: 151.2,  dl: -27.5,dg: 153.0,  sn: 'Sydney',      dn: 'Brisbane',        type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: -31.9,sg: 115.9,  dl: -33.9,dg: 151.2,  sn: 'Perth',       dn: 'Sydney',          type: 'tank',    carrier: 'DHL Freight',  count: 3 },
   // ── Africa ──
   { sl: -26.2,sg: 28.0,   dl: -29.9,dg: 31.0,   sn: 'Johannesburg',dn: 'Durban',          type: 'tank',    carrier: 'DB Schenker'  },
   { sl: 6.5,  sg: 3.4,    dl: 9.1,  dg: 7.2,    sn: 'Lagos',       dn: 'Abuja',           type: 'regular', carrier: 'DHL Freight'  },
   { sl: -1.3, sg: 36.8,   dl: -4.1, dg: 39.7,   sn: 'Nairobi',     dn: 'Mombasa',         type: 'regular', carrier: 'DB Schenker'  },
+  { sl: -33.9,sg: 18.4,   dl: -26.2,dg: 28.0,   sn: 'Cape Town',   dn: 'Johannesburg',    type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: 33.6, sg: -7.6,   dl: 36.8, dg: 10.2,   sn: 'Casablanca',  dn: 'Tunis',           type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 6.5,  sg: 3.4,    dl: 5.6,  dg: -0.2,   sn: 'Lagos',       dn: 'Accra',           type: 'regular', carrier: 'DHL Freight',  count: 3 },
+  { sl: -1.3, sg: 36.8,   dl: 0.3,  dg: 32.6,   sn: 'Nairobi',     dn: 'Kampala',         type: 'regular', carrier: 'DB Schenker',  count: 3 },
+  { sl: 15.6, sg: 32.5,   dl: 30.1, dg: 31.2,   sn: 'Khartoum',    dn: 'Cairo',           type: 'tank',    carrier: 'DHL Freight',  count: 3 },
 ];
 
 function buildSimulatedTrucks() {
@@ -1706,7 +1759,7 @@ function buildSimulatedTrucks() {
   const trucks = [];
   let id = 0;
   TRUCK_LANES.forEach((lane, laneIdx) => {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < (lane.count ?? 4); i++) {
       const seed = laneIdx * 1000 + i;
       const phase = (seed * 2654435761) % 86400;
       const progress = ((Date.now() / 1000 + phase) % 86400) / 86400;
