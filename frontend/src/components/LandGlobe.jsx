@@ -280,7 +280,7 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
       refs.glowMesh = glowMesh; refs.glowGeom = glowGeom; refs.glowMat = glowMat;
 
       // ── Equatorial ring — same as Ocean/Air Freight ──
-      const ringGeom = new THREE.TorusGeometry(102, 0.5, 8, 64);
+      const ringGeom = new THREE.TorusGeometry(102, 0.6, 8, 64);
       const ringMat  = new THREE.MeshBasicMaterial({ color: 0x004466, transparent: true, opacity: 0.4 });
       const ringMesh = new THREE.Mesh(ringGeom, ringMat);
       ringMesh.rotation.x = Math.PI / 2;
@@ -507,9 +507,8 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
         arcStartLat="startLat" arcStartLng="startLng"
         arcEndLat="endLat"     arcEndLng="endLng"
         arcColor="color"
-        arcDashLength={0.35} arcDashGap={0.6} arcDashAnimateTime={4500}
+        arcDashLength={0.6} arcDashGap={0.35} arcDashInitialGap={t => t.progress ?? 0} arcDashAnimateTime={3500}
         arcStroke={0.3} arcAltitudeAutoScale={0.25}
-        arcCurveResolution={24}
 
         labelsData={allLabels}
         labelLat="lat" labelLng="lng" labelText="text"
