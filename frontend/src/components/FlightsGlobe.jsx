@@ -112,6 +112,10 @@ function setSpritePos(sprite, lat, lng, alt, globeRadius) {
   sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
 }
 
+// Reusable Vector3s for RAF NDC projection (avoid per-frame allocation)
+const _rafWPF = new THREE.Vector3();
+const _rafFPF = new THREE.Vector3();
+
 // ── Plane sprite icons ─────────────────────────────────────────────────────
 const _planeTexCache = {};
 function makePlaneCanvas(isCargo) {
@@ -267,13 +271,35 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
           // Simulated phases are stable, so we just advance from the fetched progress value.
           if (refs.sprites.size > 0) {
             const now = Date.now();
+            const cam = globeRef.current?.camera?.();
             for (const entry of refs.sprites.values()) {
               const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius, cycleSecs } = entry;
               const elapsed = (now - fetchTs) / 1000;
               const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
-              const pt = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
+              const pt  = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
+              const tFwd = Math.min(t + 0.005, 0.999);
+              const ptF = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, tFwd);
               setSpritePos(sprite, pt.lat, pt.lng, 0.04, globeRadius);
-              sprite.material.rotation = 0;
+
+              // Rotate nose toward destination using NDC screen-space angle.
+              // Plane texture has nose pointing UP (rotation=0 → nose up).
+              // sprite.material.rotation = atan2(dy,dx) - π/2 maps travel dir → nose.
+              if (cam) {
+                const rC = globeRadius * 1.04;
+                const phi  = (90 - pt.lat)  * Math.PI / 180;
+                const th   = (90 - pt.lng)  * Math.PI / 180;
+                const phiF = (90 - ptF.lat) * Math.PI / 180;
+                const thF  = (90 - ptF.lng) * Math.PI / 180;
+                _rafWPF.set(rC * Math.sin(phi)  * Math.cos(th),  rC * Math.cos(phi),  rC * Math.sin(phi)  * Math.sin(th));
+                _rafFPF.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
+                _rafWPF.project(cam);
+                _rafFPF.project(cam);
+                const dx = _rafFPF.x - _rafWPF.x;
+                const dy = _rafFPF.y - _rafWPF.y;
+                if (dx * dx + dy * dy > 1e-10) {
+                  sprite.material.rotation = Math.atan2(dy, dx) - Math.PI / 2;
+                }
+              }
             }
           }
         } catch (_) {}
