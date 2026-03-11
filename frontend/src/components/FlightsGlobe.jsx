@@ -38,11 +38,9 @@ const AIRSPACE_RESTRICTIONS = [
 const HOME_POV = { lat: 25, lng: 10, altitude: 2.2 };
 
 // ── Colors ─────────────────────────────────────────────────────────────────
-// Rose/coral for cargo, soft violet for passenger — distinct from all existing
-// page colors (teal #00d4ff, red #ef4444, amber #f59e0b, lime #84cc16)
-const CARGO_COLOR   = 'rgba(220,80,110,0.9)';   // deep rose
+const CARGO_COLOR   = 'rgba(0,212,255,0.9)';    // cyan
 const PAX_COLOR     = 'rgba(130,90,220,0.9)';   // deep violet
-const CARGO_DIM     = 'rgba(220,80,110,0.12)';  // wider trail opacity
+const CARGO_DIM     = 'rgba(0,212,255,0.12)';   // cyan trail
 const PAX_DIM       = 'rgba(130,90,220,0.12)';
 
 function portStatusColor(status) {

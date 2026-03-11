@@ -58,10 +58,13 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
   const recognitionRef = useRef(null);
   const predictTimerRef = useRef(null);
   const transcriptRef = useRef('');
+  const micActiveRef = useRef(false);   // ref so onend closure always sees current value
+  const prospectRef = useRef(null);     // ref so interval closure always sees latest prospect
 
   // Reset when modal opens or initialProspect changes
   useEffect(() => {
     // Always stop mic when modal state changes
+    micActiveRef.current = false;
     recognitionRef.current?.stop();
     clearInterval(predictTimerRef.current);
     setMicActive(false);
@@ -111,6 +114,9 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  // Keep prospectRef current
+  useEffect(() => { prospectRef.current = prospect; }, [prospect]);
 
   // Timer
   useEffect(() => {
@@ -184,9 +190,10 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
   };
 
   const toggleMic = () => {
-    if (micActive) {
+    if (micActiveRef.current) {
       recognitionRef.current?.stop();
       clearInterval(predictTimerRef.current);
+      micActiveRef.current = false;
       setMicActive(false);
       return;
     }
@@ -209,30 +216,44 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
       setMicTranscript(transcript);
     };
 
-    recognition.onerror = () => { setMicActive(false); };
+    recognition.onerror = (e) => {
+      // 'no-speech' is benign — don't kill the session
+      if (e.error === 'no-speech') return;
+      micActiveRef.current = false;
+      setMicActive(false);
+    };
     recognition.onend = () => {
       // Auto-restart on end if still active (Chrome stops after ~60s silence)
-      if (recognitionRef.current && micActive) {
-        try { recognitionRef.current.start(); } catch (_) {}
+      if (micActiveRef.current) {
+        try { recognition.start(); } catch (_) {}
       }
     };
 
     recognition.start();
+    micActiveRef.current = true;
     setMicActive(true);
 
     const freqMs = parseInt(localStorage.getItem('sdr_mic_frequency') || '30', 10) * 1000;
     predictTimerRef.current = setInterval(async () => {
       const currentTranscript = transcriptRef.current;
-      if (!currentTranscript.trim() || !prospect) return;
+      const currentProspect = prospectRef.current;
+      if (!currentTranscript.trim() || !currentProspect) return;
       try {
         const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
         const r = await fetch(`${API}/api/call-predict`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: currentTranscript, companyName: prospect?.name, model: aiModel }),
+          body: JSON.stringify({ transcript: currentTranscript, companyName: currentProspect.name, model: aiModel }),
         });
-        if (r.ok) setMicPrediction(await r.json());
-      } catch (_) {}
+        const data = await r.json();
+        if (r.ok) {
+          setMicPrediction(data);
+        } else {
+          setMicPrediction({ error: true, message: data.error || `Error ${r.status}` });
+        }
+      } catch (err) {
+        setMicPrediction({ error: true, message: err.message || 'Network error' });
+      }
     }, freqMs);
   };
 
@@ -477,6 +498,14 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
                       "{micPrediction.suggested_response}"
                     </div>
                   )}
+                  {micPrediction.tone && (
+                    <span className="lcm-prediction-tone">{micPrediction.tone}</span>
+                  )}
+                </div>
+              )}
+              {micPrediction?.error && (
+                <div className="lcm-prediction-error">
+                  Prediction failed: {micPrediction.message}
                 </div>
               )}
             </div>

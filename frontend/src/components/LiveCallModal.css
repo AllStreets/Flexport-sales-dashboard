@@ -472,3 +472,29 @@
   font-weight: 700;
   color: #00d4ff;
 }
+
+.lcm-prediction-tone {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #10b981;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.lcm-prediction-error {
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #f87171;
+}
