@@ -64,6 +64,43 @@ function trailArc(vessel, ports) {
   };
 }
 
+// ── Great-circle SLERP for vessel animation ────────────────────────────────
+// Mirrors the backend gcVesselPoint logic. Used in the RAF loop to smoothly
+// advance ship sprites along their route between API refreshes.
+function gcVesselPoint(lat1d, lng1d, lat2d, lng2d, t) {
+  const R = Math.PI / 180;
+  const lat1 = lat1d*R, lng1 = lng1d*R, lat2 = lat2d*R, lng2 = lng2d*R;
+  const x1 = Math.cos(lat1)*Math.cos(lng1), y1 = Math.cos(lat1)*Math.sin(lng1), z1 = Math.sin(lat1);
+  const x2 = Math.cos(lat2)*Math.cos(lng2), y2 = Math.cos(lat2)*Math.sin(lng2), z2 = Math.sin(lat2);
+  const dot = Math.min(1, Math.max(-1, x1*x2 + y1*y2 + z1*z2));
+  const omega = Math.acos(dot);
+  if (omega < 0.0001) return { lat: lat1d, lng: lng1d, heading: 0 };
+  const s = Math.sin(omega);
+  const a = Math.sin((1-t)*omega)/s, b = Math.sin(t*omega)/s;
+  const x = a*x1 + b*x2, y = a*y1 + b*y2, z = a*z1 + b*z2;
+  const lat = Math.atan2(z, Math.sqrt(x*x + y*y)) / R;
+  const lng = Math.atan2(y, x) / R;
+  const t2 = Math.min(t + 0.01, 0.999);
+  const a2 = Math.sin((1-t2)*omega)/s, b2 = Math.sin(t2*omega)/s;
+  const x2p = a2*x1 + b2*x2, y2p = a2*y1 + b2*y2, z2p = a2*z1 + b2*z2;
+  const lat2p = Math.atan2(z2p, Math.sqrt(x2p*x2p + y2p*y2p)) / R;
+  const lng2p = Math.atan2(y2p, x2p) / R;
+  const dLng = ((lng2p - lng + 540) % 360 - 180) * R;
+  const heading = ((Math.atan2(
+    Math.sin(dLng),
+    Math.cos(lat*R)*Math.sin(lat2p*R) - Math.sin(lat*R)*Math.cos(lat2p*R)*Math.cos(dLng)
+  ) / R + 360) % 360);
+  return { lat, lng, heading };
+}
+
+function setSpritePos(sprite, lat, lng, alt, globeRadius) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (90 - lng) * Math.PI / 180;
+  const r = globeRadius * (1 + alt);
+  const ps = Math.sin(phi);
+  sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
+}
+
 // ── Ship sprite icons (customLayerData) ────────────────────────────────────
 // CanvasTexture is created once per color → uploaded to GPU once → reused by all
 // vessels of that type. SpriteMaterial is lightweight (just a map reference).
@@ -110,7 +147,11 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     glowMesh: null, glowGeom: null, glowMat: null,
     ringMesh: null, ringGeom: null, ringMat: null,
     moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
+    sprites: new Map(),
   });
+
+  // Clear sprite map when vessels data refreshes (react-globe.gl recreates sprites on new data reference)
+  useEffect(() => { threeRefs.current.sprites.clear(); }, [vessels]);
 
   useEffect(() => {
     const refs = threeRefs.current;
@@ -209,6 +250,18 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
             const t = Date.now() * 0.00008;
             refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
           }
+          // Animate vessel sprites along their great-circle routes
+          if (refs.sprites.size > 0) {
+            const now = Date.now();
+            for (const entry of refs.sprites.values()) {
+              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius, cycleSecs } = entry;
+              const elapsed = (now - fetchTs) / 1000;
+              const t = (progress0 + elapsed / (cycleSecs || 180)) % 1;
+              const pt = gcVesselPoint(srcLat, srcLng, dstLat, dstLng, t);
+              setSpritePos(sprite, pt.lat, pt.lng, 0.018, globeRadius);
+              sprite.material.rotation = -(pt.heading * Math.PI / 180);
+            }
+          }
         } catch (_) { /* mesh temporarily unavailable — keep loop alive */ }
         refs.frame = requestAnimationFrame(animate);
       };
@@ -240,6 +293,7 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
         refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
         refs.moonGeom = refs.moonMat = refs.moonTex = null;
+        refs.sprites.clear();
       }
     };
   }, []);
@@ -330,12 +384,20 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
         customLayerData={vessels}
         customThreeObject={makeShipSprite}
         customThreeObjectUpdate={(sprite, vessel, globeRadius) => {
-          const alt = 0.025;
-          const phi = (90 - vessel.lat) * Math.PI / 180;
-          const theta = (90 - vessel.lng) * Math.PI / 180;
-          const r = globeRadius * (1 + alt);
-          const ps = Math.sin(phi);
-          sprite.position.set(r * ps * Math.cos(theta), r * Math.cos(phi), r * ps * Math.sin(theta));
+          if (vessel.srcLat && vessel.dstLat) {
+            const seedStr = String(vessel.mmsi || vessel.id || '1000');
+            const seed = parseInt(seedStr.slice(-4), 10) || 100;
+            const cycleSecs = 60 + (seed % 241); // 60–300 seconds per route
+            threeRefs.current.sprites.set(vessel.mmsi || vessel.id, {
+              sprite, srcLat: vessel.srcLat, srcLng: vessel.srcLng,
+              dstLat: vessel.dstLat, dstLng: vessel.dstLng,
+              progress0: vessel.progress ?? 0, fetchTs: Date.now(), globeRadius, cycleSecs,
+            });
+            setSpritePos(sprite, vessel.lat, vessel.lng, 0.018, globeRadius);
+          } else {
+            if (vessel.mmsi || vessel.id) threeRefs.current.sprites.delete(vessel.mmsi || vessel.id);
+            setSpritePos(sprite, vessel.lat, vessel.lng, 0.018, globeRadius);
+          }
           sprite.material.rotation = -((vessel.cog ?? vessel.heading ?? 0) * Math.PI / 180);
         }}
         onCustomLayerClick={handleVesselClick}
