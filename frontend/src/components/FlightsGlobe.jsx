@@ -40,10 +40,10 @@ const HOME_POV = { lat: 25, lng: 10, altitude: 2.2 };
 // ── Colors ─────────────────────────────────────────────────────────────────
 // Rose/coral for cargo, soft violet for passenger — distinct from all existing
 // page colors (teal #00d4ff, red #ef4444, amber #f59e0b, lime #84cc16)
-const CARGO_COLOR   = 'rgba(251,113,133,0.9)';  // rose-400
-const PAX_COLOR     = 'rgba(167,139,250,0.9)';  // violet-400
-const CARGO_DIM     = 'rgba(251,113,133,0.07)';
-const PAX_DIM       = 'rgba(167,139,250,0.07)';
+const CARGO_COLOR   = 'rgba(220,80,110,0.9)';   // deep rose
+const PAX_COLOR     = 'rgba(130,90,220,0.9)';   // deep violet
+const CARGO_DIM     = 'rgba(220,80,110,0.12)';  // wider trail opacity
+const PAX_DIM       = 'rgba(130,90,220,0.12)';
 
 function portStatusColor(status) {
   if (status === 'disruption') return '#ef4444';
@@ -254,9 +254,9 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
           if (refs.sprites.size > 0) {
             const now = Date.now();
             for (const entry of refs.sprites.values()) {
-              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius } = entry;
-              const elapsed = (now - fetchTs) / 1000; // seconds since last fetch
-              const t = (progress0 + elapsed / 86400) % 1;
+              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius, cycleSecs } = entry;
+              const elapsed = (now - fetchTs) / 1000;
+              const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
               const pt = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.04, globeRadius);
               sprite.material.rotation = -(pt.heading * Math.PI / 180);
@@ -394,22 +394,23 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
         ref={globeRef}
         width={width}
         height={height}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-day.jpg"
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
         backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
         backgroundColor="rgba(0,0,0,0)"
-        atmosphereColor="rgba(0,180,255,0.25)"
-        atmosphereAltitude={0.25}
+        atmosphereColor="rgba(140,90,220,0.28)"
+        atmosphereAltitude={0.22}
         customLayerData={flights}
         customThreeObject={makePlaneSprite}
         customThreeObjectUpdate={(sprite, f, globeRadius) => {
           if (f.srcLat && f.dstLat) {
-            // Register for RAF animation
+            // Stable cycle duration from flight ID seed: 45–240 seconds per route completion
+            const seed = parseInt(f.id.replace(/\D/g, '').slice(-4) || '100', 10) || 100;
+            const cycleSecs = 45 + (seed % 196);
             threeRefs.current.sprites.set(f.id, {
               sprite, srcLat: f.srcLat, srcLng: f.srcLng,
               dstLat: f.dstLat, dstLng: f.dstLng,
-              progress0: f.progress ?? 0, fetchTs: Date.now(), globeRadius,
+              progress0: f.progress ?? 0, fetchTs: Date.now(), globeRadius, cycleSecs,
             });
-            // Initial position from fetched data
             setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
           } else {
             threeRefs.current.sprites.delete(f.id);
@@ -421,11 +422,11 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
         customLayerLabel={flightLabel}
         arcsData={arcs}
         arcColor="color"
-        arcDashLength={0.55}
-        arcDashGap={0.45}
+        arcDashLength={0.65}
+        arcDashGap={0.35}
         arcDashInitialGap={arcInitialGap}
-        arcDashAnimateTime={5000}
-        arcStroke={0.22}
+        arcDashAnimateTime={4000}
+        arcStroke={0.38}
         arcAltitudeAutoScale={0.18}
         arcCurveResolution={24}
         ringsData={allRings}
