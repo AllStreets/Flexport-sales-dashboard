@@ -585,6 +585,25 @@ Return JSON: { "response": "2-3 sentence counter", "follow_up_question": "Questi
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/call-predict', async (req, res) => {
+  const { transcript, companyName, model = 'gpt-4.1-mini' } = req.body;
+  if (!transcript?.trim()) return res.status(400).json({ error: 'transcript required' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  try {
+    const axios = require('axios');
+    const systemPrompt = `You are a real-time sales call coach for a Flexport SDR on a live sales call. Based on the live call transcript, predict what will likely happen in the next 15-30 seconds and suggest exactly what the SDR should say next. Be very concise. Respond ONLY with valid JSON: { "prediction": "one short sentence about what's coming", "suggested_response": "exact words the SDR should say", "tone": "confident|curious|empathetic|urgent" }`;
+    const r = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model, max_tokens: 200,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Company: ${companyName || 'Unknown'}\n\nLive transcript:\n${transcript.slice(-2000)}` },
+      ],
+      response_format: { type: 'json_object' },
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    res.json(JSON.parse(r.data.choices[0].message.content));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/map-plan', async (req, res) => {
   const { companyName, prospectData } = req.body;
   if (!companyName) return res.status(400).json({ error: 'companyName required' });

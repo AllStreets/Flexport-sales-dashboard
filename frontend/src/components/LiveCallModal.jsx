@@ -1,10 +1,11 @@
 // frontend/src/components/LiveCallModal.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RiPhoneLine, RiPhoneFill, RiSearchLine, RiLightbulbLine,
   RiCloseLine, RiFileTextLine, RiFlashlightLine, RiTimerLine,
   RiAddCircleLine, RiUser3Line, RiMailSendLine,
+  RiMicLine, RiMicOffLine,
 } from 'react-icons/ri';
 import './LiveCallModal.css';
 
@@ -50,8 +51,24 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
   const [notes, setNotes] = useState('');
   const [pipelined, setPipelined] = useState(false);
 
+  // Microphone AI
+  const [micActive, setMicActive] = useState(false);
+  const [micTranscript, setMicTranscript] = useState('');
+  const [micPrediction, setMicPrediction] = useState(null);
+  const recognitionRef = useRef(null);
+  const predictTimerRef = useRef(null);
+  const transcriptRef = useRef('');
+
   // Reset when modal opens or initialProspect changes
   useEffect(() => {
+    // Always stop mic when modal state changes
+    recognitionRef.current?.stop();
+    clearInterval(predictTimerRef.current);
+    setMicActive(false);
+    setMicPrediction(null);
+    setMicTranscript('');
+    transcriptRef.current = '';
+
     if (!isOpen) return;
     setAccountData(null);
     setQuery('');
@@ -152,6 +169,59 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
       onEndCall({ prospectId: prospect.id, notes: notes.trim(), timestamp: Date.now() });
     }
     onClose();
+  };
+
+  const toggleMic = () => {
+    if (micActive) {
+      recognitionRef.current?.stop();
+      clearInterval(predictTimerRef.current);
+      setMicActive(false);
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Use Chrome or Edge.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join(' ');
+      transcriptRef.current = transcript;
+      setMicTranscript(transcript);
+    };
+
+    recognition.onerror = () => { setMicActive(false); };
+    recognition.onend = () => {
+      // Auto-restart on end if still active (Chrome stops after ~60s silence)
+      if (recognitionRef.current && micActive) {
+        try { recognitionRef.current.start(); } catch (_) {}
+      }
+    };
+
+    recognition.start();
+    setMicActive(true);
+
+    const freqMs = parseInt(localStorage.getItem('sdr_mic_frequency') || '20', 10) * 1000;
+    predictTimerRef.current = setInterval(async () => {
+      const currentTranscript = transcriptRef.current;
+      if (!currentTranscript.trim() || !prospect) return;
+      try {
+        const aiModel = localStorage.getItem('sdr_ai_model') || 'gpt-4.1-mini';
+        const r = await fetch(`${API}/api/call-predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: currentTranscript, companyName: prospect?.name, model: aiModel }),
+        });
+        if (r.ok) setMicPrediction(await r.json());
+      } catch (_) {}
+    }, freqMs);
   };
 
   if (!isOpen) return null;
@@ -289,13 +359,32 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
               <div className="lcm-panel-title">Talk Track</div>
 
               {!callPrep && (
-                <button className="lcm-gen-btn" onClick={generateCallPrep} disabled={callPrepLoading}>
-                  <RiFlashlightLine size={13} />
-                  {callPrepLoading ? 'Generating talk track...' : 'Generate Talk Track'}
-                </button>
+                <div className="lcm-gen-row">
+                  <button className="lcm-gen-btn" onClick={generateCallPrep} disabled={callPrepLoading}>
+                    <RiFlashlightLine size={13} />
+                    {callPrepLoading ? 'Generating talk track...' : 'Generate Talk Track'}
+                  </button>
+                  <button
+                    className={`lcm-mic-btn${micActive ? ' active' : ''}`}
+                    onClick={toggleMic}
+                    title={micActive ? 'Stop AI listening' : 'Start AI listening — AI predicts what to say next'}
+                  >
+                    {micActive ? <RiMicLine size={15} /> : <RiMicOffLine size={15} />}
+                  </button>
+                </div>
               )}
 
               {callPrep && (
+                <>
+                <button
+                  className={`lcm-mic-btn${micActive ? ' active' : ''}`}
+                  onClick={toggleMic}
+                  style={{ marginBottom: 8 }}
+                  title={micActive ? 'Stop AI listening' : 'Start AI listening'}
+                >
+                  {micActive ? <RiMicLine size={15} /> : <RiMicOffLine size={15} />}
+                  <span style={{ fontSize: 11, marginLeft: 6 }}>{micActive ? 'AI Listening...' : 'Start AI Listening'}</span>
+                </button>
                 <div className="lcm-talk-content">
                   {callPrep.opening_hook && (
                     <div className="lcm-talk-block">
@@ -314,6 +403,7 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
                     </div>
                   )}
                 </div>
+                </>
               )}
 
               {/* Objection Handler */}
@@ -348,6 +438,35 @@ export default function LiveCallModal({ isOpen, onClose, initialProspect = null,
                   </div>
                 )}
               </div>
+
+              {/* Mic status indicator */}
+              {micActive && (
+                <div className="lcm-mic-status">
+                  <RiMicLine size={10} className="lcm-mic-pulse" />
+                  Listening
+                  {micTranscript && (
+                    <span className="lcm-mic-excerpt">
+                      …{micTranscript.slice(-80)}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* AI Prediction output */}
+              {micPrediction && !micPrediction.error && (
+                <div className="lcm-prediction-card">
+                  <div className="lcm-prediction-header">AI Prediction</div>
+                  {micPrediction.prediction && (
+                    <p className="lcm-prediction-body">{micPrediction.prediction}</p>
+                  )}
+                  {micPrediction.suggested_response && (
+                    <div className="lcm-prediction-say">
+                      <span className="lcm-say-label">Say: </span>
+                      "{micPrediction.suggested_response}"
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right: Capture + Actions */}

@@ -369,3 +369,105 @@
 }
 .lcm-action-btn.secondary { color: #475569; }
 .lcm-action-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Mic button ───────────────────────────────────────────────────────────── */
+.lcm-gen-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lcm-mic-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.lcm-mic-btn.active {
+  background: rgba(239,68,68,0.12);
+  border-color: rgba(239,68,68,0.4);
+  color: #ef4444;
+  animation: lcm-mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lcm-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); }
+  50%        { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+
+/* ── Mic status bar ──────────────────────────────────────────────────────── */
+.lcm-mic-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #ef4444;
+}
+
+.lcm-mic-pulse {
+  animation: lcm-icon-pulse 1s ease-in-out infinite;
+}
+
+@keyframes lcm-icon-pulse {
+  0%, 100% { opacity: 1; }
+  50%        { opacity: 0.35; }
+}
+
+.lcm-mic-excerpt {
+  color: #475569;
+  font-size: 9px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── AI Prediction card ──────────────────────────────────────────────────── */
+.lcm-prediction-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.18);
+  border-radius: 8px;
+}
+
+.lcm-prediction-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.lcm-prediction-body {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 6px;
+}
+
+.lcm-prediction-say {
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.lcm-say-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #00d4ff;
+}
