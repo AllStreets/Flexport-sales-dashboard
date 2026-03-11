@@ -1133,8 +1133,9 @@ connectAisStream();
 
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
-  if (vessels.length >= 100 && req.query.mode !== 'sim') {
-    // Only serve live data with substantial coverage (≥100 vessels) and mode not forced to sim.
+  if (vessels.length >= 20 && req.query.mode !== 'sim') {
+    // Serve live data once we have at least 20 vessels. Lower threshold helps localhost
+    // where AISstream free-tier concurrent-connection limits cause shorter accumulation windows.
     return res.json({ source: 'live', vessels: vessels.slice(0, 200) });
   }
   // Great-circle interpolation — prevents vessels crossing land or taking wrong-hemisphere paths

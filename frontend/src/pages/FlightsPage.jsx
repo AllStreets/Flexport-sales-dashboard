@@ -38,9 +38,23 @@ import './FlightsPage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-// Attempts live ADS-B via backend, then browser-side proxy if Railway IP is blocked
+// Maps a raw OpenSky states array into our flight shape
+function parseOpenSkyStates(states) {
+  return states.slice(0, 300).map(s => ({
+    id: s[0],
+    callsign: (s[1] || '').trim(),
+    isCargo: true,
+    lat: s[6],
+    lng: s[5],
+    altitude: s[13] || 10000,
+    velocity: s[9] ? Math.round(s[9] * 1.944) : 460,
+    heading: s[10] || 0,
+  }));
+}
+
+// Attempts live ADS-B via backend, then browser-side (unauthenticated then authenticated)
 async function fetchFlightsWithFallback(API) {
-  // Step 1: Try backend (works on localhost; may fall back to sim on Railway)
+  // Step 1: Try backend (works on localhost where Railway IP blocks don't apply)
   let backendData;
   try {
     const r = await fetch(`${API}/api/flights`);
@@ -53,7 +67,24 @@ async function fetchFlightsWithFallback(API) {
     return backendData;
   }
 
-  // Step 2: Backend returned sim — try browser-side OpenSky using token from backend
+  // Step 2a: Browser-side unauthenticated OpenSky call.
+  // Railway's IPs are blocked from OpenSky's OAuth server, but the user's browser
+  // is not — so call the data API directly without a token first.
+  try {
+    const osRes = await fetch('https://opensky-network.org/api/states/all');
+    if (osRes.ok) {
+      const data = await osRes.json();
+      const states = (data?.states || []).filter(s =>
+        s[5] != null && s[6] != null && !s[8]
+      );
+      if (states.length >= 20) {
+        return { source: 'live', flights: parseOpenSkyStates(states) };
+      }
+    }
+  } catch (_) {}
+
+  // Step 2b: Try browser-side authenticated call using token from backend.
+  // Falls back here if unauthenticated returned too few results.
   try {
     const tokenRes = await fetch(`${API}/api/opensky-token`);
     if (!tokenRes.ok) throw new Error('no token');
@@ -68,30 +99,16 @@ async function fetchFlightsWithFallback(API) {
       s[5] != null && s[6] != null && !s[8]
     );
     if (states.length >= 20) {
-      return {
-        source: 'live',
-        flights: states.slice(0, 300).map(s => ({
-          id: s[0],
-          callsign: (s[1] || '').trim(),
-          isCargo: true,
-          lat: s[6],
-          lng: s[5],
-          altitude: s[13] || 10000,
-          velocity: s[9] ? Math.round(s[9] * 1.944) : 460,
-          heading: s[10] || 0,
-        })),
-      };
+      return { source: 'live', flights: parseOpenSkyStates(states) };
     }
-  } catch (_) {
-    // Browser-side fetch also failed — use sim
-  }
+  } catch (_) {}
 
   // Step 3: Fallback — fetch sim explicitly
   try {
     const r = await fetch(`${API}/api/flights?mode=sim`);
     return r.json();
   } catch (_) {
-    return backendData; // return whatever we had
+    return backendData;
   }
 }
 
