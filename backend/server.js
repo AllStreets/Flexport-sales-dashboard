@@ -1138,7 +1138,7 @@ app.get('/api/vessels', (req, res) => {
     // where AISstream free-tier concurrent-connection limits cause shorter accumulation windows.
     return res.json({ source: 'live', vessels: vessels.slice(0, 200) });
   }
-  // Great-circle interpolation — prevents vessels crossing land or taking wrong-hemisphere paths
+  // Great-circle interpolation
   function greatCirclePoint(lat1d, lng1d, lat2d, lng2d, t) {
     const R = Math.PI / 180;
     const lat1 = lat1d * R, lng1 = lng1d * R, lat2 = lat2d * R, lng2 = lng2d * R;
@@ -1154,6 +1154,17 @@ app.get('/api/vessels', (req, res) => {
       lat: Math.atan2(z, Math.sqrt(x*x + y*y)) / R,
       lng: Math.atan2(y, x) / R,
     };
+  }
+  // Multi-segment waypoint interpolation — distributes t equally across segments.
+  // points = [{lat,lng}, ...] covering full path from src through waypoints to dst.
+  function gcWaypointedPoint(points, t) {
+    const n = points.length - 1;
+    if (n <= 0) return points[0];
+    if (t <= 0) return points[0];
+    if (t >= 1) return points[n];
+    const segT = t * n;
+    const idx = Math.min(Math.floor(segT), n - 1);
+    return greatCirclePoint(points[idx].lat, points[idx].lng, points[idx+1].lat, points[idx+1].lng, segT - idx);
   }
 
   // Simulated fallback — 250 vessels on real SHIPPING_LANES trade routes
@@ -1171,81 +1182,104 @@ app.get('/api/vessels', (req, res) => {
     const key = `${lat},${lng}`;
     return PORT_NAMES[key] || `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lng).toFixed(1)}°${lng >= 0 ? 'E' : 'W'}`;
   }
-  // 62 diverse ocean routes covering all major trade regions — all great-circle-safe (open ocean paths)
+  // Ocean routes with waypoints (wps) on any path that would cross land.
+  // wps = intermediate {lat,lng} checkpoints; vessel interpolates through them.
   const VESSEL_LANES = [
-    // ── Trans-Pacific (Asia → US West) ──
-    { sl: 31.2, sg: 121.5, dl: 33.7, dg: -118.2, sn: 'Shanghai', dn: 'Los Angeles' },
-    { sl: 10.8, sg: 106.7, dl: 33.7, dg: -118.2, sn: 'Ho Chi Minh City', dn: 'Los Angeles' },
-    { sl: 35.7, sg: 139.7, dl: 33.7, dg: -118.2, sn: 'Tokyo', dn: 'Los Angeles' },
-    { sl: 35.1, sg: 129.0, dl: 33.7, dg: -118.2, sn: 'Busan', dn: 'Los Angeles' },
-    { sl: 25.0, sg: 121.5, dl: 33.7, dg: -118.2, sn: 'Taipei', dn: 'Los Angeles' },
-    { sl: 22.3, sg: 114.2, dl: 33.7, dg: -118.2, sn: 'Hong Kong', dn: 'Los Angeles' },
-    { sl: 14.6, sg: 121.0, dl: 33.7, dg: -118.2, sn: 'Manila', dn: 'Los Angeles' },
-    { sl: -6.2, sg: 106.8, dl: 33.7, dg: -118.2, sn: 'Jakarta', dn: 'Los Angeles' },
-    { sl: -33.9, sg: 151.2, dl: 33.7, dg: -118.2, sn: 'Sydney', dn: 'Los Angeles' },
-    { sl: -37.8, sg: 144.9, dl: 33.7, dg: -118.2, sn: 'Melbourne', dn: 'Los Angeles' },
-    { sl: -36.9, sg: 174.8, dl: 33.7, dg: -118.2, sn: 'Auckland', dn: 'Los Angeles' },
-    { sl: 35.0, sg: 136.8, dl: 33.7, dg: -118.2, sn: 'Nagoya', dn: 'Los Angeles' },
-    { sl: -27.4, sg: 153.0, dl: 33.7, dg: -118.2, sn: 'Brisbane', dn: 'Los Angeles' },
-    // ── Trans-Pacific (Asia → US East via Panama) — use Seattle as proxy to avoid land ──
-    { sl: 31.2, sg: 121.5, dl: 47.6, dg: -122.3, sn: 'Shanghai', dn: 'Seattle' },
-    { sl: 1.35, sg: 103.8, dl: 47.6, dg: -122.3, sn: 'Singapore', dn: 'Seattle' },
-    // ── Cape Reroute: Asia → Cape Town ──
-    { sl: 1.35, sg: 103.8, dl: -34.4, dg: 18.5, sn: 'Singapore', dn: 'Cape Town' },
-    { sl: 19.0, sg: 72.8,  dl: -34.4, dg: 18.5, sn: 'Mumbai', dn: 'Cape Town' },
-    { sl: 6.9,  sg: 79.9,  dl: -34.4, dg: 18.5, sn: 'Colombo', dn: 'Cape Town' },
-    { sl: 31.2, sg: 121.5, dl: -34.4, dg: 18.5, sn: 'Shanghai', dn: 'Cape Town' },
-    { sl: 35.7, sg: 139.7, dl: -34.4, dg: 18.5, sn: 'Tokyo', dn: 'Cape Town' },
-    { sl: -6.2, sg: 106.8, dl: -34.4, dg: 18.5, sn: 'Jakarta', dn: 'Cape Town' },
-    { sl: -31.9,sg: 115.8, dl: -34.4, dg: 18.5, sn: 'Fremantle', dn: 'Cape Town' },
-    { sl: 13.1, sg: 80.3,  dl: -34.4, dg: 18.5, sn: 'Chennai', dn: 'Cape Town' },
-    // ── Cape Reroute: Cape Town → Europe ──
-    { sl: -34.4, sg: 18.5, dl: 51.9, dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam' },
-    { sl: -34.4, sg: 18.5, dl: 53.5, dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg' },
-    { sl: -34.4, sg: 18.5, dl: 40.7, dg: -74.0, sn: 'Cape Town', dn: 'New York' },
-    { sl: -34.4, sg: 18.5, dl: 29.7, dg: -95.0, sn: 'Cape Town', dn: 'Houston' },
+    // ── Trans-Pacific (Asia → US West) — open Pacific, safe ──
+    { sl: 31.2, sg: 121.5, dl: 33.7, dg: -118.2, sn: 'Shanghai',       dn: 'Los Angeles' },
+    { sl: 10.8, sg: 106.7, dl: 33.7, dg: -118.2, sn: 'Ho Chi Minh City',dn: 'Los Angeles' },
+    { sl: 35.7, sg: 139.7, dl: 33.7, dg: -118.2, sn: 'Tokyo',           dn: 'Los Angeles' },
+    { sl: 35.1, sg: 129.0, dl: 33.7, dg: -118.2, sn: 'Busan',           dn: 'Los Angeles' },
+    { sl: 25.0, sg: 121.5, dl: 33.7, dg: -118.2, sn: 'Taipei',          dn: 'Los Angeles' },
+    { sl: 22.3, sg: 114.2, dl: 33.7, dg: -118.2, sn: 'Hong Kong',       dn: 'Los Angeles' },
+    { sl: 14.6, sg: 121.0, dl: 33.7, dg: -118.2, sn: 'Manila',          dn: 'Los Angeles' },
+    { sl: -6.2, sg: 106.8, dl: 33.7, dg: -118.2, sn: 'Jakarta',         dn: 'Los Angeles' },
+    { sl: -33.9,sg: 151.2, dl: 33.7, dg: -118.2, sn: 'Sydney',          dn: 'Los Angeles' },
+    { sl: -37.8,sg: 144.9, dl: 33.7, dg: -118.2, sn: 'Melbourne',       dn: 'Los Angeles' },
+    { sl: -36.9,sg: 174.8, dl: 33.7, dg: -118.2, sn: 'Auckland',        dn: 'Los Angeles' },
+    { sl: 35.0, sg: 136.8, dl: 33.7, dg: -118.2, sn: 'Nagoya',          dn: 'Los Angeles' },
+    { sl: -27.4,sg: 153.0, dl: 33.7, dg: -118.2, sn: 'Brisbane',        dn: 'Los Angeles' },
+    // ── Trans-Pacific (Asia → Seattle) — safe ──
+    { sl: 31.2, sg: 121.5, dl: 47.6, dg: -122.3, sn: 'Shanghai',   dn: 'Seattle' },
+    { sl: 1.35, sg: 103.8, dl: 47.6, dg: -122.3, sn: 'Singapore',  dn: 'Seattle' },
+    // ── Cape Reroute: Asia → Cape Town (waypoints keep ships in Indian Ocean) ──
+    { sl: 1.35, sg: 103.8, dl: -34.4, dg: 18.5, sn: 'Singapore', dn: 'Cape Town',
+      wps: [{lat:-8,lng:80},{lat:-25,lng:50}] },
+    { sl: 19.0, sg: 72.8,  dl: -34.4, dg: 18.5, sn: 'Mumbai',    dn: 'Cape Town',
+      wps: [{lat:-5,lng:62},{lat:-22,lng:38}] },
+    { sl: 6.9,  sg: 79.9,  dl: -34.4, dg: 18.5, sn: 'Colombo',   dn: 'Cape Town',
+      wps: [{lat:-5,lng:68},{lat:-22,lng:40}] },
+    { sl: 31.2, sg: 121.5, dl: -34.4, dg: 18.5, sn: 'Shanghai',   dn: 'Cape Town',
+      wps: [{lat:3,lng:100},{lat:-10,lng:72},{lat:-22,lng:40}] },
+    { sl: 35.7, sg: 139.7, dl: -34.4, dg: 18.5, sn: 'Tokyo',      dn: 'Cape Town',
+      wps: [{lat:3,lng:108},{lat:-5,lng:80},{lat:-22,lng:42}] },
+    { sl: -6.2, sg: 106.8, dl: -34.4, dg: 18.5, sn: 'Jakarta',    dn: 'Cape Town',
+      wps: [{lat:-12,lng:85},{lat:-24,lng:48}] },
+    { sl: -31.9,sg: 115.8, dl: -34.4, dg: 18.5, sn: 'Fremantle',  dn: 'Cape Town' }, // Southern Ocean, safe
+    { sl: 13.1, sg: 80.3,  dl: -34.4, dg: 18.5, sn: 'Chennai',    dn: 'Cape Town',
+      wps: [{lat:-5,lng:64},{lat:-22,lng:40}] },
+    // ── Cape Reroute: Cape Town → Europe/Americas ──
+    { sl: -34.4, sg: 18.5, dl: 51.9,  dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam' }, // Atlantic, safe
+    { sl: -34.4, sg: 18.5, dl: 53.5,  dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg'   },
+    { sl: -34.4, sg: 18.5, dl: 40.7,  dg: -74.0, sn: 'Cape Town', dn: 'New York'  },
+    { sl: -34.4, sg: 18.5, dl: 29.7,  dg: -95.0, sn: 'Cape Town', dn: 'Houston',
+      wps: [{lat:8,lng:-55},{lat:22,lng:-82},{lat:25,lng:-90}] },
     // ── Atlantic: Europe ↔ Americas ──
-    { sl: 51.9,  sg: 4.5,  dl: 40.7, dg: -74.0, sn: 'Rotterdam', dn: 'New York' },
-    { sl: 53.5,  sg: 10.0, dl: 40.7, dg: -74.0, sn: 'Hamburg', dn: 'New York' },
-    { sl: 51.3,  sg: 4.4,  dl: 40.7, dg: -74.0, sn: 'Antwerp', dn: 'New York' },
-    { sl: 51.9,  sg: 4.5,  dl: 32.1, dg: -81.1, sn: 'Rotterdam', dn: 'Savannah' },
-    { sl: 51.9,  sg: 4.5,  dl: 29.7, dg: -95.0, sn: 'Rotterdam', dn: 'Houston' },
-    { sl: 51.9,  sg: 4.5,  dl: 25.8, dg: -80.2, sn: 'Rotterdam', dn: 'Miami' },
+    { sl: 51.9,  sg: 4.5,  dl: 40.7,  dg: -74.0, sn: 'Rotterdam', dn: 'New York'  }, // Atlantic, safe
+    { sl: 53.5,  sg: 10.0, dl: 40.7,  dg: -74.0, sn: 'Hamburg',   dn: 'New York'  },
+    { sl: 51.3,  sg: 4.4,  dl: 40.7,  dg: -74.0, sn: 'Antwerp',   dn: 'New York'  },
+    { sl: 51.9,  sg: 4.5,  dl: 32.1,  dg: -81.1, sn: 'Rotterdam', dn: 'Savannah'  },
+    { sl: 51.9,  sg: 4.5,  dl: 25.8,  dg: -80.2, sn: 'Rotterdam', dn: 'Miami'     },
+    { sl: 51.9,  sg: 4.5,  dl: 29.7,  dg: -95.0, sn: 'Rotterdam', dn: 'Houston',
+      wps: [{lat:28,lng:-55},{lat:22,lng:-82},{lat:25,lng:-90}] },
     // ── South America ──
-    { sl: -23.9, sg: -46.3, dl: 40.7, dg: -74.0, sn: 'Santos', dn: 'New York' },
-    { sl: -23.9, sg: -46.3, dl: 51.9, dg: 4.5,   sn: 'Santos', dn: 'Rotterdam' },
-    { sl: -34.6, sg: -58.4, dl: 51.9, dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam' },
-    { sl: -34.6, sg: -58.4, dl: 40.7, dg: -74.0, sn: 'Buenos Aires', dn: 'New York' },
-    { sl: -12.0, sg: -77.1, dl: 33.7, dg: -118.2,sn: 'Callao', dn: 'Los Angeles' },
-    { sl: 10.4,  sg: -75.5, dl: 29.7, dg: -95.0, sn: 'Cartagena', dn: 'Houston' },
-    { sl: 19.2,  sg: -96.1, dl: 29.7, dg: -95.0, sn: 'Veracruz', dn: 'Houston' },
-    // ── Africa ──
-    { sl: -29.9, sg: 31.0,  dl: 51.9, dg: 4.5,   sn: 'Durban', dn: 'Rotterdam' },
-    { sl: 6.4,   sg: 3.4,   dl: 51.9, dg: 4.5,   sn: 'Lagos', dn: 'Rotterdam' },
-    { sl: 14.7,  sg: -17.4, dl: 40.7, dg: -74.0, sn: 'Dakar', dn: 'New York' },
-    { sl: -4.1,  sg: 39.7,  dl: -34.4,dg: 18.5,  sn: 'Mombasa', dn: 'Cape Town' },
-    // ── Indian Ocean ──
-    { sl: 25.0,  sg: 55.1,  dl: 1.35, dg: 103.8, sn: 'Jebel Ali', dn: 'Singapore' },
-    { sl: 25.0,  sg: 55.1,  dl: -34.4,dg: 18.5,  sn: 'Jebel Ali', dn: 'Cape Town' },
-    { sl: 19.0,  sg: 72.8,  dl: 1.35, dg: 103.8, sn: 'Mumbai', dn: 'Singapore' },
-    { sl: 6.9,   sg: 79.9,  dl: 1.35, dg: 103.8, sn: 'Colombo', dn: 'Singapore' },
-    { sl: -4.1,  sg: 39.7,  dl: 19.0, dg: 72.8,  sn: 'Mombasa', dn: 'Mumbai' },
-    { sl: 19.0,  sg: 72.8,  dl: -4.1, dg: 39.7,  sn: 'Mumbai', dn: 'Mombasa' },
-    // ── Intra-Asia ──
-    { sl: 31.2,  sg: 121.5, dl: 1.35, dg: 103.8, sn: 'Shanghai', dn: 'Singapore' },
-    { sl: 35.7,  sg: 139.7, dl: 1.35, dg: 103.8, sn: 'Tokyo', dn: 'Singapore' },
-    { sl: 35.1,  sg: 129.0, dl: 1.35, dg: 103.8, sn: 'Busan', dn: 'Singapore' },
-    { sl: 14.6,  sg: 121.0, dl: 1.35, dg: 103.8, sn: 'Manila', dn: 'Singapore' },
-    { sl: 31.2,  sg: 121.5, dl: 35.7, dg: 139.7, sn: 'Shanghai', dn: 'Tokyo' },
-    { sl: 31.2,  sg: 121.5, dl: 35.1, dg: 129.0, sn: 'Shanghai', dn: 'Busan' },
-    // ── Australia ↔ Asia ──
-    { sl: -33.9, sg: 151.2, dl: 1.35, dg: 103.8, sn: 'Sydney', dn: 'Singapore' },
-    { sl: -37.8, sg: 144.9, dl: 35.7, dg: 139.7, sn: 'Melbourne', dn: 'Tokyo' },
-    { sl: -27.4, sg: 153.0, dl: 1.35, dg: 103.8, sn: 'Brisbane', dn: 'Singapore' },
-    { sl: -31.9, sg: 115.8, dl: 1.35, dg: 103.8, sn: 'Fremantle', dn: 'Singapore' },
-    // ── South Pacific ──
-    { sl: -36.9, sg: 174.8, dl: 35.7, dg: 139.7, sn: 'Auckland', dn: 'Tokyo' },
-    { sl: -36.9, sg: 174.8, dl: -33.9,dg: 151.2, sn: 'Auckland', dn: 'Sydney' },
+    { sl: -23.9, sg: -46.3, dl: 40.7,  dg: -74.0, sn: 'Santos',       dn: 'New York'   },
+    { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam'  },
+    { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam'  },
+    { sl: -34.6, sg: -58.4, dl: 40.7,  dg: -74.0, sn: 'Buenos Aires', dn: 'New York'   },
+    { sl: -12.0, sg: -77.1, dl: 33.7,  dg: -118.2,sn: 'Callao',       dn: 'Los Angeles'},
+    { sl: 10.4,  sg: -75.5, dl: 29.7,  dg: -95.0, sn: 'Cartagena',    dn: 'Houston',
+      wps: [{lat:22,lng:-87}] }, // Yucatan Channel
+    { sl: 19.2,  sg: -96.1, dl: 29.7,  dg: -95.0, sn: 'Veracruz',     dn: 'Houston',
+      wps: [{lat:24,lng:-94}] }, // Gulf of Mexico
+    // ── Africa — routes that would cross land need Atlantic waypoints ──
+    { sl: -29.9, sg: 31.0,  dl: 51.9,  dg: 4.5,   sn: 'Durban',   dn: 'Rotterdam',
+      wps: [{lat:-34.5,lng:17.5},{lat:-25,lng:11},{lat:-8,lng:3},{lat:5,lng:-3},{lat:24,lng:-18},{lat:36.1,lng:-5.6}] },
+    { sl: 6.4,   sg: 3.4,   dl: 51.9,  dg: 4.5,   sn: 'Lagos',    dn: 'Rotterdam',
+      wps: [{lat:2,lng:-5},{lat:14,lng:-18},{lat:28,lng:-14},{lat:36.1,lng:-5.6}] },
+    { sl: 14.7,  sg: -17.4, dl: 40.7,  dg: -74.0, sn: 'Dakar',    dn: 'New York' }, // Atlantic, safe
+    { sl: -4.1,  sg: 39.7,  dl: -34.4, dg: 18.5,  sn: 'Mombasa',  dn: 'Cape Town',
+      wps: [{lat:-10,lng:42},{lat:-22,lng:37},{lat:-29,lng:32.5}] },
+    // ── Indian Ocean — waypoints keep ships clear of Arabian Peninsula, India, E.Africa ──
+    { sl: 25.0,  sg: 55.1,  dl: 1.35,  dg: 103.8, sn: 'Jebel Ali', dn: 'Singapore',
+      wps: [{lat:18,lng:63},{lat:8,lng:78},{lat:4,lng:92}] },
+    { sl: 25.0,  sg: 55.1,  dl: -34.4, dg: 18.5,  sn: 'Jebel Ali', dn: 'Cape Town',
+      wps: [{lat:18,lng:63},{lat:5,lng:58},{lat:-8,lng:48}] },
+    { sl: 19.0,  sg: 72.8,  dl: 1.35,  dg: 103.8, sn: 'Mumbai',    dn: 'Singapore',
+      wps: [{lat:6,lng:82},{lat:3,lng:93}] }, // south of Sri Lanka
+    { sl: 6.9,   sg: 79.9,  dl: 1.35,  dg: 103.8, sn: 'Colombo',   dn: 'Singapore' }, // Indian Ocean, safe
+    { sl: -4.1,  sg: 39.7,  dl: 19.0,  dg: 72.8,  sn: 'Mombasa',   dn: 'Mumbai',
+      wps: [{lat:5,lng:52}] }, // Gulf of Aden
+    { sl: 19.0,  sg: 72.8,  dl: -4.1,  dg: 39.7,  sn: 'Mumbai',    dn: 'Mombasa',
+      wps: [{lat:5,lng:52}] },
+    // ── Intra-Asia — South China Sea/Western Pacific, safe ──
+    { sl: 31.2,  sg: 121.5, dl: 1.35,  dg: 103.8, sn: 'Shanghai', dn: 'Singapore' },
+    { sl: 35.7,  sg: 139.7, dl: 1.35,  dg: 103.8, sn: 'Tokyo',    dn: 'Singapore' },
+    { sl: 35.1,  sg: 129.0, dl: 1.35,  dg: 103.8, sn: 'Busan',    dn: 'Singapore' },
+    { sl: 14.6,  sg: 121.0, dl: 1.35,  dg: 103.8, sn: 'Manila',   dn: 'Singapore' },
+    { sl: 31.2,  sg: 121.5, dl: 35.7,  dg: 139.7, sn: 'Shanghai', dn: 'Tokyo'     },
+    { sl: 31.2,  sg: 121.5, dl: 35.1,  dg: 129.0, sn: 'Shanghai', dn: 'Busan'     },
+    // ── Australia ↔ Asia — waypoints avoid Indonesian archipelago ──
+    { sl: -33.9, sg: 151.2, dl: 1.35,  dg: 103.8, sn: 'Sydney',    dn: 'Singapore',
+      wps: [{lat:-10,lng:127},{lat:-5,lng:116}] }, // Timor Sea → Lombok Strait
+    { sl: -37.8, sg: 144.9, dl: 35.7,  dg: 139.7, sn: 'Melbourne', dn: 'Tokyo'     }, // Pacific, safe
+    { sl: -27.4, sg: 153.0, dl: 1.35,  dg: 103.8, sn: 'Brisbane',  dn: 'Singapore',
+      wps: [{lat:-10,lng:130},{lat:-5,lng:116}] },
+    { sl: -31.9, sg: 115.8, dl: 1.35,  dg: 103.8, sn: 'Fremantle', dn: 'Singapore',
+      wps: [{lat:-8,lng:108},{lat:3,lng:103}] }, // Indian Ocean → Malacca
+    // ── South Pacific — Tasman Sea / open Pacific, safe ──
+    { sl: -36.9, sg: 174.8, dl: 35.7,  dg: 139.7, sn: 'Auckland', dn: 'Tokyo'   },
+    { sl: -36.9, sg: 174.8, dl: -33.9, dg: 151.2, sn: 'Auckland', dn: 'Sydney'  },
   ];
   const VESSEL_NAMES = [
     'EVER ACCORD','OOCL EUROPE','MSC GÜLSÜN','CMA CGM BRAZIL','COSCO SHIPPING UNIVERSE',
@@ -1264,7 +1298,11 @@ app.get('/api/vessels', (req, res) => {
   for (let i = 0; i < 250; i++) {
     const lane = VESSEL_LANES[i % VESSEL_LANES.length];
     const t = ((i * 0.13 + i * i * 0.0003 + Date.now() * 0.0000008) % 1);
-    const pos = greatCirclePoint(lane.sl, lane.sg, lane.dl, lane.dg, t);
+    // Use waypointed interpolation if the lane has wps, otherwise plain great-circle.
+    const allPts = lane.wps
+      ? [{lat:lane.sl,lng:lane.sg}, ...lane.wps, {lat:lane.dl,lng:lane.dg}]
+      : null;
+    const pos = allPts ? gcWaypointedPoint(allPts, t) : greatCirclePoint(lane.sl, lane.sg, lane.dl, lane.dg, t);
     const { lat, lng } = pos;
     const suffix = i >= VESSEL_NAMES.length ? ` ${Math.floor(i / VESSEL_NAMES.length) + 1}` : '';
     simVessels.push({
@@ -1278,6 +1316,7 @@ app.get('/api/vessels', (req, res) => {
       srcLat: lane.sl, srcLng: lane.sg,
       dstLat: lane.dl, dstLng: lane.dg,
       srcName: lane.sn, dstName: lane.dn,
+      waypoints: lane.wps || null,
       progress: t,
       ts: Date.now(), simulated: true,
     });

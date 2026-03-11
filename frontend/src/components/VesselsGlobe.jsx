@@ -54,19 +54,45 @@ function nearestPort(lat, lng, ports) {
 }
 function trailArc(vessel, ports) {
   if (!vessel.lat) return null;
-  let srcLat = vessel.srcLat, srcLng = vessel.srcLng;
-  if (!srcLat) {
+  let arcStart;
+  if (vessel.srcLat) {
+    // Use the start of the current waypoint segment so trail stays in ocean.
+    arcStart = arcSegmentStart(vessel);
+  } else {
     const p = nearestPort(vessel.lat, vessel.lng, ports);
     if (!p) return null;
-    srcLat = p.lat; srcLng = p.lng;
+    arcStart = { lat: p.lat, lng: p.lng };
   }
   const bright = vesselColor(vessel.type);
   return {
-    startLat: srcLat, startLng: srcLng,
+    startLat: arcStart.lat, startLng: arcStart.lng,
     endLat: vessel.lat, endLng: vessel.lng,
     color: [dimColor(bright), bright],
     mmsi: vessel.mmsi,
   };
+}
+
+// Multi-segment waypoint interpolation — mirrors backend gcWaypointedPoint.
+// points = [{lat,lng},...] from src through waypoints to dst.
+function gcMultiPoint(points, t) {
+  const n = points.length - 1;
+  if (n <= 0) return { lat: points[0].lat, lng: points[0].lng };
+  if (t <= 0) return { lat: points[0].lat, lng: points[0].lng };
+  if (t >= 1) return { lat: points[n].lat, lng: points[n].lng };
+  const segT = t * n;
+  const idx = Math.min(Math.floor(segT), n - 1);
+  return gcVesselPoint(points[idx].lat, points[idx].lng, points[idx+1].lat, points[idx+1].lng, segT - idx);
+}
+
+// Returns the arc-start for a vessel's trail: the start of the current waypoint segment
+// (so the trail arc stays in ocean rather than back-tracking across land to the origin port).
+function arcSegmentStart(vessel) {
+  if (!vessel.waypoints?.length || vessel.progress == null) {
+    return { lat: vessel.srcLat, lng: vessel.srcLng };
+  }
+  const pts = [{lat: vessel.srcLat, lng: vessel.srcLng}, ...vessel.waypoints, {lat: vessel.dstLat, lng: vessel.dstLng}];
+  const idx = Math.min(Math.floor(vessel.progress * (pts.length - 1)), pts.length - 2);
+  return pts[idx];
 }
 
 // ── Great-circle SLERP for vessel animation ────────────────────────────────
@@ -266,14 +292,16 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
             const t = Date.now() * 0.00008;
             refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
           }
-          // Animate vessel sprites along their great-circle routes
+          // Animate vessel sprites along their routes (waypointed paths stay in ocean)
           if (refs.sprites.size > 0) {
             const now = Date.now();
             for (const entry of refs.sprites.values()) {
-              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius, cycleSecs } = entry;
+              const { sprite, srcLat, srcLng, dstLat, dstLng, wpsAll, progress0, fetchTs, globeRadius, cycleSecs } = entry;
               const elapsed = (now - fetchTs) / 1000;
               const t = (progress0 + elapsed / (cycleSecs || 180)) % 1;
-              const pt = gcVesselPoint(srcLat, srcLng, dstLat, dstLng, t);
+              const pt = wpsAll
+                ? gcMultiPoint(wpsAll, t)
+                : gcVesselPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.018, globeRadius);
               sprite.material.rotation = -(pt.heading * Math.PI / 180);
             }
@@ -402,10 +430,15 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
           if (vessel.srcLat && vessel.dstLat) {
             const seedStr = String(vessel.mmsi || vessel.id || '1000');
             const seed = parseInt(seedStr.slice(-4), 10) || 100;
-            const cycleSecs = 60 + (seed % 241); // 60–300 seconds per route
+            const cycleSecs = 60 + (seed % 241);
+            // Build full waypoint path if vessel has wps from backend.
+            const wpsAll = vessel.waypoints?.length
+              ? [{lat:vessel.srcLat,lng:vessel.srcLng}, ...vessel.waypoints, {lat:vessel.dstLat,lng:vessel.dstLng}]
+              : null;
             threeRefs.current.sprites.set(vessel.mmsi || vessel.id, {
               sprite, srcLat: vessel.srcLat, srcLng: vessel.srcLng,
               dstLat: vessel.dstLat, dstLng: vessel.dstLng,
+              wpsAll,
               progress0: vessel.progress ?? 0, fetchTs: Date.now(), globeRadius, cycleSecs,
             });
             setSpritePos(sprite, vessel.lat, vessel.lng, 0.018, globeRadius);
