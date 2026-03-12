@@ -104,6 +104,16 @@ function gcFlightPoint(lat1d, lng1d, lat2d, lng2d, t) {
   return { lat, lng, heading };
 }
 
+// Compute a point slightly ahead of (lat, lng) along the given heading (degrees from north).
+// Used to give live ADS-B sprites the same nose-forward NDC rotation as simulated flights.
+function forwardPoint(lat, lng, headingDeg, stepDeg = 0.5) {
+  const R = Math.PI / 180;
+  const latR = lat * R, lonR = lng * R, hR = headingDeg * R, d = stepDeg * R;
+  const newLatR = Math.asin(Math.sin(latR) * Math.cos(d) + Math.cos(latR) * Math.sin(d) * Math.cos(hR));
+  const newLonR = lonR + Math.atan2(Math.sin(hR) * Math.sin(d) * Math.cos(latR), Math.cos(d) - Math.sin(latR) * Math.sin(newLatR));
+  return { lat: newLatR / R, lng: newLonR / R };
+}
+
 function setSpritePos(sprite, lat, lng, alt, globeRadius) {
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (90 - lng) * Math.PI / 180;
@@ -273,23 +283,33 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
             const now = Date.now();
             const cam = globeRef.current?.camera?.();
             for (const entry of refs.sprites.values()) {
-              const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius, cycleSecs } = entry;
-              const elapsed = (now - fetchTs) / 1000;
-              const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
-              const pt  = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
-              const tFwd = Math.min(t + 0.005, 0.999);
-              const ptF = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, tFwd);
-              setSpritePos(sprite, pt.lat, pt.lng, 0.04, globeRadius);
+              const { sprite, globeRadius } = entry;
+              let curLat, curLng, fwdLat, fwdLng;
 
-              // Rotate nose toward destination using NDC screen-space angle.
-              // Plane texture has nose pointing UP (rotation=0 → nose up).
-              // sprite.material.rotation = atan2(dy,dx) - π/2 maps travel dir → nose.
+              if (entry.isLive) {
+                // Live ADS-B: fixed position, heading-derived forward point
+                curLat = entry.lat; curLng = entry.lng;
+                const fp = forwardPoint(curLat, curLng, entry.heading ?? 0);
+                fwdLat = fp.lat; fwdLng = fp.lng;
+              } else {
+                // Simulated: advance along great-circle route
+                const { srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, cycleSecs } = entry;
+                const elapsed = (now - fetchTs) / 1000;
+                const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
+                const pt  = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
+                const ptF = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, Math.min(t + 0.005, 0.999));
+                curLat = pt.lat; curLng = pt.lng;
+                fwdLat = ptF.lat; fwdLng = ptF.lng;
+                setSpritePos(sprite, curLat, curLng, 0.04, globeRadius);
+              }
+
+              // NDC screen-space rotation: nose points toward (fwdLat, fwdLng)
               if (cam) {
                 const rC = globeRadius * 1.04;
-                const phi  = (90 - pt.lat)  * Math.PI / 180;
-                const th   = (90 - pt.lng)  * Math.PI / 180;
-                const phiF = (90 - ptF.lat) * Math.PI / 180;
-                const thF  = (90 - ptF.lng) * Math.PI / 180;
+                const phi  = (90 - curLat) * Math.PI / 180;
+                const th   = (90 - curLng) * Math.PI / 180;
+                const phiF = (90 - fwdLat) * Math.PI / 180;
+                const thF  = (90 - fwdLng) * Math.PI / 180;
                 _rafWPF.set(rC * Math.sin(phi)  * Math.cos(th),  rC * Math.cos(phi),  rC * Math.sin(phi)  * Math.sin(th));
                 _rafFPF.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
                 _rafWPF.project(cam);
@@ -453,10 +473,13 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
             });
             setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
           } else {
-            threeRefs.current.sprites.delete(f.id);
+            // Live ADS-B: register with heading so RAF loop can rotate nose-forward
+            threeRefs.current.sprites.set(f.id, {
+              sprite, lat: f.lat, lng: f.lng,
+              heading: f.heading ?? 0, globeRadius, isLive: true,
+            });
             setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
           }
-          sprite.material.rotation = 0;
         }}
         onCustomLayerClick={handleFlightClick}
         customLayerLabel={flightLabel}
