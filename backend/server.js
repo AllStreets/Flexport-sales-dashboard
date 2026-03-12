@@ -1220,9 +1220,9 @@ app.get('/api/vessels', (req, res) => {
       wps: [{lat:-5,lng:64},{lat:-22,lng:53},{lat:-32,lng:33}] },
     // ── Cape Reroute: Cape Town → Europe/Americas ──
     { sl: -34.4, sg: 18.5, dl: 51.9,  dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam',
-      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:20,lng:-18},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:15,lng:-22},{lat:36.1,lng:-5.6}] },
     { sl: -34.4, sg: 18.5, dl: 53.5,  dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg',
-      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:20,lng:-18},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:15,lng:-22},{lat:36.1,lng:-5.6}] },
     { sl: -34.4, sg: 18.5, dl: 40.7,  dg: -74.0, sn: 'Cape Town', dn: 'New York'  },
     { sl: -34.4, sg: 18.5, dl: 29.7,  dg: -95.0, sn: 'Cape Town', dn: 'Houston',
       wps: [{lat:8,lng:-55},{lat:15,lng:-75},{lat:24,lng:-84},{lat:25,lng:-90}] },
@@ -1236,11 +1236,13 @@ app.get('/api/vessels', (req, res) => {
       wps: [{lat:28,lng:-55},{lat:24,lng:-84},{lat:25,lng:-90}] },
     // ── South America ──
     { sl: -23.9, sg: -46.3, dl: 40.7,  dg: -74.0, sn: 'Santos',       dn: 'New York',
-      wps: [{lat:-25,lng:-38},{lat:0,lng:-25},{lat:20,lng:-65}] }, // east into Atlantic, avoid Brazil
-    { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam'  }, // NE Atlantic, safe
-    { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam'  }, // NE Atlantic, safe
+      wps: [{lat:-30,lng:-35},{lat:-5,lng:-28},{lat:10,lng:-55},{lat:25,lng:-70}] },
+    { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam',
+      wps: [{lat:-30,lng:-35},{lat:-5,lng:-28},{lat:15,lng:-26},{lat:36.1,lng:-5.6}] },
+    { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam',
+      wps: [{lat:-38,lng:-50},{lat:-10,lng:-30},{lat:10,lng:-25},{lat:25,lng:-22},{lat:36.1,lng:-5.6}] },
     { sl: -34.6, sg: -58.4, dl: 40.7,  dg: -74.0, sn: 'Buenos Aires', dn: 'New York',
-      wps: [{lat:-38,lng:-52},{lat:0,lng:-25},{lat:20,lng:-65}] }, // east into Atlantic, avoid S. America
+      wps: [{lat:-38,lng:-50},{lat:-10,lng:-30},{lat:8,lng:-56},{lat:25,lng:-70}] },
     { sl: -12.0, sg: -77.1, dl: 33.7,  dg: -118.2,sn: 'Callao',       dn: 'Los Angeles',
       wps: [{lat:5,lng:-88},{lat:18,lng:-110}] },
     { sl: 10.4,  sg: -75.5, dl: 29.7,  dg: -95.0, sn: 'Cartagena',    dn: 'Houston',
