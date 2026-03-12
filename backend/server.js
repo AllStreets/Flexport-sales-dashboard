@@ -1220,9 +1220,9 @@ app.get('/api/vessels', (req, res) => {
       wps: [{lat:-5,lng:64},{lat:-22,lng:53},{lat:-32,lng:33}] },
     // ── Cape Reroute: Cape Town → Europe/Americas ──
     { sl: -34.4, sg: 18.5, dl: 51.9,  dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam',
-      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:15,lng:-22},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:15,lng:-22},{lat:37,lng:-14},{lat:48,lng:-8},{lat:50,lng:-2}] },
     { sl: -34.4, sg: 18.5, dl: 53.5,  dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg',
-      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:15,lng:-22},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:15,lng:-22},{lat:37,lng:-14},{lat:48,lng:-8},{lat:53,lng:4}] },
     { sl: -34.4, sg: 18.5, dl: 40.7,  dg: -74.0, sn: 'Cape Town', dn: 'New York'  },
     { sl: -34.4, sg: 18.5, dl: 29.7,  dg: -95.0, sn: 'Cape Town', dn: 'Houston',
       wps: [{lat:8,lng:-55},{lat:15,lng:-75},{lat:24,lng:-84},{lat:25,lng:-90}] },
@@ -1238,9 +1238,9 @@ app.get('/api/vessels', (req, res) => {
     { sl: -23.9, sg: -46.3, dl: 40.7,  dg: -74.0, sn: 'Santos',       dn: 'New York',
       wps: [{lat:-30,lng:-35},{lat:-5,lng:-28},{lat:10,lng:-55},{lat:25,lng:-70}] },
     { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam',
-      wps: [{lat:-30,lng:-35},{lat:-5,lng:-28},{lat:15,lng:-26},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-30,lng:-35},{lat:-5,lng:-28},{lat:15,lng:-26},{lat:37,lng:-14},{lat:48,lng:-8},{lat:50,lng:-2}] },
     { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam',
-      wps: [{lat:-38,lng:-50},{lat:-10,lng:-30},{lat:10,lng:-25},{lat:25,lng:-22},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-38,lng:-50},{lat:-10,lng:-30},{lat:10,lng:-25},{lat:25,lng:-22},{lat:37,lng:-14},{lat:48,lng:-8},{lat:50,lng:-2}] },
     { sl: -34.6, sg: -58.4, dl: 40.7,  dg: -74.0, sn: 'Buenos Aires', dn: 'New York',
       wps: [{lat:-38,lng:-50},{lat:-10,lng:-30},{lat:8,lng:-56},{lat:25,lng:-70}] },
     { sl: -12.0, sg: -77.1, dl: 33.7,  dg: -118.2,sn: 'Callao',       dn: 'Los Angeles',
@@ -1251,9 +1251,9 @@ app.get('/api/vessels', (req, res) => {
       wps: [{lat:24,lng:-94}] }, // Gulf of Mexico
     // ── Africa — routes that would cross land need Atlantic waypoints ──
     { sl: -29.9, sg: 31.0,  dl: 51.9,  dg: 4.5,   sn: 'Durban',   dn: 'Rotterdam',
-      wps: [{lat:-35,lng:32},{lat:-37,lng:20},{lat:-25,lng:11},{lat:-8,lng:3},{lat:5,lng:-3},{lat:24,lng:-18},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-35,lng:32},{lat:-37,lng:20},{lat:-25,lng:11},{lat:-8,lng:3},{lat:5,lng:-3},{lat:24,lng:-18},{lat:37,lng:-14},{lat:48,lng:-8},{lat:50,lng:-2}] },
     { sl: 6.4,   sg: 3.4,   dl: 51.9,  dg: 4.5,   sn: 'Lagos',    dn: 'Rotterdam',
-      wps: [{lat:2,lng:-5},{lat:14,lng:-18},{lat:28,lng:-14},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:2,lng:-5},{lat:14,lng:-18},{lat:28,lng:-14},{lat:37,lng:-14},{lat:48,lng:-8},{lat:50,lng:-2}] },
     { sl: 14.7,  sg: -17.4, dl: 40.7,  dg: -74.0, sn: 'Dakar',    dn: 'New York' }, // Atlantic, safe
     { sl: -4.1,  sg: 39.7,  dl: -34.4, dg: 18.5,  sn: 'Mombasa',  dn: 'Cape Town',
       wps: [{lat:-10,lng:44},{lat:-22,lng:50},{lat:-32,lng:33}] },
