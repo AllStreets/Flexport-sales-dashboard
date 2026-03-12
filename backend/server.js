@@ -1204,26 +1204,28 @@ app.get('/api/vessels', (req, res) => {
     { sl: 1.35, sg: 103.8, dl: 47.6, dg: -122.3, sn: 'Singapore',  dn: 'Seattle' },
     // ── Cape Reroute: Asia → Cape Town (waypoints keep ships in Indian Ocean) ──
     { sl: 1.35, sg: 103.8, dl: -34.4, dg: 18.5, sn: 'Singapore', dn: 'Cape Town',
-      wps: [{lat:-8,lng:80},{lat:-25,lng:50}] },
+      wps: [{lat:-8,lng:80},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: 19.0, sg: 72.8,  dl: -34.4, dg: 18.5, sn: 'Mumbai',    dn: 'Cape Town',
-      wps: [{lat:-5,lng:62},{lat:-22,lng:38}] },
+      wps: [{lat:-5,lng:62},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: 6.9,  sg: 79.9,  dl: -34.4, dg: 18.5, sn: 'Colombo',   dn: 'Cape Town',
-      wps: [{lat:-5,lng:68},{lat:-22,lng:40}] },
+      wps: [{lat:-5,lng:68},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: 31.2, sg: 121.5, dl: -34.4, dg: 18.5, sn: 'Shanghai',   dn: 'Cape Town',
-      wps: [{lat:3,lng:100},{lat:-10,lng:72},{lat:-22,lng:40}] },
+      wps: [{lat:3,lng:103},{lat:-8,lng:78},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: 35.7, sg: 139.7, dl: -34.4, dg: 18.5, sn: 'Tokyo',      dn: 'Cape Town',
-      wps: [{lat:3,lng:108},{lat:-5,lng:80},{lat:-22,lng:42}] },
+      wps: [{lat:10,lng:125},{lat:3,lng:108},{lat:-8,lng:78},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: -6.2, sg: 106.8, dl: -34.4, dg: 18.5, sn: 'Jakarta',    dn: 'Cape Town',
-      wps: [{lat:-12,lng:85},{lat:-24,lng:48}] },
+      wps: [{lat:-12,lng:85},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: -31.9,sg: 115.8, dl: -34.4, dg: 18.5, sn: 'Fremantle',  dn: 'Cape Town' }, // Southern Ocean, safe
     { sl: 13.1, sg: 80.3,  dl: -34.4, dg: 18.5, sn: 'Chennai',    dn: 'Cape Town',
-      wps: [{lat:-5,lng:64},{lat:-22,lng:40}] },
+      wps: [{lat:-5,lng:64},{lat:-22,lng:53},{lat:-32,lng:33}] },
     // ── Cape Reroute: Cape Town → Europe/Americas ──
-    { sl: -34.4, sg: 18.5, dl: 51.9,  dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam' }, // Atlantic, safe
-    { sl: -34.4, sg: 18.5, dl: 53.5,  dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg'   },
+    { sl: -34.4, sg: 18.5, dl: 51.9,  dg: 4.5,   sn: 'Cape Town', dn: 'Rotterdam',
+      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:20,lng:-18},{lat:36.1,lng:-5.6}] },
+    { sl: -34.4, sg: 18.5, dl: 53.5,  dg: 10.0,  sn: 'Cape Town', dn: 'Hamburg',
+      wps: [{lat:-30,lng:12},{lat:-5,lng:-2},{lat:20,lng:-18},{lat:36.1,lng:-5.6}] },
     { sl: -34.4, sg: 18.5, dl: 40.7,  dg: -74.0, sn: 'Cape Town', dn: 'New York'  },
     { sl: -34.4, sg: 18.5, dl: 29.7,  dg: -95.0, sn: 'Cape Town', dn: 'Houston',
-      wps: [{lat:8,lng:-55},{lat:22,lng:-82},{lat:25,lng:-90}] },
+      wps: [{lat:8,lng:-55},{lat:15,lng:-75},{lat:24,lng:-84},{lat:25,lng:-90}] },
     // ── Atlantic: Europe ↔ Americas ──
     { sl: 51.9,  sg: 4.5,  dl: 40.7,  dg: -74.0, sn: 'Rotterdam', dn: 'New York'  }, // Atlantic, safe
     { sl: 53.5,  sg: 10.0, dl: 40.7,  dg: -74.0, sn: 'Hamburg',   dn: 'New York'  },
@@ -1231,30 +1233,31 @@ app.get('/api/vessels', (req, res) => {
     { sl: 51.9,  sg: 4.5,  dl: 32.1,  dg: -81.1, sn: 'Rotterdam', dn: 'Savannah'  },
     { sl: 51.9,  sg: 4.5,  dl: 25.8,  dg: -80.2, sn: 'Rotterdam', dn: 'Miami'     },
     { sl: 51.9,  sg: 4.5,  dl: 29.7,  dg: -95.0, sn: 'Rotterdam', dn: 'Houston',
-      wps: [{lat:28,lng:-55},{lat:22,lng:-82},{lat:25,lng:-90}] },
+      wps: [{lat:28,lng:-55},{lat:24,lng:-84},{lat:25,lng:-90}] },
     // ── South America ──
     { sl: -23.9, sg: -46.3, dl: 40.7,  dg: -74.0, sn: 'Santos',       dn: 'New York'   },
     { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam'  },
     { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam'  },
     { sl: -34.6, sg: -58.4, dl: 40.7,  dg: -74.0, sn: 'Buenos Aires', dn: 'New York'   },
-    { sl: -12.0, sg: -77.1, dl: 33.7,  dg: -118.2,sn: 'Callao',       dn: 'Los Angeles'},
+    { sl: -12.0, sg: -77.1, dl: 33.7,  dg: -118.2,sn: 'Callao',       dn: 'Los Angeles',
+      wps: [{lat:5,lng:-88},{lat:18,lng:-110}] },
     { sl: 10.4,  sg: -75.5, dl: 29.7,  dg: -95.0, sn: 'Cartagena',    dn: 'Houston',
-      wps: [{lat:22,lng:-87}] }, // Yucatan Channel
+      wps: [{lat:15,lng:-80},{lat:22,lng:-87}] }, // Caribbean then Yucatan Channel
     { sl: 19.2,  sg: -96.1, dl: 29.7,  dg: -95.0, sn: 'Veracruz',     dn: 'Houston',
       wps: [{lat:24,lng:-94}] }, // Gulf of Mexico
     // ── Africa — routes that would cross land need Atlantic waypoints ──
     { sl: -29.9, sg: 31.0,  dl: 51.9,  dg: 4.5,   sn: 'Durban',   dn: 'Rotterdam',
-      wps: [{lat:-34.5,lng:17.5},{lat:-25,lng:11},{lat:-8,lng:3},{lat:5,lng:-3},{lat:24,lng:-18},{lat:36.1,lng:-5.6}] },
+      wps: [{lat:-35,lng:32},{lat:-37,lng:20},{lat:-25,lng:11},{lat:-8,lng:3},{lat:5,lng:-3},{lat:24,lng:-18},{lat:36.1,lng:-5.6}] },
     { sl: 6.4,   sg: 3.4,   dl: 51.9,  dg: 4.5,   sn: 'Lagos',    dn: 'Rotterdam',
       wps: [{lat:2,lng:-5},{lat:14,lng:-18},{lat:28,lng:-14},{lat:36.1,lng:-5.6}] },
     { sl: 14.7,  sg: -17.4, dl: 40.7,  dg: -74.0, sn: 'Dakar',    dn: 'New York' }, // Atlantic, safe
     { sl: -4.1,  sg: 39.7,  dl: -34.4, dg: 18.5,  sn: 'Mombasa',  dn: 'Cape Town',
-      wps: [{lat:-10,lng:42},{lat:-22,lng:37},{lat:-29,lng:32.5}] },
+      wps: [{lat:-10,lng:44},{lat:-22,lng:50},{lat:-32,lng:33}] },
     // ── Indian Ocean — waypoints keep ships clear of Arabian Peninsula, India, E.Africa ──
     { sl: 25.0,  sg: 55.1,  dl: 1.35,  dg: 103.8, sn: 'Jebel Ali', dn: 'Singapore',
       wps: [{lat:18,lng:63},{lat:8,lng:78},{lat:4,lng:92}] },
     { sl: 25.0,  sg: 55.1,  dl: -34.4, dg: 18.5,  sn: 'Jebel Ali', dn: 'Cape Town',
-      wps: [{lat:18,lng:63},{lat:5,lng:58},{lat:-8,lng:48}] },
+      wps: [{lat:18,lng:63},{lat:5,lng:58},{lat:-8,lng:48},{lat:-22,lng:53},{lat:-32,lng:33}] },
     { sl: 19.0,  sg: 72.8,  dl: 1.35,  dg: 103.8, sn: 'Mumbai',    dn: 'Singapore',
       wps: [{lat:6,lng:82},{lat:3,lng:93}] }, // south of Sri Lanka
     { sl: 6.9,   sg: 79.9,  dl: 1.35,  dg: 103.8, sn: 'Colombo',   dn: 'Singapore' }, // Indian Ocean, safe
@@ -1271,10 +1274,11 @@ app.get('/api/vessels', (req, res) => {
     { sl: 31.2,  sg: 121.5, dl: 35.1,  dg: 129.0, sn: 'Shanghai', dn: 'Busan'     },
     // ── Australia ↔ Asia — waypoints avoid Indonesian archipelago ──
     { sl: -33.9, sg: 151.2, dl: 1.35,  dg: 103.8, sn: 'Sydney',    dn: 'Singapore',
-      wps: [{lat:-10,lng:127},{lat:-5,lng:116}] }, // Timor Sea → Lombok Strait
-    { sl: -37.8, sg: 144.9, dl: 35.7,  dg: 139.7, sn: 'Melbourne', dn: 'Tokyo'     }, // Pacific, safe
+      wps: [{lat:-22,lng:152},{lat:-10.5,lng:143},{lat:-9,lng:128},{lat:-5,lng:116},{lat:-3,lng:108}] }, // Coral Sea → Torres Strait → Timor Sea → Lombok Strait
+    { sl: -37.8, sg: 144.9, dl: 35.7,  dg: 139.7, sn: 'Melbourne', dn: 'Tokyo',
+      wps: [{lat:-38,lng:152},{lat:-10,lng:156},{lat:5,lng:148},{lat:20,lng:145}] }, // Tasman Sea → Coral Sea → Pacific
     { sl: -27.4, sg: 153.0, dl: 1.35,  dg: 103.8, sn: 'Brisbane',  dn: 'Singapore',
-      wps: [{lat:-10,lng:130},{lat:-5,lng:116}] },
+      wps: [{lat:-20,lng:155},{lat:-10.5,lng:143},{lat:-9,lng:128},{lat:-5,lng:116},{lat:-3,lng:108}] },
     { sl: -31.9, sg: 115.8, dl: 1.35,  dg: 103.8, sn: 'Fremantle', dn: 'Singapore',
       wps: [{lat:-8,lng:108},{lat:3,lng:103}] }, // Indian Ocean → Malacca
     // ── South Pacific — Tasman Sea / open Pacific, safe ──
