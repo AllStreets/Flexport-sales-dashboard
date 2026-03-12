@@ -124,6 +124,20 @@ function gcVesselPoint(lat1d, lng1d, lat2d, lng2d, t) {
   return { lat, lng, heading };
 }
 
+// Compute a point slightly ahead of (lat, lng) along the given heading (degrees from north).
+// Used to give live AIS vessel sprites the same NDC-projection nose-forward rotation as planes.
+function forwardVesselPoint(lat, lng, headingDeg, stepDeg = 0.5) {
+  const R = Math.PI / 180;
+  const latR = lat * R, lonR = lng * R, hR = headingDeg * R, d = stepDeg * R;
+  const newLatR = Math.asin(Math.sin(latR) * Math.cos(d) + Math.cos(latR) * Math.sin(d) * Math.cos(hR));
+  const newLonR = lonR + Math.atan2(Math.sin(hR) * Math.sin(d) * Math.cos(latR), Math.cos(d) - Math.sin(latR) * Math.sin(newLatR));
+  return { lat: newLatR / R, lng: newLonR / R };
+}
+
+// Reusable Vector3s for live-vessel NDC projection (avoid per-frame allocation)
+const _rafWPV = new THREE.Vector3();
+const _rafFPV = new THREE.Vector3();
+
 function setSpritePos(sprite, lat, lng, alt, globeRadius) {
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (90 - lng) * Math.PI / 180;
@@ -292,18 +306,42 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
             const t = Date.now() * 0.00008;
             refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
           }
-          // Animate vessel sprites along their routes (waypointed paths stay in ocean)
+          // Animate vessel sprites — simulated advance along route, live use heading-based NDC rotation
           if (refs.sprites.size > 0) {
             const now = Date.now();
+            const cam = globeRef.current?.camera?.();
             for (const entry of refs.sprites.values()) {
-              const { sprite, srcLat, srcLng, dstLat, dstLng, wpsAll, progress0, fetchTs, globeRadius, cycleSecs } = entry;
-              const elapsed = (now - fetchTs) / 1000;
-              const t = (progress0 + elapsed / (cycleSecs || 180)) % 1;
-              const pt = wpsAll
-                ? gcMultiPoint(wpsAll, t)
-                : gcVesselPoint(srcLat, srcLng, dstLat, dstLng, t);
-              setSpritePos(sprite, pt.lat, pt.lng, 0.018, globeRadius);
-              sprite.material.rotation = -(pt.heading * Math.PI / 180);
+              const { sprite, globeRadius } = entry;
+              if (entry.isLive) {
+                // Live AIS: fixed position, COG-derived forward point → NDC rotation
+                const fp = forwardVesselPoint(entry.lat, entry.lng, entry.heading ?? 0);
+                if (cam) {
+                  const rC = globeRadius * 1.018;
+                  const phi  = (90 - entry.lat) * Math.PI / 180;
+                  const th   = (90 - entry.lng) * Math.PI / 180;
+                  const phiF = (90 - fp.lat) * Math.PI / 180;
+                  const thF  = (90 - fp.lng) * Math.PI / 180;
+                  _rafWPV.set(rC * Math.sin(phi)  * Math.cos(th),  rC * Math.cos(phi),  rC * Math.sin(phi)  * Math.sin(th));
+                  _rafFPV.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
+                  _rafWPV.project(cam);
+                  _rafFPV.project(cam);
+                  const dx = _rafFPV.x - _rafWPV.x;
+                  const dy = _rafFPV.y - _rafWPV.y;
+                  if (dx * dx + dy * dy > 1e-10) {
+                    sprite.material.rotation = Math.atan2(dy, dx) - Math.PI / 2;
+                  }
+                }
+              } else {
+                // Simulated: advance along great-circle / waypointed route
+                const { srcLat, srcLng, dstLat, dstLng, wpsAll, progress0, fetchTs, cycleSecs } = entry;
+                const elapsed = (now - fetchTs) / 1000;
+                const t = (progress0 + elapsed / (cycleSecs || 180)) % 1;
+                const pt = wpsAll
+                  ? gcMultiPoint(wpsAll, t)
+                  : gcVesselPoint(srcLat, srcLng, dstLat, dstLng, t);
+                setSpritePos(sprite, pt.lat, pt.lng, 0.018, globeRadius);
+                sprite.material.rotation = -(pt.heading * Math.PI / 180);
+              }
             }
           }
         } catch (_) { /* mesh temporarily unavailable — keep loop alive */ }
@@ -443,10 +481,13 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
             });
             setSpritePos(sprite, vessel.lat, vessel.lng, 0.018, globeRadius);
           } else {
-            if (vessel.mmsi || vessel.id) threeRefs.current.sprites.delete(vessel.mmsi || vessel.id);
+            // Live AIS: register with COG so RAF loop can apply NDC-projection rotation
+            threeRefs.current.sprites.set(vessel.mmsi || vessel.id || vessel.lat + ',' + vessel.lng, {
+              sprite, lat: vessel.lat, lng: vessel.lng,
+              heading: vessel.cog ?? vessel.heading ?? 0, globeRadius, isLive: true,
+            });
             setSpritePos(sprite, vessel.lat, vessel.lng, 0.018, globeRadius);
           }
-          sprite.material.rotation = -((vessel.cog ?? vessel.heading ?? 0) * Math.PI / 180);
         }}
         onCustomLayerClick={handleVesselClick}
         customLayerLabel={vesselLabel}
