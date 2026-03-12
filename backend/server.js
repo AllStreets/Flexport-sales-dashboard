@@ -1235,10 +1235,12 @@ app.get('/api/vessels', (req, res) => {
     { sl: 51.9,  sg: 4.5,  dl: 29.7,  dg: -95.0, sn: 'Rotterdam', dn: 'Houston',
       wps: [{lat:28,lng:-55},{lat:24,lng:-84},{lat:25,lng:-90}] },
     // ── South America ──
-    { sl: -23.9, sg: -46.3, dl: 40.7,  dg: -74.0, sn: 'Santos',       dn: 'New York'   },
-    { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam'  },
-    { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam'  },
-    { sl: -34.6, sg: -58.4, dl: 40.7,  dg: -74.0, sn: 'Buenos Aires', dn: 'New York'   },
+    { sl: -23.9, sg: -46.3, dl: 40.7,  dg: -74.0, sn: 'Santos',       dn: 'New York',
+      wps: [{lat:-25,lng:-38},{lat:0,lng:-25},{lat:20,lng:-65}] }, // east into Atlantic, avoid Brazil
+    { sl: -23.9, sg: -46.3, dl: 51.9,  dg: 4.5,   sn: 'Santos',       dn: 'Rotterdam'  }, // NE Atlantic, safe
+    { sl: -34.6, sg: -58.4, dl: 51.9,  dg: 4.5,   sn: 'Buenos Aires', dn: 'Rotterdam'  }, // NE Atlantic, safe
+    { sl: -34.6, sg: -58.4, dl: 40.7,  dg: -74.0, sn: 'Buenos Aires', dn: 'New York',
+      wps: [{lat:-38,lng:-52},{lat:0,lng:-25},{lat:20,lng:-65}] }, // east into Atlantic, avoid S. America
     { sl: -12.0, sg: -77.1, dl: 33.7,  dg: -118.2,sn: 'Callao',       dn: 'Los Angeles',
       wps: [{lat:5,lng:-88},{lat:18,lng:-110}] },
     { sl: 10.4,  sg: -75.5, dl: 29.7,  dg: -95.0, sn: 'Cartagena',    dn: 'Houston',
