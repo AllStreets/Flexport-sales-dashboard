@@ -968,7 +968,13 @@ Their primary import/export lanes, likely freight forwarder, estimated annual fr
 2-3 specific, signal-grounded reasons this company needs Flexport RIGHT NOW. Reference tariffs, Hormuz disruption, Vietnam factory surge, or relevant market forces.
 
 ## OPENING HOOK
-One killer first sentence for a cold call or email. Reference something specific about their business. Make it impossible to ignore.`;
+One killer first sentence for a cold call or email. Reference something specific about their business. Make it impossible to ignore.
+
+## FREIGHT_MODES
+Write ONLY one line: ocean=XX air=XX land=XX where XX are integers summing to 100. Base on their industry/product type.
+
+## URGENCY_SCORE
+Write ONLY a single integer 1–10 (10 = call them today, deal is on the table; 1 = low priority, no signals).`;
 
   try {
     const axios = require('axios');
