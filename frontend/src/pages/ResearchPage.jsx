@@ -263,87 +263,79 @@ export default function ResearchPage() {
           <div className="rp-grid">
 
             {/* SNAPSHOT tile */}
-            {(isStreaming || snapshot) && (
-              <div className="rp-tile rp-tile-full">
-                <div className="rp-tile-header">
-                  <span className="rp-tile-label">SNAPSHOT</span>
-                  {isStreaming && !snapshot && <span className="rp-streaming-dot" />}
-                </div>
-                {snapshot ? (
-                  <>
-                    {statChips.length > 0 && (
-                      <div className="rp-chips">
-                        {statChips.map(c => (
-                          <span key={c.key} className="rp-chip">
-                            <span className="rp-chip-key">{c.key}</span>
-                            <span className="rp-chip-val">{c.value}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <p className="rp-snapshot-body">{snapshot}</p>
-                  </>
-                ) : <TileSkeleton />}
+            <div className="rp-tile rp-tile-full">
+              <div className="rp-tile-header">
+                <span className="rp-tile-label">SNAPSHOT</span>
+                {isStreaming && !snapshot && <span className="rp-streaming-dot" />}
               </div>
-            )}
+              {snapshot ? (
+                <>
+                  {statChips.length > 0 && (
+                    <div className="rp-chips">
+                      {statChips.map(c => (
+                        <span key={c.key} className="rp-chip">
+                          <span className="rp-chip-key">{c.key}</span>
+                          <span className="rp-chip-val">{c.value}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="rp-snapshot-body">{snapshot}</p>
+                </>
+              ) : isStreaming ? <TileSkeleton /> : null}
+            </div>
 
             {/* TRADE PROFILE tile */}
-            {(isStreaming || tradeText) && (
-              <div className="rp-tile rp-tile-half">
-                <div className="rp-tile-header">
-                  <span className="rp-tile-label">TRADE PROFILE</span>
-                  {isStreaming && !tradeText && <span className="rp-streaming-dot" />}
-                </div>
-                {tradeText ? (
-                  <>
-                    {freightModes && <FreightBar modes={freightModes} />}
-                    <p className="rp-trade-body">{tradeText.replace(/ocean=\d+\s+air=\d+\s+land=\d+/gi, '').trim()}</p>
-                  </>
-                ) : <TileSkeleton />}
+            <div className="rp-tile rp-tile-half">
+              <div className="rp-tile-header">
+                <span className="rp-tile-label">TRADE PROFILE</span>
+                {isStreaming && !tradeText && <span className="rp-streaming-dot" />}
               </div>
-            )}
+              {tradeText ? (
+                <>
+                  {freightModes && <FreightBar modes={freightModes} />}
+                  <p className="rp-trade-body">{tradeText.replace(/ocean=\d+\s+air=\d+\s+land=\d+/gi, '').trim()}</p>
+                </>
+              ) : isStreaming ? <TileSkeleton /> : null}
+            </div>
 
             {/* URGENCY tile */}
-            {(isStreaming || urgency !== null || whyBullets.length > 0) && (
-              <div className="rp-tile rp-tile-half">
-                <div className="rp-tile-header">
-                  <span className="rp-tile-label">URGENCY SCORE</span>
-                  {isStreaming && urgency === null && <span className="rp-streaming-dot" />}
-                </div>
-                {(urgency !== null || whyBullets.length > 0) ? (
-                  <div className="rp-urgency-wrap">
-                    {urgency !== null && <UrgencyRing score={urgency} />}
-                    {whyBullets.length > 0 && (
-                      <ul className="rp-why-list">
-                        {whyBullets.map((b, i) => (
-                          <li key={i} className="rp-why-item">{b}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ) : <TileSkeleton />}
+            <div className="rp-tile rp-tile-half">
+              <div className="rp-tile-header">
+                <span className="rp-tile-label">URGENCY SCORE</span>
+                {isStreaming && urgency === null && <span className="rp-streaming-dot" />}
               </div>
-            )}
+              {(urgency !== null || whyBullets.length > 0) ? (
+                <div className="rp-urgency-wrap">
+                  {urgency !== null && <UrgencyRing score={urgency} />}
+                  {whyBullets.length > 0 && (
+                    <ul className="rp-why-list">
+                      {whyBullets.map((b, i) => (
+                        <li key={i} className="rp-why-item">{b}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : isStreaming ? <TileSkeleton /> : null}
+            </div>
 
             {/* RECENT SIGNALS tile */}
-            {(isStreaming || signalBullets.length > 0) && (
-              <div className="rp-tile rp-tile-full">
-                <div className="rp-tile-header">
-                  <span className="rp-tile-label">RECENT SIGNALS</span>
-                  {isStreaming && !signals && <span className="rp-streaming-dot" />}
-                </div>
-                {signalBullets.length > 0 ? (
-                  <div className="rp-signals">
-                    {signalBullets.map((s, i) => (
-                      <div key={i} className={`rp-signal rp-signal-${s.tone}`}>
-                        <span className="rp-signal-dot" />
-                        <span className="rp-signal-text">{s.line}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : <TileSkeleton />}
+            <div className="rp-tile rp-tile-full">
+              <div className="rp-tile-header">
+                <span className="rp-tile-label">RECENT SIGNALS</span>
+                {isStreaming && !signals && <span className="rp-streaming-dot" />}
               </div>
-            )}
+              {signalBullets.length > 0 ? (
+                <div className="rp-signals">
+                  {signalBullets.map((s, i) => (
+                    <div key={i} className={`rp-signal rp-signal-${s.tone}`}>
+                      <span className="rp-signal-dot" />
+                      <span className="rp-signal-text">{s.line}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : isStreaming ? <TileSkeleton /> : null}
+            </div>
 
             {/* OPENING HOOK tile */}
             {(hookText || (loading && !hookRaw)) && (
