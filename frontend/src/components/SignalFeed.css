@@ -37,23 +37,19 @@
 .signal-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .signal-tag { font-size: 10px; background: rgba(37,99,235,0.15); color: #60a5fa; border-radius: 4px; padding: 2px 6px; }
 
-.signal-outreach-btn {
-  margin-top: 8px; background: none;
-  border: 1px solid rgba(37,99,235,0.3); color: #60a5fa;
-  font-size: 10px; padding: 3px 10px; border-radius: 5px;
-  cursor: pointer; transition: all 0.15s;
-}
-.signal-outreach-btn:hover { background: rgba(37,99,235,0.15); border-color: rgba(37,99,235,0.6); }
-
 .signal-actions { display: flex; gap: 6px; margin-top: 8px; }
 
-.signal-match-btn {
-  display: flex; align-items: center;
-  background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25);
-  color: #a78bfa; font-size: 10px; padding: 3px 10px; border-radius: 5px;
-  cursor: pointer; transition: all 0.15s;
+.sig-btn {
+  display: inline-flex; align-items: center;
+  background: rgba(255,255,255,0.06); color: #cbd5e1;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 5px 12px;
+  font-size: 11px; cursor: pointer; transition: all 0.2s;
 }
-.signal-match-btn:hover { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); }
+.sig-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
+
+.sig-btn--ai { color: #a78bfa; border-color: rgba(167,139,250,0.2); background: rgba(167,139,250,0.06); }
+.sig-btn--ai:hover { background: rgba(167,139,250,0.14); border-color: rgba(167,139,250,0.4); }
 
 /* Signal Match Panel */
 .smp-panel {

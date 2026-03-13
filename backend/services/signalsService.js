@@ -13,16 +13,36 @@ async function fetchAndScoreSignals() {
   const cached = await getCachedSignals();
   if (cached.length > 0) return cached;
 
-  const q = 'import freight customs tariff port congestion disruption supply chain ocean shipping international logistics';
-  const newsRes = await axios.get('https://newsapi.org/v2/everything', {
-    params: { q, language: 'en', sortBy: 'publishedAt', pageSize: 20, apiKey: process.env.NEWS_API_KEY }
-  });
+  // Fetch from two targeted queries and dedupe
+  const queries = [
+    '"port congestion" OR "freight rates" OR "ocean freight" OR "shipping delay" OR "supply chain disruption"',
+    'tariff OR "trade war" OR "import duty" OR "customs" OR "air freight" OR "logistics disruption"',
+  ];
+  const results = await Promise.all(queries.map(q =>
+    axios.get('https://newsapi.org/v2/everything', {
+      params: { q, language: 'en', sortBy: 'publishedAt', pageSize: 12, apiKey: process.env.NEWS_API_KEY }
+    }).then(r => r.data.articles || []).catch(() => [])
+  ));
 
-  const articles = newsRes.data.articles || [];
+  // Dedupe by url, cap at 20
+  const seen = new Set();
+  const articles = results.flat().filter(a => {
+    if (!a.url || seen.has(a.url)) return false;
+    seen.add(a.url);
+    return true;
+  }).slice(0, 20);
+
   if (articles.length === 0) return [];
 
-  // Score urgency with OpenAI
-  const scorePrompt = `You are scoring news articles for urgency to a Flexport inbound SDR. Rate each from 1-10 where 10 = "call prospects now".
+  // Score urgency with OpenAI — explicit instruction to use full 1-10 range
+  const scorePrompt = `You are scoring news articles for urgency to a Flexport inbound SDR who sells freight forwarding to importers and exporters. Rate each article from 1-10:
+- 9-10: Active port closure, major lane disruption, emergency tariff — call prospects TODAY
+- 7-8: Significant freight rate spike, new tariffs announced, port congestion building
+- 5-6: Moderate supply chain signal, trade policy update with future impact
+- 3-4: Background industry news, minor regulatory change
+- 1-2: Tangentially related or not relevant to freight at all
+
+IMPORTANT: Vary scores meaningfully. Do NOT give the same score to all articles.
 
 Articles:
 ${articles.map((a, i) => `${i + 1}. ${a.title}`).join('\n')}
@@ -31,13 +51,14 @@ Return a JSON array (same order as input):
 [{"urgency_score": 8, "urgency_reason": "Port congestion on Asia-US West Coast affects electronics importers", "affected_lanes": ["Asia-US West Coast"], "affected_sectors": ["electronics","e-commerce"]}]`;
 
   const scoreRes = await axios.post(OPENAI_URL, {
-    model: 'gpt-4.1-mini', max_tokens: 1000,
+    model: 'gpt-4.1-mini', max_tokens: 2000,
     messages: [{ role: 'user', content: scorePrompt }]
   }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' } });
 
   let scores = [];
   try {
-    const m = scoreRes.data.choices[0].message.content.match(/\[[\s\S]*\]/);
+    const content = scoreRes.data.choices[0].message.content;
+    const m = content.match(/\[[\s\S]*\]/);
     scores = m ? JSON.parse(m[0]) : [];
   } catch { scores = []; }
 
@@ -46,13 +67,19 @@ Return a JSON array (same order as input):
   await new Promise(r => db.run('DELETE FROM news_signals', r));
   const stmt = db.prepare(`INSERT INTO news_signals (headline, summary, url, source, published_at, urgency_score, urgency_reason, affected_lanes, affected_sectors) VALUES (?,?,?,?,?,?,?,?,?)`);
 
-  const signals = articles.map((a, i) => {
-    const score = scores[i] || { urgency_score: 5, urgency_reason: 'General supply chain news', affected_lanes: [], affected_sectors: [] };
-    stmt.run(a.title, a.description, a.url, a.source?.name, a.publishedAt,
-      score.urgency_score, score.urgency_reason,
-      JSON.stringify(score.affected_lanes || []), JSON.stringify(score.affected_sectors || []));
-    return { ...a, ...score };
-  });
+  const signals = articles
+    .map((a, i) => {
+      const score = scores[i] || { urgency_score: 3, urgency_reason: '', affected_lanes: [], affected_sectors: [] };
+      return { ...a, ...score };
+    })
+    .filter(s => (s.urgency_score || 0) >= 3)  // drop clearly irrelevant articles
+    .sort((a, b) => b.urgency_score - a.urgency_score);
+
+  for (const s of signals) {
+    stmt.run(s.title, s.description, s.url, s.source?.name, s.publishedAt,
+      s.urgency_score, s.urgency_reason,
+      JSON.stringify(s.affected_lanes || []), JSON.stringify(s.affected_sectors || []));
+  }
 
   stmt.finalize();
   db.close();

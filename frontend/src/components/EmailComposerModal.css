@@ -28,12 +28,40 @@
   font-family: 'JetBrains Mono', monospace; font-size: 9px;
   color: #475569; letter-spacing: 0.1em; margin-bottom: 6px; display: block;
 }
-.ec-select, .ec-textarea {
+.ec-textarea {
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 6px; color: #e2e8f0; font-size: 12px; padding: 8px 10px;
-  width: 100%; font-family: inherit; resize: none;
+  width: 100%; font-family: inherit; resize: none; box-sizing: border-box;
 }
-.ec-select:focus, .ec-textarea:focus { outline: none; border-color: rgba(0,212,255,0.3); }
+.ec-textarea:focus { outline: none; border-color: rgba(0,212,255,0.3); }
+
+.ec-search-wrap { position: relative; }
+.ec-search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #475569; pointer-events: none; }
+.ec-search-input {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px; color: #e2e8f0; font-size: 12px; padding: 8px 10px 8px 28px;
+  width: 100%; font-family: inherit; box-sizing: border-box;
+}
+.ec-search-input:focus { outline: none; border-color: rgba(0,212,255,0.3); }
+.ec-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: #0d1526; border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 8px; z-index: 10; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.ec-dropdown-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; cursor: pointer; transition: background 0.15s;
+}
+.ec-dropdown-item:hover { background: rgba(0,212,255,0.08); }
+.ec-di-name { font-size: 12px; color: #e2e8f0; }
+.ec-di-meta { font-size: 10px; color: #475569; }
+
+.ec-error {
+  margin-top: 10px; padding: 7px 10px; border-radius: 6px;
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171; font-size: 11px;
+}
 .ec-prospect-card {
   margin-top: 8px; padding: 8px 10px;
   background: rgba(0,212,255,0.06); border-radius: 6px;

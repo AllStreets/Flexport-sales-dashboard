@@ -147,12 +147,15 @@ export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscr
 
         {/* Right column */}
         <div className="right-column">
+          {/* Today's Playbook — above Signals */}
+          <TodaysPlaybook hotProspects={hotProspects} navigate={navigate} />
+
           <div className="glass-card col-section">
-            <SignalFeed onOpenOutreach={onOpenOutreach} selectedProspect={selectedProspect} onOpenEmailComposer={onOpenEmailComposer} />
+            <SignalFeed selectedProspect={selectedProspect} onOpenEmailComposer={onOpenEmailComposer} />
           </div>
 
-          {/* Today's Playbook — above Hot Prospects */}
-          <TodaysPlaybook hotProspects={hotProspects} navigate={navigate} />
+          {/* US Trade Data — above Hot Prospects */}
+          <TradeDataCharts />
 
           {/* Hot Prospects */}
           {hotProspects.length > 0 && (
@@ -179,9 +182,6 @@ export default function HomePage({ onAddToPipeline, onOpenOutreach, globeFullscr
               </div>
             </div>
           )}
-
-          {/* US Trade Data — below Hot Prospects */}
-          <TradeDataCharts />
         </div>
       </div>
     </div>

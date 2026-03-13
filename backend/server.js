@@ -1607,10 +1607,25 @@ app.get('/api/flights', async (req, res) => {
 const cron = require('node-cron');
 
 // Refresh FRED trade data cache every night at midnight EST
-// '0 0 * * *' in America/New_York = 05:00 UTC in winter, 04:00 UTC in summer
 cron.schedule('0 0 * * *', () => {
   console.log('[CRON] Midnight EST — refreshing FRED trade data cache...');
-  refreshAllTradeCache().catch(e => console.error('[CRON] Refresh failed:', e.message));
+  refreshAllTradeCache().catch(e => console.error('[CRON] FRED refresh failed:', e.message));
+}, { timezone: 'America/New_York' });
+
+// Refresh supply chain signals every night at midnight EST
+cron.schedule('0 0 * * *', async () => {
+  console.log('[CRON] Midnight EST — refreshing supply chain signals...');
+  try {
+    const sqlite3 = require('sqlite3').verbose();
+    const dbPath = process.env.DB_PATH || require('path').join(__dirname, 'flexport.db');
+    const db = new sqlite3.Database(dbPath);
+    await new Promise(r => db.run('DELETE FROM news_signals', r));
+    db.close();
+    const signals = await fetchAndScoreSignals();
+    console.log(`[CRON] Signals refreshed — ${signals.length} articles scored.`);
+  } catch (e) {
+    console.error('[CRON] Signals refresh failed:', e.message);
+  }
 }, { timezone: 'America/New_York' });
 
 // ── Land Freight — 110 highway corridors, ~340 simulated trucks ──────────────

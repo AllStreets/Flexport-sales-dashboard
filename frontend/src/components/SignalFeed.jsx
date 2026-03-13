@@ -5,7 +5,7 @@ import './SignalFeed.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function SignalFeed({ onOpenOutreach, selectedProspect, onOpenEmailComposer }) {
+export default function SignalFeed({ selectedProspect, onOpenEmailComposer }) {
   const [signals, setSignals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [matchSignal, setMatchSignal] = useState(null);
@@ -99,24 +99,14 @@ export default function SignalFeed({ onOpenOutreach, selectedProspect, onOpenEma
               </div>
             )}
             <div className="signal-actions">
-              {onOpenOutreach && (
-                <button className="signal-outreach-btn" onClick={e => { e.preventDefault(); onOpenOutreach(selectedProspect, null); }}>
-                  → Outreach
-                </button>
-              )}
-              {aiEnabled && (
-                <button className="signal-match-btn" onClick={e => { e.preventDefault(); runSignalMatch(s); }}>
-                  <RiSparklingLine size={10} style={{ marginRight: 3 }} />AI Match
-                </button>
-              )}
-              <button
-                className="signal-email-btn"
-                title="Compose email from this signal"
-                onClick={e => { e.preventDefault(); onOpenEmailComposer?.(null, s.title || s.headline); }}
-                style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '2px 4px' }}
-              >
-                <RiMailSendLine size={11} />
+              <button className="sig-btn" onClick={e => { e.preventDefault(); onOpenEmailComposer?.(null, s.title || s.headline); }}>
+                <RiMailSendLine size={11} style={{ marginRight: 4 }} />Outreach
               </button>
+              {aiEnabled && (
+                <button className="sig-btn sig-btn--ai" onClick={e => { e.preventDefault(); runSignalMatch(s); }}>
+                  <RiSparklingLine size={11} style={{ marginRight: 4 }} />AI Match
+                </button>
+              )}
             </div>
           </a>
         ))}

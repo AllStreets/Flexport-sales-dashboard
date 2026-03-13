@@ -1,45 +1,66 @@
 import { useState, useEffect, useRef } from 'react';
-import { RiMailSendLine, RiLinkedinLine, RiRefreshLine, RiFileCopyLine, RiCloseLine } from 'react-icons/ri';
+import { RiMailSendLine, RiLinkedinLine, RiRefreshLine, RiFileCopyLine, RiCloseLine, RiSearchLine } from 'react-icons/ri';
 import './EmailComposerModal.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const TONES = ['direct', 'consultative', 'challenger'];
 
 export default function EmailComposerModal({ isOpen, onClose, initialProspect = null, initialTrigger = '' }) {
-  const [prospects, setProspects] = useState([]);
-  const [selectedId, setSelectedId] = useState('');
+  const [allProspects, setAllProspects] = useState([]);
+  const [query, setQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedProspect, setSelectedProspect] = useState(null);
   const [trigger, setTrigger] = useState(initialTrigger);
   const [tone, setTone] = useState('consultative');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [tab, setTab] = useState('email');
   const [copied, setCopied] = useState('');
   const outputRef = useRef('');
+  const searchRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) fetch(`${API}/api/prospects?limit=136`).then(r => r.json()).then(d => setProspects(d.prospects || []));
+    if (isOpen) {
+      fetch(`${API}/api/prospects?limit=200`)
+        .then(r => r.json())
+        .then(d => setAllProspects(Array.isArray(d) ? d : (d.prospects || [])));
+    }
   }, [isOpen]);
 
   useEffect(() => {
-    if (initialProspect) setSelectedId(String(initialProspect.id || ''));
+    if (initialProspect) {
+      setSelectedProspect(initialProspect);
+      setQuery(initialProspect.name || '');
+    }
     if (initialTrigger) setTrigger(initialTrigger);
   }, [initialProspect, initialTrigger]);
 
   if (!isOpen) return null;
 
-  const prospect = prospects.find(p => String(p.id) === selectedId) || initialProspect;
+  const filtered = query.trim().length > 0
+    ? allProspects.filter(p => p.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : [];
+
+  const selectProspect = (p) => {
+    setSelectedProspect(p);
+    setQuery(p.name);
+    setShowDropdown(false);
+  };
 
   const generate = async () => {
-    if (!prospect) return;
+    if (!selectedProspect) { setError('Select a prospect first'); return; }
     setOutput('');
+    setError('');
     outputRef.current = '';
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/compose-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prospect, trigger, tone }),
+        body: JSON.stringify({ prospect: selectedProspect, trigger, tone }),
       });
+      if (!res.ok) { setError('Generation failed — check API key'); setLoading(false); return; }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       while (true) {
@@ -56,6 +77,8 @@ export default function EmailComposerModal({ isOpen, onClose, initialProspect = 
           }
         }
       }
+    } catch (e) {
+      setError('Generation failed: ' + e.message);
     } finally {
       setLoading(false);
     }
@@ -89,22 +112,40 @@ export default function EmailComposerModal({ isOpen, onClose, initialProspect = 
       <div className="ec-modal" onClick={e => e.stopPropagation()}>
         <div className="ec-header">
           <RiMailSendLine size={16} />
-          <span>AI EMAIL COMPOSER</span>
+          <span>AI MESSAGE COMPOSER</span>
           <button className="ec-close" onClick={onClose}><RiCloseLine size={18} /></button>
         </div>
 
         <div className="ec-body">
           <div className="ec-left">
             <label className="ec-label">PROSPECT</label>
-            <select className="ec-select" value={selectedId} onChange={e => setSelectedId(e.target.value)}>
-              <option value="">Select prospect...</option>
-              {prospects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            {prospect && (
+            <div className="ec-search-wrap" ref={searchRef}>
+              <RiSearchLine size={12} className="ec-search-icon" />
+              <input
+                className="ec-search-input"
+                placeholder="Type to search prospects..."
+                value={query}
+                onChange={e => { setQuery(e.target.value); setShowDropdown(true); setSelectedProspect(null); }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              />
+              {showDropdown && filtered.length > 0 && (
+                <div className="ec-dropdown">
+                  {filtered.map(p => (
+                    <div key={p.id} className="ec-dropdown-item" onMouseDown={() => selectProspect(p)}>
+                      <span className="ec-di-name">{p.name}</span>
+                      <span className="ec-di-meta">{p.sector} · ICP {p.icp_score}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedProspect && (
               <div className="ec-prospect-card">
-                <div className="ec-pname">{prospect.name}</div>
-                <div className="ec-pmeta">{prospect.industry || prospect.sector} · ICP {prospect.icp_score}</div>
-                <div className="ec-pmeta">{(prospect.primary_lanes || []).join(', ')}</div>
+                <div className="ec-pname">{selectedProspect.name}</div>
+                <div className="ec-pmeta">{selectedProspect.industry || selectedProspect.sector} · ICP {selectedProspect.icp_score}</div>
+                <div className="ec-pmeta">{(selectedProspect.primary_lanes || []).join(', ')}</div>
               </div>
             )}
 
@@ -126,7 +167,9 @@ export default function EmailComposerModal({ isOpen, onClose, initialProspect = 
               ))}
             </div>
 
-            <button className="ec-generate-btn" onClick={generate} disabled={!prospect || loading}>
+            {error && <div className="ec-error">{error}</div>}
+
+            <button className="ec-generate-btn" onClick={generate} disabled={!selectedProspect || loading}>
               {loading ? <RiRefreshLine className="ec-spin" size={14} /> : <RiMailSendLine size={14} />}
               {loading ? 'Generating...' : 'Generate'}
             </button>
@@ -159,7 +202,7 @@ export default function EmailComposerModal({ isOpen, onClose, initialProspect = 
             <div className="ec-output-wrap">
               {tab === 'email' && (
                 <>
-                  <pre className="ec-output">{extract('email') || (loading ? 'Generating...' : 'Generate to see email')}</pre>
+                  <pre className="ec-output">{extract('email') || (loading ? 'Generating...' : 'Select a prospect and click Generate')}</pre>
                   {extract('email') && (
                     <button className="ec-copy-full" onClick={() => copyText(extract('email'), 'email')}>
                       {copied === 'email' ? '✓ Copied' : <><RiFileCopyLine size={12} /> Copy Email</>}
@@ -169,7 +212,7 @@ export default function EmailComposerModal({ isOpen, onClose, initialProspect = 
               )}
               {tab === 'linkedin' && (
                 <>
-                  <pre className="ec-output">{extract('linkedin') || (loading ? 'Generating...' : 'Generate to see LinkedIn message')}</pre>
+                  <pre className="ec-output">{extract('linkedin') || (loading ? 'Generating...' : 'Select a prospect and click Generate')}</pre>
                   {extract('linkedin') && (
                     <button className="ec-copy-full" onClick={() => copyText(extract('linkedin'), 'linkedin')}>
                       {copied === 'linkedin' ? '✓ Copied' : <><RiFileCopyLine size={12} /> Copy Message</>}
