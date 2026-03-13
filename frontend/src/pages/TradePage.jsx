@@ -249,31 +249,15 @@ function MacroTile({ label, data, color, formatter, barSpark }) {
   );
 }
 
-function RateSparkline({ data = [], color = '#00d4ff' }) {
+function RateYtd({ data = [] }) {
   if (!data.length) return null;
-  const chartData = data.map((v) => ({ v }));
   const first = data[0], last = data[data.length - 1];
   const pct = (((last - first) / first) * 100).toFixed(1);
   const up = last >= first;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ width: 80, height: 28 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
-            <defs>
-              <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill="url(#sg)" dot={false} isAnimationActive={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono, monospace', color: up ? '#ef4444' : '#10b981', minWidth: 42 }}>
-        {up ? '▲' : '▼'} {Math.abs(pct)}%
-      </span>
-    </div>
+    <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono, monospace', color: up ? '#ef4444' : '#10b981', minWidth: 42 }}>
+      {up ? '▲' : '▼'} {Math.abs(pct)}%
+    </span>
   );
 }
 
@@ -554,7 +538,7 @@ export default function TradePage() {
                 <span className="cr-change" style={{ color: r.change >= 0 ? '#ff3b3b' : '#00c176' }}>
                   {r.change >= 0 ? '+' : ''}{r.change}%
                 </span>
-                <RateSparkline data={rateHistory[ROUTE_IDS[r.route]] || []} />
+                <RateYtd data={rateHistory[ROUTE_IDS[r.route]] || []} />
               </div>
             ))}
           </div>
