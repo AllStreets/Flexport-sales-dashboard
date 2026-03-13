@@ -193,6 +193,85 @@ app.put('/api/analyses/:id/favorite', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Semantic Prospect Search — GPT parses NL query → SQL filters ──────────
+app.post('/api/semantic-search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: 'query required' });
+
+  const VALID_SECTORS = ['CPG','accessories','activewear','apparel','beauty','e-commerce','electronics','footwear','furniture','health','home-goods','home-textiles','jewelry','outdoor','pet'];
+
+  const parsePrompt = `You are parsing a natural-language prospect search query for a freight forwarder's SDR tool. Extract structured search criteria.
+
+Query: "${query}"
+
+Valid sectors: ${VALID_SECTORS.join(', ')}
+
+Return ONLY valid JSON (no markdown):
+{
+  "sector": "one of the valid sectors, or null if not specified",
+  "icp_min": number 0-100 or null (minimum ICP score, e.g. 'high ICP' = 80, 'very high' = 90, 'elite' = 95),
+  "volume": "Very High" | "High" | "Medium" | "Low" | null,
+  "import_origins_keyword": "country where goods ship FROM, e.g. 'China', 'Vietnam', 'India', 'Europe' — use for phrases like 'importing from X' or 'sourcing from X', or null",
+  "lanes_keyword": "trade ROUTE keyword like 'Asia-US West Coast', 'transatlantic', 'Europe' — only use if the query mentions a specific shipping lane, NOT the same as import_origins_keyword, or null",
+  "location_keyword": "city, state, or country keyword for hq_location, or null",
+  "description_keywords": ["keyword1", "keyword2"] (max 3 relevant terms to match in description, or []),
+  "name_keyword": "company name fragment if the query mentions a specific company, or null"
+}`;
+
+  let parsed = {};
+  try {
+    const r = await require('axios').post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4.1-mini', max_tokens: 300,
+      messages: [{ role: 'user', content: parsePrompt }]
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const m = r.data.choices[0].message.content.match(/\{[\s\S]*\}/);
+    parsed = m ? JSON.parse(m[0]) : {};
+  } catch (e) {
+    return res.status(500).json({ error: 'AI parse failed: ' + e.message });
+  }
+
+  // Build SQL from parsed filters
+  const db = new (require('sqlite3').verbose().Database)(process.env.DB_PATH || require('path').join(__dirname, 'flexport.db'));
+  let sql = 'SELECT * FROM prospects WHERE 1=1';
+  const params = [];
+
+  if (parsed.sector) { sql += ' AND sector = ?'; params.push(parsed.sector); }
+  if (parsed.icp_min) { sql += ' AND icp_score >= ?'; params.push(parsed.icp_min); }
+  if (parsed.volume) { sql += ' AND shipping_volume_estimate = ?'; params.push(parsed.volume); }
+  if (parsed.import_origins_keyword) { sql += ' AND import_origins LIKE ?'; params.push(`%${parsed.import_origins_keyword}%`); }
+  if (parsed.lanes_keyword) { sql += ' AND primary_lanes LIKE ?'; params.push(`%${parsed.lanes_keyword}%`); }
+  if (parsed.location_keyword) { sql += ' AND hq_location LIKE ?'; params.push(`%${parsed.location_keyword}%`); }
+  if (parsed.name_keyword) { sql += ' AND name LIKE ?'; params.push(`%${parsed.name_keyword}%`); }
+  // description_keywords are OR'd together (any match is fine), skip generic freight terms
+  const SKIP_KW = new Set(['importers','importer','import','export','freight','shipping','logistics','company','companies']);
+  const descKws = (parsed.description_keywords || []).filter(kw => !SKIP_KW.has(kw.toLowerCase()));
+  if (descKws.length) {
+    const orClauses = descKws.map(() => 'description LIKE ?').join(' OR ');
+    sql += ` AND (${orClauses})`;
+    descKws.forEach(kw => params.push(`%${kw}%`));
+  }
+
+  sql += ' ORDER BY icp_score DESC LIMIT 50';
+
+  db.all(sql, params, (err, rows) => {
+    db.close();
+    if (err) return res.status(500).json({ error: err.message });
+
+    // Build human-readable filter chips
+    const filters = {
+      sector: parsed.sector || null,
+      icp_min: parsed.icp_min || null,
+      volume: parsed.volume || null,
+      import_origins_keyword: parsed.import_origins_keyword || null,
+      lanes_keyword: parsed.lanes_keyword || null,
+      location_keyword: parsed.location_keyword || null,
+      description_keywords: parsed.description_keywords?.length ? parsed.description_keywords : null,
+    };
+
+    res.json({ results: rows, filters });
+  });
+});
+
 // ── Signals & Trade Data ───────────────────────────
 app.get('/api/signals', async (req, res) => {
   try { res.json(await fetchAndScoreSignals()); }

@@ -4,7 +4,7 @@ import { RiSparklingLine } from 'react-icons/ri';
 import ICPBadge from './ICPBadge';
 import './ProspectSearch.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function ProspectSearch({ onSelect }) {
   const [prospects, setProspects] = useState([]);
@@ -52,7 +52,7 @@ export default function ProspectSearch({ onSelect }) {
   return (
     <div className="prospect-search">
       <div className="ps-mode-row">
-        <button className={`ps-mode-btn${!aiMode ? ' active' : ''}`} onClick={() => setAiMode(false)}>Filters</button>
+        <button className={`ps-mode-btn${!aiMode ? ' active' : ''}`} onClick={() => setAiMode(false)}>Search</button>
         <button className={`ps-mode-btn${aiMode ? ' active' : ''}`} onClick={() => setAiMode(true)}>
           <RiSparklingLine size={11} style={{ marginRight: 4 }} />AI Search
         </button>
@@ -76,7 +76,11 @@ export default function ProspectSearch({ onSelect }) {
             <div className="ai-filters-row">
               {aiFilters.sector && <span className="ai-filter-chip">Sector: {aiFilters.sector}</span>}
               {aiFilters.icp_min && <span className="ai-filter-chip">ICP {aiFilters.icp_min}+</span>}
-              {aiFilters.search && <span className="ai-filter-chip">"{aiFilters.search}"</span>}
+              {aiFilters.volume && <span className="ai-filter-chip">Volume: {aiFilters.volume}</span>}
+              {aiFilters.import_origins_keyword && <span className="ai-filter-chip">Origin: {aiFilters.import_origins_keyword}</span>}
+              {aiFilters.lanes_keyword && <span className="ai-filter-chip">Lane: {aiFilters.lanes_keyword}</span>}
+              {aiFilters.location_keyword && <span className="ai-filter-chip">HQ: {aiFilters.location_keyword}</span>}
+              {aiFilters.description_keywords?.map(kw => <span key={kw} className="ai-filter-chip">"{kw}"</span>)}
             </div>
           )}
         </div>
