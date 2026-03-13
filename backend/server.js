@@ -238,12 +238,25 @@ Return ONLY valid JSON (no markdown):
   if (parsed.sector) { sql += ' AND sector = ?'; params.push(parsed.sector); }
   if (parsed.icp_min) { sql += ' AND icp_score >= ?'; params.push(parsed.icp_min); }
   if (parsed.volume) { sql += ' AND shipping_volume_estimate = ?'; params.push(parsed.volume); }
-  if (parsed.import_origins_keyword) { sql += ' AND import_origins LIKE ?'; params.push(`%${parsed.import_origins_keyword}%`); }
+
+  // Geographic keyword: search BOTH import_origins and primary_lanes (Asia won't be in origins, but is in lanes)
+  if (parsed.import_origins_keyword) {
+    sql += ' AND (import_origins LIKE ? OR primary_lanes LIKE ?)';
+    params.push(`%${parsed.import_origins_keyword}%`, `%${parsed.import_origins_keyword}%`);
+  }
   if (parsed.lanes_keyword) { sql += ' AND primary_lanes LIKE ?'; params.push(`%${parsed.lanes_keyword}%`); }
   if (parsed.location_keyword) { sql += ' AND hq_location LIKE ?'; params.push(`%${parsed.location_keyword}%`); }
   if (parsed.name_keyword) { sql += ' AND name LIKE ?'; params.push(`%${parsed.name_keyword}%`); }
-  // description_keywords are OR'd together (any match is fine), skip generic freight terms
-  const SKIP_KW = new Set(['importers','importer','import','export','freight','shipping','logistics','company','companies']);
+
+  // description_keywords: skip generic terms and sector/origin words already filtered above
+  const SKIP_KW = new Set([
+    'importers','importer','import','importing','exports','exporter','exporting','export',
+    'freight','shipping','logistics','company','companies','brands','brand','business',
+    'electronics','apparel','activewear','footwear','beauty','health','furniture','jewelry','outdoor','pet','cpg',
+    'asia','asian','china','chinese','vietnam','vietnamese','india','indian','europe','european',
+    'japan','japanese','korea','korean','us','usa','america','american',
+    'high','low','medium','very','icp','volume','score',
+  ]);
   const descKws = (parsed.description_keywords || []).filter(kw => !SKIP_KW.has(kw.toLowerCase()));
   if (descKws.length) {
     const orClauses = descKws.map(() => 'description LIKE ?').join(' OR ');
