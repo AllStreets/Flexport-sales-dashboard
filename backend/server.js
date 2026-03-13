@@ -1122,14 +1122,17 @@ app.get('/api/rate-history', (req, res) => {
 app.get('/api/settings/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '2.0.0',
+    version: '2.1.0',
     timestamp: new Date().toISOString(),
     env: {
       openai:       !!process.env.OPENAI_API_KEY,
-      fred:         !!process.env.FRED_API_KEY,
       newsapi:      !!(process.env.NEWSAPI_KEY || process.env.NEWS_API_KEY),
+      fred:         !!process.env.FRED_API_KEY,
       exchangeRate: !!process.env.EXCHANGE_RATE_API_KEY,
       serper:       !!process.env.SERPER_API_KEY,
+      aisstream:    !!process.env.AISSTREAM_API_KEY,
+      terminal49:   !!process.env.TERMINAL49_API_KEY,
+      opensky:      !!(process.env.OPENSKY_CLIENT_ID && process.env.OPENSKY_CLIENT_SECRET),
     },
   });
 });

@@ -485,49 +485,59 @@ function IntegrationsSection({ health, onTestHealth, healthLoading }) {
           Keys are set via backend environment variables. Status reflects whether each is currently configured on the server.
         </div>
         {[
-          { label: 'OpenAI',             key: 'openai',       icon: RiRobotLine   },
-          { label: 'FRED (Macro Data)',   key: 'fred',         icon: RiServerLine  },
-          { label: 'NewsAPI (Signals)',   key: 'newsapi',      icon: RiFileCodeLine},
-          { label: 'ExchangeRate API',    key: 'exchangeRate', icon: RiKeyLine     },
-          { label: 'Serper (Enrichment)', key: 'serper',       icon: RiCodeLine    },
-        ].map(({ label, key, icon: Icon }) => (
-          <SettingRow key={key} label={label} icon={Icon}>
+          { label: 'OpenAI',                key: 'openai',       icon: RiRobotLine,    desc: 'All AI features'                     },
+          { label: 'NewsAPI',               key: 'newsapi',      icon: RiFileCodeLine, desc: 'Supply chain signals feed'           },
+          { label: 'FRED',                  key: 'fred',         icon: RiServerLine,   desc: 'Macro trade data + indices'          },
+          { label: 'ExchangeRate API',       key: 'exchangeRate', icon: RiKeyLine,      desc: 'Live FX rates'                       },
+          { label: 'Serper',                key: 'serper',       icon: RiCodeLine,     desc: 'Company research enrichment'         },
+          { label: 'AISstream',             key: 'aisstream',    icon: RiGlobalLine,   desc: 'Live vessel positions (Ocean Freight)'},
+          { label: 'Terminal49',            key: 'terminal49',   icon: RiServerLine,   desc: 'Container tracking'                  },
+          { label: 'OpenSky (OAuth)',        key: 'opensky',      icon: RiPlugLine,     desc: 'Live cargo flight positions (Air Freight)'},
+        ].map(({ label, key, icon: Icon, desc }) => (
+          <SettingRow key={key} label={label} description={desc} icon={Icon}>
             {envStatus(key) || <span className="health-label muted">Run health check</span>}
           </SettingRow>
         ))}
       </SettingCard>
 
       <SettingCard title="AI Preferences">
-        <SettingRow label="Enable AI Features" description="Powers analysis, objection handler, outreach sequences" icon={RiCpuLine}>
+        <SettingRow label="Enable AI Features" description="Powers prospect analysis, AI Message Composer, semantic search, signal scoring, live call suggestions, and research briefs" icon={RiCpuLine}>
           <SettingToggle value={aiEnabled} onChange={(v) => { setAiEnabled(v); flash(); }} />
         </SettingRow>
-        <SettingRow label="Model Preference" description="Used for all OpenAI calls" icon={RiRobotLine}>
+        <SettingRow label="Model Preference" description="Used for all AI features across the platform" icon={RiRobotLine}>
           <select
             className="setting-input setting-select"
             value={model}
             onChange={e => { setModel(e.target.value); flash(); }}
           >
-            <option value="gpt-4.1-mini">gpt-4.1-mini (default)</option>
+            <option value="gpt-4.1-mini">gpt-4.1-mini (default — fast + cost-efficient)</option>
             <option value="gpt-4o-mini">gpt-4o-mini</option>
-            <option value="gpt-4o">gpt-4o</option>
+            <option value="gpt-4o">gpt-4o (highest quality)</option>
+            <option value="gpt-4.1">gpt-4.1</option>
           </select>
         </SettingRow>
       </SettingCard>
 
-      <SettingCard title="API Key Reference (Local)">
-        <div className="setting-desc" style={{ marginBottom: 12 }}>
-          Stored locally for reference only. Add keys to your backend <code className="inline-code">.env</code> file to activate them.
-        </div>
+      <SettingCard title="AI Features Active on This Platform">
         {[
-          { label: 'OpenAI API Key',      key: openaiKey,  setter: setOpenaiKey,  ph: 'sk-...'           },
-          { label: 'NewsAPI Key',         key: newsKey,    setter: setNewsKey,    ph: 'newsapi key...'   },
-          { label: 'ExchangeRate Key',    key: fxKey,      setter: setFxKey,      ph: 'er-api key...'    },
-          { label: 'Serper API Key',      key: serperKey,  setter: setSerperKey,  ph: 'serper key...'    },
-          { label: 'FRED API Key',        key: fredKey,    setter: setFredKey,    ph: 'fred key...'      },
-        ].map(({ label, key, setter, ph }) => (
-          <SettingRow key={label} label={label} icon={RiKeyLine}>
-            <PasswordInput value={key} onChange={(v) => { setter(v); flash(); }} placeholder={ph} />
-          </SettingRow>
+          { label: 'Prospect Analysis',      desc: 'Freight mix, urgency score, pain points, talking points — Account 360 + Home' },
+          { label: 'AI Message Composer',    desc: 'Generate email + LinkedIn outreach by tone (direct / consultative / challenger)' },
+          { label: 'Semantic Prospect Search', desc: 'Natural language → SQL: "electronics importers from Asia with high ICP"' },
+          { label: 'Supply Chain Signals',   desc: 'NewsAPI articles scored 1–10 for outreach urgency, refreshed nightly at midnight EST' },
+          { label: 'Signal Match',           desc: 'Maps a trade signal to affected sectors and generates talking points' },
+          { label: 'Live Call AI',           desc: 'Real-time transcript analysis with suggested responses and objection predictions' },
+          { label: 'Call Prep Brief',        desc: 'Pre-call intelligence package: context, openers, objections, questions' },
+          { label: 'Objection Handler',      desc: 'Structured rebuttals for common freight forwarder objections' },
+          { label: 'Call Intelligence',      desc: 'Parses call notes into pain points, signals, deal probability, and next steps' },
+          { label: 'Research Brief',         desc: 'Company intelligence: trade profile, freight breakdown, why-now signals' },
+          { label: 'MAP / Strategic Plan',   desc: 'Mutual Action Plan generator for Account 360 page' },
+        ].map(({ label, desc }) => (
+          <div key={label} className="setting-row" style={{ alignItems: 'flex-start', gap: 8 }}>
+            <div>
+              <div className="setting-label" style={{ fontSize: 12 }}>{label}</div>
+              <div className="setting-desc">{desc}</div>
+            </div>
+          </div>
         ))}
       </SettingCard>
 
@@ -647,36 +657,51 @@ function DataSection() {
 }
 
 const API_ROUTES = [
-  { method: 'GET',  path: '/api/prospects',               desc: 'List prospects with filters'          },
-  { method: 'GET',  path: '/api/prospects/:id',           desc: 'Single prospect detail'               },
-  { method: 'GET',  path: '/api/hot-prospects',           desc: 'Top 8 by opportunity score'           },
-  { method: 'GET',  path: '/api/market-map',              desc: 'Prospects grouped by sector'          },
-  { method: 'GET',  path: '/api/globe-data',              desc: 'Shipping lanes + port status'         },
-  { method: 'POST', path: '/api/analyze',                 desc: 'AI streaming analysis (SSE)'          },
-  { method: 'POST', path: '/api/semantic-search',         desc: 'AI natural language prospect search'  },
-  { method: 'GET',  path: '/api/signals',                 desc: 'Scored trade signals (NewsAPI)'       },
-  { method: 'GET',  path: '/api/trade-intelligence',      desc: 'FRED macro data'                      },
-  { method: 'GET',  path: '/api/fx-rates',                desc: 'Live FX rates + 1-day % change'       },
-  { method: 'GET',  path: '/api/trigger-events',          desc: 'Earnings + supply chain events'       },
-  { method: 'GET',  path: '/api/performance',             desc: 'SDR KPI summary'                      },
-  { method: 'POST', path: '/api/performance/activity',    desc: 'Log an SDR activity'                  },
-  { method: 'GET',  path: '/api/pipeline',                desc: 'Full pipeline grouped by stage'       },
-  { method: 'GET',  path: '/api/pipeline/count',          desc: 'Active deal count (excl. closed)'     },
-  { method: 'POST', path: '/api/pipeline',                desc: 'Add deal'                             },
-  { method: 'PUT',  path: '/api/pipeline/:id',            desc: 'Update stage / notes / deal value'    },
-  { method: 'DELETE',path: '/api/pipeline/:id',           desc: 'Remove deal'                          },
-  { method: 'GET',  path: '/api/win-loss',                desc: 'Win/loss records'                     },
-  { method: 'POST', path: '/api/win-loss',                desc: 'Log a win or loss'                    },
-  { method: 'GET',  path: '/api/followup-radar',          desc: 'Overdue pipeline contacts'            },
-  { method: 'GET',  path: '/api/pipeline-velocity',       desc: 'Avg days per stage'                   },
-  { method: 'POST', path: '/api/route-optimize',          desc: 'Transit benchmark comparison'         },
-  { method: 'GET',  path: '/api/hs-lookup',               desc: 'HS code tariff data'                  },
-  { method: 'POST', path: '/api/generate-sequence',       desc: 'AI outreach sequence'                 },
-  { method: 'POST', path: '/api/call-prep',               desc: 'AI call prep brief'                   },
-  { method: 'POST', path: '/api/objection',               desc: 'AI objection handler'                 },
-  { method: 'POST', path: '/api/call-intelligence',       desc: 'AI call note parser'                  },
-  { method: 'GET',  path: '/api/analyses',                desc: 'Saved AI analyses'                    },
-  { method: 'GET',  path: '/api/settings/health',        desc: 'Backend + API key health'             },
+  // Prospects
+  { method: 'GET',    path: '/api/prospects',             desc: 'List prospects with sector/ICP/search filters'   },
+  { method: 'GET',    path: '/api/prospects/:id',         desc: 'Single prospect detail'                          },
+  { method: 'GET',    path: '/api/prospects/sectors',     desc: 'Distinct sectors + counts'                       },
+  { method: 'GET',    path: '/api/hot-prospects',         desc: 'Top 8 by opportunity score'                      },
+  { method: 'POST',   path: '/api/semantic-search',       desc: 'AI natural language → SQL prospect search'       },
+  // AI — analysis & messaging
+  { method: 'POST',   path: '/api/analyze',               desc: 'Prospect analysis stream (SSE) — freight mix, urgency, talking pts' },
+  { method: 'POST',   path: '/api/compose-email',         desc: 'AI Message Composer stream (SSE) — email + LinkedIn by tone'        },
+  { method: 'POST',   path: '/api/research',              desc: 'Company intelligence brief — trade profile, signals, why-now'       },
+  { method: 'POST',   path: '/api/call-prep',             desc: 'Pre-call AI brief — context, openers, objections, questions'        },
+  { method: 'POST',   path: '/api/objection',             desc: 'Objection handler — structured freight rebuttals'                   },
+  { method: 'POST',   path: '/api/call-intelligence',     desc: 'Parse call notes → pain points, deal probability, next steps'       },
+  { method: 'POST',   path: '/api/signal-match',          desc: 'Map trade signal to affected sectors + talking points'              },
+  { method: 'POST',   path: '/api/map-plan',              desc: 'Mutual Action Plan generator'                                       },
+  { method: 'GET',    path: '/api/analyses',              desc: 'Saved AI analyses (GET) / save new (POST)'                          },
+  // Signals & market data
+  { method: 'GET',    path: '/api/signals',               desc: 'Scored trade signals refreshed nightly — NewsAPI + GPT'             },
+  { method: 'GET',    path: '/api/trade-intelligence',    desc: 'FRED macro data (trade balance, freight indices)'                   },
+  { method: 'GET',    path: '/api/trade-data/:commodity', desc: 'FRED time-series for a commodity'                                   },
+  { method: 'GET',    path: '/api/fx-rates',              desc: 'Live FX rates + 1-day % change'                                     },
+  { method: 'GET',    path: '/api/trigger-events',        desc: 'Earnings + supply chain trigger events'                             },
+  // Freight tracking
+  { method: 'GET',    path: '/api/vessels',               desc: 'Live/simulated vessel positions'                                    },
+  { method: 'GET',    path: '/api/flights',               desc: 'Live/simulated cargo flight positions (OpenSky)'                    },
+  { method: 'GET',    path: '/api/trucks',                desc: '340 simulated trucks on 85 global highway corridors'                },
+  { method: 'GET',    path: '/api/containers/track',      desc: 'Container tracking by number'                                       },
+  { method: 'GET',    path: '/api/globe-data',            desc: 'Shipping lanes + port status for globe overlay'                     },
+  // Pipeline & performance
+  { method: 'GET',    path: '/api/pipeline',              desc: 'Full pipeline grouped by stage'                                     },
+  { method: 'GET',    path: '/api/pipeline/count',        desc: 'Active deal count (excl. closed) — status bar badge'                },
+  { method: 'POST',   path: '/api/pipeline',              desc: 'Add deal to pipeline'                                               },
+  { method: 'PUT',    path: '/api/pipeline/:id',          desc: 'Update stage / notes / deal value'                                  },
+  { method: 'DELETE', path: '/api/pipeline/:id',          desc: 'Remove deal'                                                        },
+  { method: 'GET',    path: '/api/performance',           desc: 'SDR KPI summary — calls, emails, demos, revenue'                    },
+  { method: 'POST',   path: '/api/performance/activity',  desc: 'Log an SDR activity'                                                },
+  { method: 'GET',    path: '/api/win-loss',              desc: 'Win/loss records'                                                   },
+  { method: 'POST',   path: '/api/win-loss',              desc: 'Log a win or loss outcome'                                          },
+  { method: 'GET',    path: '/api/followup-radar',        desc: 'Pipeline contacts overdue for follow-up'                            },
+  { method: 'GET',    path: '/api/pipeline-velocity',     desc: 'Average days per pipeline stage'                                    },
+  { method: 'GET',    path: '/api/market-map',            desc: 'Prospects grouped by sector for radial market map'                  },
+  // Tools
+  { method: 'GET',    path: '/api/hs-lookup',             desc: 'HS code tariff lookup'                                              },
+  { method: 'POST',   path: '/api/route-optimize',        desc: 'Transit time benchmark comparison across modes'                     },
+  { method: 'GET',    path: '/api/settings/health',       desc: 'Backend health + API key configuration status'                      },
 ];
 
 const SHORTCUTS = [
@@ -695,15 +720,38 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
       <SettingCard title="Application">
         {[
           { key: 'Application',    val: 'Flexport SDR Intelligence Hub' },
-          { key: 'Version',        val: 'v2.0.0'                        },
-          { key: 'Frontend',       val: 'React 19 + Vite 7'            },
-          { key: 'Backend',        val: 'Express 5 + SQLite 3'         },
-          { key: 'AI Engine',      val: 'OpenAI GPT-4.1-mini'          },
-          { key: 'Design System',  val: '#060b18 · #00d4ff · Space Grotesk' },
+          { key: 'Version',        val: 'v2.1.0'                        },
+          { key: 'Frontend',       val: 'React 19 + Vite 7'             },
+          { key: 'Backend',        val: 'Express 5 + SQLite 3'          },
+          { key: 'AI Engine',      val: 'OpenAI GPT-4.1-mini'           },
+          { key: 'Data Sources',   val: 'NewsAPI · FRED · AISstream · OpenSky · ExchangeRate · Serper · Terminal49' },
+          { key: 'Design System',  val: '#060b18 · #00d4ff · Space Grotesk + JetBrains Mono' },
         ].map(({ key, val }) => (
           <div key={key} className="about-kv-row">
             <span className="about-key">{key}</span>
             <span className="about-val">{val}</span>
+          </div>
+        ))}
+      </SettingCard>
+
+      <SettingCard title="Platform Pages">
+        {[
+          { page: 'Home',           path: '/',             desc: 'Globe + prospect intelligence + supply chain signals + today\'s playbook' },
+          { page: 'Ocean Freight',  path: '/vessels',      desc: 'Live vessel tracking globe with AISstream, port congestion overlays' },
+          { page: 'Air Freight',    path: '/flights',      desc: 'Live cargo flight positions via OpenSky OAuth, route arcs' },
+          { page: 'Land Freight',   path: '/land',         desc: '340 simulated trucks on 85 global highway corridors' },
+          { page: 'Trade Data',     path: '/trade',        desc: 'Bloomberg-style terminal — FRED macro data, FX rates, trigger events' },
+          { page: 'Account 360',    path: '/account/:id',  desc: 'Full prospect profile — supply chain diagram, AI analysis, MAP, objection handler' },
+          { page: 'Performance',    path: '/performance',  desc: 'SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart' },
+          { page: 'Research',       path: '/research',     desc: 'AI company intelligence briefs — trade profile, signals, why-now' },
+        ].map(({ page, path, desc }) => (
+          <div key={page} className="setting-row" style={{ alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div className="setting-label" style={{ fontSize: 12 }}>
+                {page} <span style={{ color: '#334155', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>{path}</span>
+              </div>
+              <div className="setting-desc">{desc}</div>
+            </div>
           </div>
         ))}
       </SettingCard>
