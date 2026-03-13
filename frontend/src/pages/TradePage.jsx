@@ -249,17 +249,6 @@ function MacroTile({ label, data, color, formatter, barSpark }) {
   );
 }
 
-function RateYtd({ data = [] }) {
-  if (!data.length) return null;
-  const first = data[0], last = data[data.length - 1];
-  const pct = (((last - first) / first) * 100).toFixed(1);
-  const up = last >= first;
-  return (
-    <span style={{ fontSize: 9, fontFamily: 'JetBrains Mono, monospace', color: up ? '#ef4444' : '#10b981', minWidth: 42 }}>
-      {up ? '▲' : '▼'} {Math.abs(pct)}%
-    </span>
-  );
-}
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function TradePage() {
@@ -538,7 +527,6 @@ export default function TradePage() {
                 <span className="cr-change" style={{ color: r.change >= 0 ? '#ff3b3b' : '#00c176' }}>
                   {r.change >= 0 ? '+' : ''}{r.change}%
                 </span>
-                <RateYtd data={rateHistory[ROUTE_IDS[r.route]] || []} />
               </div>
             ))}
           </div>
