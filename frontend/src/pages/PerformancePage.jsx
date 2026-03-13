@@ -20,10 +20,11 @@ function localDateStr(d = new Date()) {
 // ── Quota targets — reads from Settings localStorage, falls back to defaults ──
 function readQuota() {
   return {
-    calls:   parseInt(localStorage.getItem('sdr_quota_calls'),    10) || 50,
-    emails:  parseInt(localStorage.getItem('sdr_quota_emails'),   10) || 100,
-    demos:   parseInt(localStorage.getItem('sdr_quota_demos'),    10) || 5,
-    revenue: parseInt(localStorage.getItem('sdr_quota_revenue'),  10) || 0,
+    calls:    parseInt(localStorage.getItem('sdr_quota_calls'),    10) || 50,
+    emails:   parseInt(localStorage.getItem('sdr_quota_emails'),   10) || 100,
+    demos:    parseInt(localStorage.getItem('sdr_quota_demos'),    10) || 5,
+    linkedin: parseInt(localStorage.getItem('sdr_quota_linkedin'), 10) || 20,
+    revenue:  parseInt(localStorage.getItem('sdr_quota_revenue'),  10) || 0,
   };
 }
 const HEATMAP_LEVELS = [
@@ -1086,13 +1087,14 @@ export default function PerformancePage() {
   const pipeline = data?.pipeline || {};
   const activities = data?.activities || [];
 
-  // Quota attainment (composite of calls + emails + demos, + pipeline if revenue target set)
-  const callPct    = Math.min(100, ((kpis.callsThisWeek  || 0) / QUOTA.calls)    * 100);
-  const emailPct   = Math.min(100, ((kpis.emailsThisWeek || 0) / QUOTA.emails)   * 100);
-  const demoPct    = Math.min(100, ((kpis.demosBooked    || 0) / QUOTA.demos)    * 100);
-  const revenuePct = QUOTA.revenue > 0 ? Math.min(100, ((kpis.pipelineValue || 0) / QUOTA.revenue) * 100) : null;
-  const _quotaDims = [callPct, emailPct, demoPct, ...(revenuePct !== null ? [revenuePct] : [])];
-  const attainment = Math.round(_quotaDims.reduce((a, b) => a + b, 0) / _quotaDims.length) || 0;
+  // Quota attainment (composite of calls + emails + demos + linkedin, + pipeline if revenue target set)
+  const callPct     = Math.min(100, ((kpis.callsThisWeek    || 0) / QUOTA.calls)    * 100);
+  const emailPct    = Math.min(100, ((kpis.emailsThisWeek   || 0) / QUOTA.emails)   * 100);
+  const demoPct     = Math.min(100, ((kpis.demosBooked      || 0) / QUOTA.demos)    * 100);
+  const linkedinPct = Math.min(100, ((kpis.linkedinsThisWeek|| 0) / QUOTA.linkedin) * 100);
+  const revenuePct  = QUOTA.revenue > 0 ? Math.min(100, ((kpis.pipelineValue || 0) / QUOTA.revenue) * 100) : null;
+  const _quotaDims  = [callPct, emailPct, demoPct, linkedinPct, ...(revenuePct !== null ? [revenuePct] : [])];
+  const attainment  = Math.round(_quotaDims.reduce((a, b) => a + b, 0) / _quotaDims.length) || 0;
 
   const profileName      = localStorage.getItem('sdr_profile_name')      || '';
   const profileTitle     = localStorage.getItem('sdr_profile_title')     || '';
@@ -1206,6 +1208,13 @@ export default function PerformancePage() {
                   <div className="qt-bar" style={{ width: `${demoPct}%`, background: '#10b981' }} />
                 </div>
                 <span className="qt-val">{kpis.demosBooked || 0}<span className="qt-max">/{QUOTA.demos}</span></span>
+              </div>
+              <div className="qt-row">
+                <span style={{ color: '#f59e0b' }}>LinkedIn</span>
+                <div className="qt-bar-bg">
+                  <div className="qt-bar" style={{ width: `${linkedinPct}%`, background: '#f59e0b' }} />
+                </div>
+                <span className="qt-val">{kpis.linkedinsThisWeek || 0}<span className="qt-max">/{QUOTA.linkedin}</span></span>
               </div>
               {QUOTA.revenue > 0 && (() => {
                 const pipeVal = kpis.pipelineValue || 0;

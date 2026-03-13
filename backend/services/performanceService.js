@@ -226,7 +226,8 @@ async function getPerformanceSummary(retentionDays) {
   const emailsThisWeek = thisWeek.filter(a => a.type === 'email').length;
 
   // Demos booked KPI = demos logged as activities THIS week (for weekly quota tracking)
-  const demosBooked = thisWeek.filter(a => a.type === 'demo').length;
+  const demosBooked        = thisWeek.filter(a => a.type === 'demo').length;
+  const linkedinsThisWeek  = thisWeek.filter(a => a.type === 'linkedin').length;
 
   // Pipeline value: use actual deal_value sum when any deals have values entered,
   // otherwise fall back to count × $72K estimate
@@ -235,7 +236,7 @@ async function getPerformanceSummary(retentionDays) {
     : funnel.totalPipeline * 72000;
 
   return {
-    kpis: { callsThisWeek, emailsThisWeek, demosBooked, pipelineValue },
+    kpis: { callsThisWeek, emailsThisWeek, demosBooked, linkedinsThisWeek, pipelineValue },
     activities,
     pipeline: {
       totalProspects: prospects,

@@ -7,6 +7,7 @@ import {
   RiMailSendLine, RiCalendarCheckLine, RiMoneyDollarCircleLine,
   RiAlertLine, RiTimeLine, RiSparklingLine, RiVolumeUpLine,
   RiKeyLine, RiRobotLine, RiServerLine, RiPlugLine,
+  RiLinkedinBoxLine,
   RiSaveLine, RiDownload2Line, RiDeleteBinLine, RiRefreshLine,
   RiExternalLinkLine, RiBug2Line, RiKeyboardLine, RiGithubLine,
   RiTerminalLine, RiEyeLine, RiEyeOffLine, RiCheckLine, RiLayoutLine,
@@ -183,11 +184,12 @@ function ProfileSection() {
 }
 
 function QuotaSection() {
-  const [calls,   setCalls]   = useSetting('sdr_quota_calls',   50);
-  const [emails,  setEmails]  = useSetting('sdr_quota_emails',  100);
-  const [demos,   setDemos]   = useSetting('sdr_quota_demos',   5);
-  const [revenue, setRevenue] = useSetting('sdr_quota_revenue', 0);
-  const [saved,   setSaved]   = useState(false);
+  const [calls,    setCalls]    = useSetting('sdr_quota_calls',    50);
+  const [emails,   setEmails]   = useSetting('sdr_quota_emails',   100);
+  const [demos,    setDemos]    = useSetting('sdr_quota_demos',    5);
+  const [linkedin, setLinkedin] = useSetting('sdr_quota_linkedin', 20);
+  const [revenue,  setRevenue]  = useSetting('sdr_quota_revenue',  0);
+  const [saved,    setSaved]    = useState(false);
 
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
   const numField = (setter) => (e) => {
@@ -195,9 +197,10 @@ function QuotaSection() {
     setter(v); flash();
   };
 
-  const callPct  = Math.min(100, Math.round((22 / calls)  * 100));
-  const emailPct = Math.min(100, Math.round((47 / emails) * 100));
-  const demoPct  = Math.min(100, Math.round((2  / demos)  * 100));
+  const callPct     = Math.min(100, Math.round((22 / calls)    * 100));
+  const emailPct    = Math.min(100, Math.round((47 / emails)   * 100));
+  const demoPct     = Math.min(100, Math.round((2  / demos)    * 100));
+  const linkedinPct = Math.min(100, Math.round((8  / linkedin) * 100));
 
   return (
     <>
@@ -211,6 +214,9 @@ function QuotaSection() {
         <SettingRow label="Demo Target" description="Demos booked per week" icon={RiCalendarCheckLine}>
           <input className="setting-input setting-number" type="number" min="1" value={demos} onChange={numField(setDemos)} />
         </SettingRow>
+        <SettingRow label="LinkedIn Target" description="LinkedIn messages per week" icon={RiLinkedinBoxLine}>
+          <input className="setting-input setting-number" type="number" min="1" value={linkedin} onChange={numField(setLinkedin)} />
+        </SettingRow>
         <SettingRow label="Pipeline Target" description="Revenue goal ($)" icon={RiMoneyDollarCircleLine}>
           <input className="setting-input setting-number" type="number" min="0" step="1000" value={revenue} onChange={(e) => { setRevenue(parseInt(e.target.value,10)||0); flash(); }} />
         </SettingRow>
@@ -219,9 +225,10 @@ function QuotaSection() {
       <SettingCard title="Quota Preview">
         <div className="quota-preview-note">Based on hypothetical mid-week progress (22 calls / 47 emails / 2 demos)</div>
         {[
-          { label: 'Calls',  pct: callPct,  color: '#00d4ff', val: 22, target: calls  },
-          { label: 'Emails', pct: emailPct, color: '#8b5cf6', val: 47, target: emails },
-          { label: 'Demos',  pct: demoPct,  color: '#10b981', val: 2,  target: demos  },
+          { label: 'Calls',    pct: callPct,     color: '#00d4ff', val: 22, target: calls    },
+          { label: 'Emails',   pct: emailPct,    color: '#8b5cf6', val: 47, target: emails   },
+          { label: 'Demos',    pct: demoPct,     color: '#10b981', val: 2,  target: demos    },
+          { label: 'LinkedIn', pct: linkedinPct, color: '#f59e0b', val: 8,  target: linkedin },
         ].map(({ label, pct, color, val, target }) => (
           <div key={label} className="quota-prev-row">
             <span className="quota-prev-label">{label}</span>
