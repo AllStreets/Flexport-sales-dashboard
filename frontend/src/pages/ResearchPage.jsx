@@ -15,18 +15,23 @@ function parseSection(text, key) {
 }
 
 function parseFreightModes(text) {
-  const raw = parseSection(text, 'FREIGHT_MODES');
-  if (!raw) return null;
-  const m = raw.match(/ocean=(\d+)\s+air=(\d+)\s+land=(\d+)/i);
-  if (!m) return null;
-  return { ocean: +m[1], air: +m[2], land: +m[3] };
+  // Search the whole text for the pattern in case section header is malformed
+  const m = text.match(/ocean=(\d+)\s+air=(\d+)\s+land=(\d+)/i);
+  if (m) return { ocean: +m[1], air: +m[2], land: +m[3] };
+  return null;
 }
 
 function parseUrgencyScore(text) {
+  // Try formal section first
   const raw = parseSection(text, 'URGENCY_SCORE');
-  if (!raw) return null;
-  const n = parseInt(raw.trim(), 10);
-  return isNaN(n) ? null : Math.min(10, Math.max(1, n));
+  if (raw) {
+    const n = parseInt(raw.trim(), 10);
+    if (!isNaN(n)) return Math.min(10, Math.max(1, n));
+  }
+  // Fallback: find URGENCY_SCORE label followed by a number anywhere in text
+  const m = text.match(/URGENCY[_\s]SCORE[^\d]*(\d+)/i);
+  if (m) return Math.min(10, Math.max(1, parseInt(m[1], 10)));
+  return null;
 }
 
 function parseStatChips(snapshotText) {
@@ -197,8 +202,20 @@ export default function ResearchPage() {
   const urgency     = parseUrgencyScore(output);
   const statChips   = snapshot ? parseStatChips(snapshot) : [];
   const signalBullets = signals ? parseSignalBullets(signals) : [];
-  const hookText    = hookRaw ? parseHook(hookRaw) : '';
-  const whyBullets  = whyContact ? whyContact.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean) : [];
+  // Fallback: if formal ## OPENING HOOK section missing, scan raw text
+  const hookTextRaw = hookRaw || (() => {
+    const m = output.match(/OPEN(?:ING)?\s*HOOK[:\s]*\n?([^\n]{20,})/i);
+    return m ? m[1].trim() : '';
+  })();
+  const hookText    = hookTextRaw ? parseHook(hookTextRaw) : '';
+  const whyBullets  = whyContact ? whyContact.split('\n')
+    .map(l => l.replace(/^[-•*]\s*/, '').trim())
+    .filter(l => l &&
+      !l.match(/^(OPENING?\s*HOOK|OPEN\s*HOOK|FREIGHT|URGENCY)/i) &&
+      !l.match(/^ocean=|^air=|^land=/i) &&
+      !l.match(/^\d+$/) &&
+      !l.match(/^##/)
+    ) : [];
 
   const hasAnyContent = !!(snapshot || tradeText || signals || whyContact || hookRaw);
   const isStreaming   = loading;

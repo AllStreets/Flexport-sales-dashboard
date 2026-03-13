@@ -953,7 +953,7 @@ ${newsContext || 'No live news available — use your knowledge.'}
 WEB SIGNALS:
 ${serperContext || 'No web signals — use your knowledge.'}
 
-Write the brief using EXACTLY these section headers:
+Your response MUST contain EXACTLY these 7 section headers in this order, each on its own line starting with ##:
 
 ## SNAPSHOT
 2-3 sentences: revenue estimate, employee count, HQ, founding year, what they make/sell.
@@ -971,10 +971,10 @@ Their primary import/export lanes, likely freight forwarder, estimated annual fr
 One killer first sentence for a cold call or email. Reference something specific about their business. Make it impossible to ignore.
 
 ## FREIGHT_MODES
-Write ONLY one line: ocean=XX air=XX land=XX where XX are integers summing to 100. Base on their industry/product type.
+Output exactly one line in this format (integers only, must sum to 100): ocean=XX air=XX land=XX
 
 ## URGENCY_SCORE
-Write ONLY a single integer 1–10 (10 = call them today, deal is on the table; 1 = low priority, no signals).`;
+Output exactly one integer between 1 and 10. Nothing else. No label. No punctuation. Just the digit.`;
 
   try {
     const axios = require('axios');
