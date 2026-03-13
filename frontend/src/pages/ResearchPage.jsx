@@ -1,73 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { RiSearchEyeLine, RiRefreshLine, RiDeleteBinLine, RiFileCopyLine, RiCheckLine } from 'react-icons/ri';
 import './ResearchPage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-// ─── parsers ────────────────────────────────────────────────────────────────
-
-function parseSection(text, key) {
-  const start = text.indexOf(`## ${key}`);
-  if (start === -1) return '';
-  const after = text.slice(start + `## ${key}`.length).trim();
-  const next = after.search(/^## /m);
-  return (next === -1 ? after : after.slice(0, next)).trim();
-}
-
-function parseFreightModes(text) {
-  // Search the whole text for the pattern in case section header is malformed
-  const m = text.match(/ocean=(\d+)\s+air=(\d+)\s+land=(\d+)/i);
-  if (m) return { ocean: +m[1], air: +m[2], land: +m[3] };
-  return null;
-}
-
-function parseUrgencyScore(text) {
-  // Try formal section first
-  const raw = parseSection(text, 'URGENCY_SCORE');
-  if (raw) {
-    const n = parseInt(raw.trim(), 10);
-    if (!isNaN(n)) return Math.min(10, Math.max(1, n));
-  }
-  // Fallback: find URGENCY_SCORE label followed by a number anywhere in text
-  const m = text.match(/URGENCY[_\s]SCORE[^\d]*(\d+)/i);
-  if (m) return Math.min(10, Math.max(1, parseInt(m[1], 10)));
-  return null;
-}
-
-function parseStatChips(snapshotText) {
-  const chips = [];
-  const patterns = [
-    { key: 'Revenue',   re: /\$[\d,.]+[BMK]?\s*(?:billion|million|B|M)?(?:\s+(?:annual|revenue|ARR|in revenue))?/i },
-    { key: 'Employees', re: /[\d,]+\+?\s*(?:employees|staff|people|headcount)/i },
-    { key: 'Founded',   re: /(?:founded|est\.?|established)\s*(?:in\s*)?\d{4}/i },
-    { key: 'HQ',        re: /(?:headquartered|based|HQ)\s+(?:in\s+)?([A-Z][A-Za-z\s,]+?)(?:\.|,|\n|$)/i },
-  ];
-  for (const { key, re } of patterns) {
-    const m = snapshotText.match(re);
-    if (m) chips.push({ key, value: m[0].trim().replace(/^(?:founded|est\.?|established|headquartered|based|HQ)\s+(?:in\s+)?/i, '').replace(/\.$/, '') });
-  }
-  return chips;
-}
-
-function parseSignalBullets(text) {
-  return text
-    .split('\n')
-    .map(l => l.replace(/^[-•*]\s*/, '').trim())
-    .filter(Boolean)
-    .map(line => {
-      const lower = line.toLowerCase();
-      let tone = 'neutral';
-      if (/expan|grow|launch|partner|award|win|fund|hire|record|surge|boost|open|new|strong|positive|raise|acqui/.test(lower)) tone = 'positive';
-      if (/risk|warn|loss|layoff|cut|decline|drop|miss|churn|delay|problem|issue|disrupt|slow|concern|sanction|penalt|fine|investig|sue|lawsuit/.test(lower)) tone = 'risk';
-      return { line, tone };
-    });
-}
-
-function parseHook(text) {
-  return text.replace(/^["']|["']$/g, '').trim();
-}
-
-// ─── SVG components ──────────────────────────────────────────────────────────
+// ─── SVG / visual components ─────────────────────────────────────────────────
 
 function UrgencyRing({ score }) {
   const r = 42, cx = 54, cy = 54;
@@ -99,19 +36,19 @@ function UrgencyRing({ score }) {
   );
 }
 
-function FreightBar({ modes }) {
-  const total = modes.ocean + modes.air + modes.land || 100;
+function FreightBar({ ocean, air, land }) {
+  const total = (ocean + air + land) || 100;
   const bars = [
-    { label: 'OCEAN', pct: modes.ocean / total * 100, color: '#00d4ff' },
-    { label: 'AIR',   pct: modes.air   / total * 100, color: '#a78bfa' },
-    { label: 'LAND',  pct: modes.land  / total * 100, color: '#34d399' },
+    { label: 'OCEAN', pct: ocean / total * 100, color: '#00d4ff' },
+    { label: 'AIR',   pct: air   / total * 100, color: '#a78bfa' },
+    { label: 'LAND',  pct: land  / total * 100, color: '#34d399' },
   ];
   return (
     <div className="rp-freight-bar">
       <div className="rp-freight-bar-track">
         {bars.map(b => (
           <div key={b.label} className="rp-freight-bar-seg"
-            style={{ width: `${b.pct}%`, background: b.color, transition: 'width 0.8s ease' }}
+            style={{ width: `${b.pct}%`, background: b.color }}
             title={`${b.label}: ${Math.round(b.pct)}%`}
           />
         ))}
@@ -133,38 +70,67 @@ function SkeletonLine({ w = '100%', h = 13, mb = 8 }) {
   return <div className="rp-skeleton" style={{ width: w, height: h, marginBottom: mb }} />;
 }
 
-function TileSkeleton() {
+function LoadingGrid() {
   return (
-    <div className="rp-skeleton-tile">
-      <SkeletonLine w="40%" h={10} mb={14} />
-      <SkeletonLine w="100%" />
-      <SkeletonLine w="90%" />
-      <SkeletonLine w="80%" />
+    <div className="rp-grid">
+      <div className="rp-tile rp-tile-full">
+        <SkeletonLine w="30%" h={9} mb={14} />
+        <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+          {[80,90,70,85].map((w,i) => <SkeletonLine key={i} w={w} h={26} mb={0} />)}
+        </div>
+        <SkeletonLine /><SkeletonLine w="90%" /><SkeletonLine w="75%" />
+      </div>
+      <div className="rp-tile rp-tile-full">
+        <SkeletonLine w="30%" h={9} mb={14} />
+        <SkeletonLine h={8} mb={10} />
+        <SkeletonLine /><SkeletonLine w="85%" /><SkeletonLine w="70%" />
+      </div>
+      <div className="rp-tile rp-tile-half">
+        <SkeletonLine w="40%" h={9} mb={14} />
+        <SkeletonLine /><SkeletonLine w="90%" /><SkeletonLine w="80%" />
+      </div>
+      <div className="rp-tile rp-tile-half">
+        <SkeletonLine w="40%" h={9} mb={14} />
+        <SkeletonLine /><SkeletonLine w="85%" />
+      </div>
+      <div className="rp-tile rp-tile-full">
+        <SkeletonLine w="30%" h={9} mb={14} />
+        {[1,2,3,4].map(i => <SkeletonLine key={i} w={`${75+i*5}%`} h={38} mb={6} />)}
+      </div>
     </div>
   );
 }
 
-// ─── main component ──────────────────────────────────────────────────────────
+function signalTone(text) {
+  const l = text.toLowerCase();
+  if (/expan|grow|launch|partner|award|win|fund|hire|record|surge|boost|open|new|strong|raise|acqui/.test(l)) return 'positive';
+  if (/risk|warn|loss|layoff|cut|decline|drop|miss|churn|delay|problem|issue|disrupt|slow|sanction|fine/.test(l)) return 'risk';
+  return 'neutral';
+}
+
+// ─── main component ───────────────────────────────────────────────────────────
 
 export default function ResearchPage() {
   const [query, setQuery]     = useState('');
-  const [output, setOutput]   = useState('');
+  const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
   const [copied, setCopied]   = useState(false);
-  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('research_history') || '[]'));
-  const outputRef = useRef('');
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('research_history') || '[]'); } catch { return []; }
+  });
 
-  const saveHistory = (company, text) => {
-    const entry = { company, text, ts: Date.now() };
-    const next = [entry, ...history].slice(0, 10);
+  const saveHistory = (company, d) => {
+    const entry = { company, data: d, ts: Date.now() };
+    const next = [entry, ...history.filter(h => h.company.toLowerCase() !== company.toLowerCase())].slice(0, 10);
     setHistory(next);
     localStorage.setItem('research_history', JSON.stringify(next));
   };
 
   const runResearch = useCallback(async (company = query.trim()) => {
     if (!company) return;
-    setOutput('');
-    outputRef.current = '';
+    setData(null);
+    setError('');
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/research`, {
@@ -172,66 +138,50 @@ export default function ResearchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company }),
       });
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        for (const line of decoder.decode(value).split('\n')) {
-          if (line.startsWith('data: ') && !line.includes('[DONE]')) {
-            try {
-              const { text } = JSON.parse(line.slice(6));
-              outputRef.current += text;
-              setOutput(outputRef.current);
-            } catch {}
-          }
-        }
-      }
-      saveHistory(company, outputRef.current);
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setData(json);
+      saveHistory(company, json);
+    } catch (e) {
+      setError(e.message || 'Research failed');
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, history]);
 
-  const snapshot    = parseSection(output, 'SNAPSHOT');
-  const tradeText   = parseSection(output, 'TRADE PROFILE');
-  const whyContact  = parseSection(output, 'WHY CONTACT NOW');
-  const signals     = parseSection(output, 'RECENT SIGNALS');
-  const hookRaw     = parseSection(output, 'OPENING HOOK');
-  const freightModes = parseFreightModes(output);
-  const urgency     = parseUrgencyScore(output);
-  const statChips   = snapshot ? parseStatChips(snapshot) : [];
-  const signalBullets = signals ? parseSignalBullets(signals) : [];
-  // Fallback: if formal ## OPENING HOOK section missing, scan raw text
-  const hookTextRaw = hookRaw || (() => {
-    const m = output.match(/OPEN(?:ING)?\s*HOOK[:\s]*\n?([^\n]{20,})/i);
-    return m ? m[1].trim() : '';
-  })();
-  const hookText    = hookTextRaw ? parseHook(hookTextRaw) : '';
-  const whyBullets  = whyContact ? whyContact.split('\n')
-    .map(l => l.replace(/^[-•*]\s*/, '').trim())
-    .filter(l => l &&
-      !l.match(/^(OPENING?\s*HOOK|OPEN\s*HOOK|FREIGHT|URGENCY)/i) &&
-      !l.match(/^ocean=|^air=|^land=/i) &&
-      !l.match(/^\d+$/) &&
-      !l.match(/^##/)
-    ) : [];
-
-  const hasAnyContent = !!(snapshot || tradeText || signals || whyContact || hookRaw);
-  const isStreaming   = loading;
+  const loadHistory = (h) => {
+    setQuery(h.company);
+    if (h.data && typeof h.data === 'object' && h.data.snapshot) {
+      setData(h.data);
+    } else {
+      // Old text-format entry — re-fetch
+      runResearch(h.company);
+    }
+  };
 
   const copyHook = () => {
-    if (!hookText) return;
-    navigator.clipboard.writeText(hookText).then(() => {
+    if (!data?.openingHook) return;
+    navigator.clipboard.writeText(data.openingHook).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
 
+  const chips = data ? [
+    data.employees && { key: 'EMPLOYEES', value: data.employees },
+    data.founded   && { key: 'FOUNDED',   value: data.founded   },
+    data.hq        && { key: 'HQ',        value: data.hq        },
+    data.revenue   && { key: 'REVENUE',   value: data.revenue   },
+  ].filter(Boolean) : [];
+
+  const signals  = Array.isArray(data?.signals)  ? data.signals  : [];
+  const whyNow   = Array.isArray(data?.whyNow)   ? data.whyNow   : [];
+  const hasData  = !!data && !error;
+
   return (
     <div className="rp-page">
 
-      {/* ── left sidebar ── */}
+      {/* ── sidebar ── */}
       <div className="rp-sidebar">
         <div className="rp-search-box">
           <RiSearchEyeLine size={15} className="rp-search-icon" />
@@ -251,8 +201,7 @@ export default function ResearchPage() {
           <div className="rp-history">
             <div className="rp-history-label">RECENT SCANS</div>
             {history.map((h, i) => (
-              <div key={i} className="rp-history-item"
-                onClick={() => { setQuery(h.company); setOutput(h.text); }}>
+              <div key={i} className="rp-history-item" onClick={() => loadHistory(h)}>
                 <span className="rp-history-name">{h.company}</span>
                 <button className="rp-history-del" onClick={e => {
                   e.stopPropagation();
@@ -266,114 +215,108 @@ export default function ResearchPage() {
         )}
       </div>
 
-      {/* ── main content ── */}
+      {/* ── main ── */}
       <div className="rp-main">
-        {!hasAnyContent && !loading && (
+
+        {!hasData && !loading && !error && (
           <div className="rp-empty">
             <RiSearchEyeLine size={36} className="rp-empty-icon" />
             <div className="rp-empty-title">INTELLIGENCE BRIEF</div>
-            <p className="rp-empty-sub">Enter a company name to generate a scannable brief — freight profile, signals, urgency score, and opening hook in under 60 seconds.</p>
+            <p className="rp-empty-sub">Enter a company name to generate a scannable brief — freight profile, signals, urgency score, and opening hook.</p>
           </div>
         )}
 
-        {(hasAnyContent || loading) && (
+        {error && (
+          <div className="rp-empty">
+            <div className="rp-empty-title" style={{ color: '#ef4444' }}>GENERATION FAILED</div>
+            <p className="rp-empty-sub">{error}</p>
+          </div>
+        )}
+
+        {loading && <LoadingGrid />}
+
+        {hasData && (
           <div className="rp-grid">
 
-            {/* SNAPSHOT tile */}
+            {/* ── SNAPSHOT ── */}
             <div className="rp-tile rp-tile-full">
               <div className="rp-tile-header">
                 <span className="rp-tile-label">SNAPSHOT</span>
-                {isStreaming && !snapshot && <span className="rp-streaming-dot" />}
               </div>
-              {snapshot ? (
-                <>
-                  {statChips.length > 0 && (
-                    <div className="rp-chips">
-                      {statChips.map(c => (
-                        <span key={c.key} className="rp-chip">
-                          <span className="rp-chip-key">{c.key}</span>
-                          <span className="rp-chip-val">{c.value}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="rp-snapshot-body">{snapshot}</p>
-                </>
-              ) : isStreaming ? <TileSkeleton /> : null}
+              {chips.length > 0 && (
+                <div className="rp-chips">
+                  {chips.map(c => (
+                    <span key={c.key} className="rp-chip">
+                      <span className="rp-chip-key">{c.key}</span>
+                      <span className="rp-chip-val">{c.value}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="rp-snapshot-body">{data.snapshot}</p>
             </div>
 
-            {/* TRADE PROFILE tile */}
-            <div className="rp-tile rp-tile-half">
+            {/* ── TRADE PROFILE — full width, always has freight bar ── */}
+            <div className="rp-tile rp-tile-full">
               <div className="rp-tile-header">
                 <span className="rp-tile-label">TRADE PROFILE</span>
-                {isStreaming && !tradeText && <span className="rp-streaming-dot" />}
               </div>
-              {tradeText ? (
-                <>
-                  {freightModes && <FreightBar modes={freightModes} />}
-                  <p className="rp-trade-body">{tradeText.replace(/ocean=\d+\s+air=\d+\s+land=\d+/gi, '').trim()}</p>
-                </>
-              ) : isStreaming ? <TileSkeleton /> : null}
+              <FreightBar
+                ocean={data.freightOcean ?? 60}
+                air={data.freightAir ?? 30}
+                land={data.freightLand ?? 10}
+              />
+              <p className="rp-trade-body">{data.tradeProfile}</p>
             </div>
 
-            {/* URGENCY tile */}
+            {/* ── URGENCY SCORE + OPENING HOOK side by side ── */}
             <div className="rp-tile rp-tile-half">
               <div className="rp-tile-header">
                 <span className="rp-tile-label">URGENCY SCORE</span>
-                {isStreaming && urgency === null && <span className="rp-streaming-dot" />}
               </div>
-              {(urgency !== null || whyBullets.length > 0) ? (
-                <div className="rp-urgency-wrap">
-                  {urgency !== null && <UrgencyRing score={urgency} />}
-                  {whyBullets.length > 0 && (
-                    <ul className="rp-why-list">
-                      {whyBullets.map((b, i) => (
-                        <li key={i} className="rp-why-item">{b}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : isStreaming ? <TileSkeleton /> : null}
+              <div className="rp-urgency-wrap">
+                {data.urgencyScore != null && <UrgencyRing score={data.urgencyScore} />}
+                {whyNow.length > 0 && (
+                  <ul className="rp-why-list">
+                    {whyNow.map((b, i) => <li key={i} className="rp-why-item">{b}</li>)}
+                  </ul>
+                )}
+              </div>
             </div>
 
-            {/* RECENT SIGNALS tile */}
+            <div className="rp-tile rp-tile-half rp-tile-hook">
+              <div className="rp-tile-header">
+                <span className="rp-tile-label">OPENING HOOK</span>
+                <button className="rp-copy-btn" onClick={copyHook}>
+                  {copied ? <RiCheckLine size={13} /> : <RiFileCopyLine size={13} />}
+                  <span>{copied ? 'COPIED' : 'COPY'}</span>
+                </button>
+              </div>
+              <blockquote className="rp-hook-text">"{data.openingHook}"</blockquote>
+            </div>
+
+            {/* ── RECENT SIGNALS ── */}
             <div className="rp-tile rp-tile-full">
               <div className="rp-tile-header">
                 <span className="rp-tile-label">RECENT SIGNALS</span>
-                {isStreaming && !signals && <span className="rp-streaming-dot" />}
               </div>
-              {signalBullets.length > 0 ? (
+              {signals.length > 0 ? (
                 <div className="rp-signals">
-                  {signalBullets.map((s, i) => (
-                    <div key={i} className={`rp-signal rp-signal-${s.tone}`}>
-                      <span className="rp-signal-dot" />
-                      <span className="rp-signal-text">{s.line}</span>
-                    </div>
-                  ))}
+                  {signals.map((s, i) => {
+                    const tone = signalTone(s);
+                    return (
+                      <div key={i} className={`rp-signal rp-signal-${tone}`}>
+                        <span className="rp-signal-dot" />
+                        <span className="rp-signal-text">{s}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : isStreaming ? <TileSkeleton /> : null}
+              ) : (
+                <div className="rp-unavailable"><span className="rp-unavailable-dot" />no recent signals found</div>
+              )}
             </div>
 
-            {/* OPENING HOOK tile */}
-            {(hookText || (loading && !hookRaw)) && (
-              <div className="rp-tile rp-tile-full rp-tile-hook">
-                <div className="rp-tile-header">
-                  <span className="rp-tile-label">OPENING HOOK</span>
-                  {isStreaming && !hookText && <span className="rp-streaming-dot" />}
-                  {hookText && (
-                    <button className="rp-copy-btn" onClick={copyHook} title="Copy hook">
-                      {copied ? <RiCheckLine size={13} /> : <RiFileCopyLine size={13} />}
-                      <span>{copied ? 'COPIED' : 'COPY'}</span>
-                    </button>
-                  )}
-                </div>
-                {hookText ? (
-                  <blockquote className="rp-hook-text">"{hookText}"</blockquote>
-                ) : <TileSkeleton />}
-              </div>
-            )}
-
-            {loading && <span className="rp-cursor" />}
           </div>
         )}
       </div>

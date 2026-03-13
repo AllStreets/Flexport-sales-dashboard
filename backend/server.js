@@ -913,7 +913,7 @@ OUTPUT FORMAT (use these exact headers):
   }
 });
 
-// ── Research — AI company intelligence brief with Serper + NewsAPI + OpenAI ─
+// ── Research — AI company intelligence brief (structured JSON, always complete) ─
 app.post('/api/research', async (req, res) => {
   const { company } = req.body;
   if (!company) return res.status(400).json({ error: 'company required' });
@@ -943,74 +943,56 @@ app.post('/api/research', async (req, res) => {
     }
   } catch (e) { console.error('research enrichment error:', e.message); }
 
-  const prompt = `You are a world-class sales intelligence analyst. Generate a concise prospect intelligence brief for an SDR at Flexport (AI-powered freight forwarding) targeting this company.
+  const prompt = `You are a world-class sales intelligence analyst. Generate a Flexport SDR prospect brief as a JSON object.
 
 COMPANY: ${company}
+RECENT NEWS: ${newsContext || 'Use your knowledge.'}
+WEB SIGNALS: ${serperContext || 'Use your knowledge.'}
 
-RECENT NEWS:
-${newsContext || 'No live news available — use your knowledge.'}
+Return ONLY a valid JSON object with exactly these fields:
+{
+  "employees": "headcount string e.g. ~80,000",
+  "revenue": "annual revenue e.g. ~$50B USD",
+  "founded": "year e.g. 1964",
+  "hq": "city and country e.g. Beaverton, OR, USA",
+  "snapshot": "2-3 sentences: what they make/sell, market position, why they matter for freight",
+  "tradeProfile": "their import/export lanes, likely freight forwarder, annual freight spend estimate, dominant shipping mode",
+  "freightOcean": <integer 0-100>,
+  "freightAir": <integer 0-100>,
+  "freightLand": <integer 0-100>,
+  "signals": ["signal 1", "signal 2", "signal 3", "signal 4", "signal 5"],
+  "whyNow": ["reason 1", "reason 2", "reason 3"],
+  "openingHook": "one killer cold call or email opening sentence referencing something specific about their logistics",
+  "urgencyScore": <integer 1-10>
+}
 
-WEB SIGNALS:
-${serperContext || 'No web signals — use your knowledge.'}
-
-Your response MUST contain EXACTLY these 7 section headers in this order, each on its own line starting with ##:
-
-## SNAPSHOT
-2-3 sentences: revenue estimate, employee count, HQ, founding year, what they make/sell.
-
-## TRADE PROFILE
-Their primary import/export lanes, likely freight forwarder, estimated annual freight spend range, dominant shipping mode (ocean/air/both).
-
-## RECENT SIGNALS
-3-5 bullet points: notable news from last 90 days — funding, exec hires, factory moves, earnings, supply chain changes. If none, note the silence.
-
-## WHY CONTACT NOW
-2-3 specific, signal-grounded reasons this company needs Flexport RIGHT NOW. Reference tariffs, Hormuz disruption, Vietnam factory surge, or relevant market forces.
-
-## OPENING HOOK
-One killer first sentence for a cold call or email. Reference something specific about their business. Make it impossible to ignore.
-
-## FREIGHT_MODES
-Output exactly one line in this format (integers only, must sum to 100): ocean=XX air=XX land=XX
-
-## URGENCY_SCORE
-Output exactly one integer between 1 and 10. Nothing else. No label. No punctuation. Just the digit.`;
+Rules:
+- freightOcean + freightAir + freightLand must sum to exactly 100.
+- signals must have 3-5 items. whyNow must have 2-3 items.
+- openingHook must be a single compelling sentence.
+- No markdown, no extra fields.
+- urgencyScore MUST reflect actual evidence. Use the full 1-10 range:
+  1-3 = stable company, long-term incumbent forwarder, no recent disruption, low freight complexity (e.g. domestic-only retailer, no import dependency)
+  4-5 = moderate freight volume, some international exposure, no urgent signals
+  6-7 = notable freight volume, some recent supply chain signals, or an incumbent forwarder relationship worth displacing
+  8-9 = active supply chain disruption, tariff exposure, exec change, new factory, or explicit competitor vulnerability
+  10 = crisis-level urgency: active logistics failure, emergency sourcing shift, or imminent contract renewal
+  Most companies score 4-6. Only score 8+ if there is specific evidence justifying it.`;
 
   try {
     const axios = require('axios');
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.flushHeaders();
-
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4.1-mini',
       messages: [{ role: 'user', content: prompt }],
-      stream: true,
+      response_format: { type: 'json_object' },
     }, {
       headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      responseType: 'stream',
     });
-
-    response.data.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n').filter(l => l.trim());
-      for (const line of lines) {
-        if (line.startsWith('data: ') && !line.includes('[DONE]')) {
-          try {
-            const json = JSON.parse(line.slice(6));
-            const text = json.choices?.[0]?.delta?.content || '';
-            if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
-          } catch {}
-        } else if (line.includes('[DONE]')) {
-          res.write('data: [DONE]\n\n');
-          res.end();
-        }
-      }
-    });
-    response.data.on('end', () => { if (!res.writableEnded) { res.write('data: [DONE]\n\n'); res.end(); } });
-    response.data.on('error', () => { if (!res.writableEnded) res.end(); });
+    const result = JSON.parse(response.data.choices[0].message.content);
+    res.json(result);
   } catch (err) {
     console.error('research error:', err.message);
-    if (!res.headersSent) res.status(500).json({ error: 'Research generation failed' });
+    res.status(500).json({ error: 'Research generation failed' });
   }
 });
 
