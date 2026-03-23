@@ -5,17 +5,11 @@ import axios from 'axios';
 import { RiFlashlightLine, RiArrowRightLine, RiCloseLine, RiMapPin2Line, RiShipLine } from 'react-icons/ri';
 import './MarketMapPage.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 // ── Static sector intelligence ────────────────────────────────────────────────
 // TAMs reflect US freight forwarding addressable market by sector (2024-2025 trade data)
 const SECTOR_META = {
-  'e-commerce': {
-    tam: '$38B', freight: '$180K avg/yr',
-    products: ['Cross-Border', 'Duty Deferral', 'Ocean LCL', 'Tracking'],
-    subsegments: ['DTC Apparel', 'DTC Beauty', 'DTC Home', 'Multi-Cat'],
-    signal: 'Q2 peak season import surge underway — window to displace incumbents',
-  },
   'apparel': {
     tam: '$22B', freight: '$220K avg/yr',
     products: ['Ocean FCL', 'Air Freight', 'Customs Brokerage'],
