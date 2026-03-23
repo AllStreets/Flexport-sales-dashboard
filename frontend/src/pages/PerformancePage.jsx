@@ -3,7 +3,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import {
   RiPhoneLine, RiMailSendLine, RiCalendarCheckLine, RiMoneyDollarCircleLine,
@@ -472,7 +472,7 @@ function OutreachStats({ activities, winLossRecords }) {
       {activities.filter(a => a.notes?.trim()).length > 0 && (
         <div className="os-notes-log">
           <div className="os-breakdown-label" style={{ marginTop: 12 }}>Recent Activity Notes</div>
-          {activities.filter(a => a.notes?.trim()).slice(-20).reverse().map((a, i) => (
+          {activities.filter(a => a.notes?.trim()).slice(0, 20).map((a, i) => (
             <div key={i} className="os-note-row">
               <div className="os-note-meta">
                 <span style={{ color: ACTIVITY_TYPE_META[a.type]?.color || '#64748b', textTransform: 'capitalize' }}>{a.type}</span>
@@ -1087,11 +1087,20 @@ export default function PerformancePage() {
   const pipeline = data?.pipeline || {};
   const activities = data?.activities || [];
 
+  // Compute linkedinsThisWeek from activities directly (frontend source of truth — avoids
+  // stale backend kpis if server hasn't been restarted after a schema change)
+  const _wkMon = (() => {
+    const d = new Date(); const dow = d.getDay();
+    d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  })();
+  const linkedinsThisWeek = activities.filter(a => a.type === 'linkedin' && a.date >= _wkMon).length;
+
   // Quota attainment (composite of calls + emails + demos + linkedin, + pipeline if revenue target set)
   const callPct     = Math.min(100, ((kpis.callsThisWeek    || 0) / QUOTA.calls)    * 100);
   const emailPct    = Math.min(100, ((kpis.emailsThisWeek   || 0) / QUOTA.emails)   * 100);
   const demoPct     = Math.min(100, ((kpis.demosBooked      || 0) / QUOTA.demos)    * 100);
-  const linkedinPct = Math.min(100, ((kpis.linkedinsThisWeek|| 0) / QUOTA.linkedin) * 100);
+  const linkedinPct = Math.min(100, (linkedinsThisWeek / QUOTA.linkedin) * 100);
   const revenuePct  = QUOTA.revenue > 0 ? Math.min(100, ((kpis.pipelineValue || 0) / QUOTA.revenue) * 100) : null;
   const _quotaDims  = [callPct, emailPct, demoPct, linkedinPct, ...(revenuePct !== null ? [revenuePct] : [])];
   const attainment  = Math.round(_quotaDims.reduce((a, b) => a + b, 0) / _quotaDims.length) || 0;
@@ -1214,7 +1223,7 @@ export default function PerformancePage() {
                 <div className="qt-bar-bg">
                   <div className="qt-bar" style={{ width: `${linkedinPct}%`, background: '#f59e0b' }} />
                 </div>
-                <span className="qt-val">{kpis.linkedinsThisWeek || 0}<span className="qt-max">/{QUOTA.linkedin}</span></span>
+                <span className="qt-val">{linkedinsThisWeek}<span className="qt-max">/{QUOTA.linkedin}</span></span>
               </div>
               {QUOTA.revenue > 0 && (() => {
                 const pipeVal = kpis.pipelineValue || 0;
