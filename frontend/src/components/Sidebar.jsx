@@ -11,6 +11,7 @@ const NAV = [
   { to: '/flights',     Icon: RiPlaneLine,            label: 'Air Freight'        },
   { to: '/land',        Icon: RiTruckLine,            label: 'Land Freight'       },
   { to: '/vessels',     Icon: RiShipLine,             label: 'Ocean Freight'      },
+  { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'         },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence' },
   { to: '/research',    Icon: RiSearchEyeLine,        label: 'Quick Research'     },
   { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Research'       },
