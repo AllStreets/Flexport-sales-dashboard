@@ -106,6 +106,12 @@ const SECTOR_META = {
     subsegments: ['Fine Jewelry', 'Fashion Jewelry', 'Watches', 'Lab-Grown'],
     signal: 'High-value air shipments at risk from duty changes — FTZ bonded warehouse pitch',
   },
+  'baby': {
+    tam: '$9B', freight: '$180K avg/yr',
+    products: ['Ocean FCL', 'Customs Brokerage', 'Section 301 Mgmt'],
+    subsegments: ['Strollers & Gear', 'Nursery Furniture', 'Monitors & Tech', 'Feeding & Care'],
+    signal: 'CPSC juvenile product testing burden rising — compliance-ready forwarders win',
+  },
 };
 
 const DEFAULT_META = {
