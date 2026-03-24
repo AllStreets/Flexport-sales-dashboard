@@ -16,10 +16,10 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 | `/vessels` | Ocean Freight | Live AIS vessel tracking globe — 200 real vessels (AISstream) or 250 simulated vessels on 62 great-circle trade routes. Animated route arcs, vessel type coloring (Container/Tanker/Bulk), port disruption rings. Right panel: Fleet Overview, live event feed, container tracker (Terminal49), vessel detail. Live/simulated badge. |
 | `/trade` | Trade Intelligence Terminal | Bloomberg-style macro terminal — FRED live data, 20-route container spot rates, port congestion table, live FX rates, tariff tables, route optimizer, §301 actions, trade policy calendar, earnings trigger event monitor |
 | `/account/:id` | Account 360 | Full prospect deep-dive — animated supply chain diagram with correct US port routing, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser (always visible; auto-populates from Live Call notes) |
-| `/performance` | SDR Performance | 365-day activity heatmap, quota attainment rings, activity funnel, win/loss chart and logger, follow-up radar, pipeline velocity, recent activity feed |
-| `/market` | Market Map | Zoomable radial SVG node graph of 136 prospects by sector with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations, signal timeline per company |
+| `/performance` | SDR Performance | 365-day activity heatmap, quota attainment rings (calls, emails, demos, LinkedIn, pipeline), activity funnel, win/loss chart and logger, follow-up radar, pipeline velocity, recent activity feed |
+| `/market` | Market Map | Zoomable radial SVG node graph of 250 prospects across 15 sectors (apparel, beauty, electronics, CPG, outdoor, accessories, home-goods, furniture, health, footwear, activewear, jewelry, home-textiles, pet, baby) with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations, signal timeline per company |
 | `/tariff` | Tariff Calculator | Landed cost modeling — origin country, product HS code, cargo value, weight, Ocean FCL vs Air mode; §301 + reciprocal tariff breakdown, SDR angle generator, HS code lookup |
-| `/settings` | Settings | Profile, quota targets, notifications, Live Call (mic auto-start, AI prediction frequency), appearance (accent color, density), AI model selection, API key status, data export, keyboard shortcuts reference |
+| `/settings` | Settings | Profile, quota targets (calls, emails, demos, LinkedIn, pipeline), notifications, Live Call (mic auto-start, AI prediction frequency), appearance (accent color, density), AI model selection, API key status, data export, keyboard shortcuts reference, platform pages reference, server health |
 
 ---
 
@@ -100,7 +100,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   │   ├── usitcService.js                 # HS code tariff lookup
 │   │   └── database.js                     # Saved analyses CRUD
 │   ├── data/
-│   │   └── seedProspects.js                # 136-prospect database seed script
+│   │   └── seedProspects.js                # 250-prospect database seed script (15 sectors)
 │   ├── initDb.js                           # Schema creation + safe ALTER TABLE migrations
 │   └── server.js                           # All API routes, AISstream WebSocket client, static data
 │

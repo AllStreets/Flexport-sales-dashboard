@@ -748,6 +748,7 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
           { page: 'Air Freight',    path: '/flights',      desc: 'Live cargo flight positions via OpenSky OAuth, route arcs' },
           { page: 'Land Freight',   path: '/land',         desc: '340 simulated trucks on 85 global highway corridors' },
           { page: 'Trade Data',     path: '/trade',        desc: 'Bloomberg-style terminal — FRED macro data, FX rates, trigger events' },
+          { page: 'Market Map',     path: '/market',       desc: '250-prospect radial node graph across 15 sectors — TAM, freight avg, live ICP signals' },
           { page: 'Account 360',    path: '/account/:id',  desc: 'Full prospect profile — supply chain diagram, AI analysis, MAP, objection handler' },
           { page: 'Performance',    path: '/performance',  desc: 'SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart' },
           { page: 'Research',       path: '/research',     desc: 'AI company intelligence briefs — trade profile, signals, why-now' },

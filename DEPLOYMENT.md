@@ -46,7 +46,7 @@ Subsequent deploys happen automatically on push to `main`.
 node initDb.js && node data/seedProspects.js && node server.js
 ```
 
-This creates the schema, runs safe migrations, seeds all 136 prospects, and starts the API on every cold start. No manual database setup required.
+This creates the schema, runs safe migrations, seeds all 250 prospects across 15 sectors, and starts the API on every cold start. No manual database setup required.
 
 ### Environment Variables (Railway Dashboard → Variables)
 
