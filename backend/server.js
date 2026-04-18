@@ -1459,6 +1459,7 @@ app.get('/api/containers/:requestId', async (req, res) => {
 
 // ── Air Freight (Flights) ─────────────────────────────────────────────────
 const CARGO_PREFIXES_SET = new Set(['FDX','UPS','GTI','CLX','NCA','CKS','PAC','SWN','KAC','CAL','CPA','ETD','QTR','ABX','ATN','GEC','TAY','VDA','DHL','BOX','WOA','ETH','LCO','CKK']);
+const GOV_PREFIXES_SET   = new Set(['RCH','SAM','NAV','USN','MIL','DUKE','IRON','BOXER','SWORD','REACH','USAF','EVAC','FORTE','ATLAS','SUI','NCO','EXC','GLEX']);
 
 const FLIGHT_ROUTES = [
   { from:'Memphis',     fromLat:35.04,  fromLng:-89.98,  to:'Frankfurt',   toLat:50.04,  toLng:8.57    },
@@ -1632,7 +1633,7 @@ function buildSimulatedFlights() {
       const cs = PAXCS[seed % PAXCS.length];
       const num = 100 + ((seed * 31 + ri * 17) % 899);
       flights.push({
-        id: `PAX${seed}`, callsign: `${cs}${num}`, isCargo: false,
+        id: `PAX${seed}`, callsign: `${cs}${num}`, isCargo: false, isGov: false,
         lat, lng, altitude: 10000 + ((seed * 29 + i * 300) % 2000),
         velocity: 250 + ((seed * 11 + i * 9) % 50), heading,
         origin: r.from, destination: r.to,
@@ -1675,6 +1676,7 @@ app.get('/api/flights', async (req, res) => {
           id: s[0],
           callsign: (s[1] || '').trim(),
           isCargo: true,
+          isGov: false,
           lat: s[6], lng: s[5],
           altitude: s[7] || 0,
           velocity: s[9] ? Math.round(s[9] * 1.944) : 0,

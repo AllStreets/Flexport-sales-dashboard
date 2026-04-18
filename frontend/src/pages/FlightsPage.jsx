@@ -44,6 +44,7 @@ function parseOpenSkyStates(states) {
     id: s[0],
     callsign: (s[1] || '').trim(),
     isCargo: true,
+    isGov: false,
     lat: s[6],
     lng: s[5],
     altitude: s[13] || 10000,
@@ -212,7 +213,7 @@ export default function FlightsPage() {
           )}
           <div className="fg-legend">
             <span style={{ color: '#00d4ff' }}>&#9632; Cargo</span>
-            <span style={{ color: '#825adc' }}>&#9632; Passenger</span>
+            <span style={{ color: '#825adc' }}>&#9632; Government</span>
             <span style={{ color: '#00d4ff' }}>&#9679; Hub (Tier 1)</span>
             <span style={{ color: 'rgba(0,212,255,0.5)' }}>&#9679; Hub (Tier 2)</span>
             <span style={{ color: '#10b981' }}>&#9679; Port Clear</span>

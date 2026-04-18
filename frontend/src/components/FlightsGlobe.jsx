@@ -44,9 +44,9 @@ const HOME_POV = { lat: 25, lng: 10, altitude: 2.2 };
 
 // ── Colors ─────────────────────────────────────────────────────────────────
 const CARGO_COLOR   = 'rgba(0,212,255,0.9)';    // cyan
-const PAX_COLOR     = 'rgba(130,90,220,0.9)';   // deep violet
+const GOV_COLOR     = 'rgba(130,90,220,0.9)';   // deep violet — government/military
 const CARGO_DIM     = 'rgba(0,212,255,0.12)';   // cyan trail
-const PAX_DIM       = 'rgba(130,90,220,0.12)';
+const GOV_DIM       = 'rgba(130,90,220,0.12)';
 
 function portStatusColor(status) {
   if (status === 'disruption') return '#ef4444';
@@ -66,8 +66,8 @@ function nearestHub(lat, lng) {
 // Simulated flights: full route arc src→dst with progress-phased dashes.
 // Live flights (no route data): trail arc from nearest cargo hub → current position.
 function flightRouteArc(f) {
-  const bright = f.isCargo ? CARGO_COLOR.replace('0.9)', '0.6)') : PAX_COLOR.replace('0.9)', '0.6)');
-  const dim    = f.isCargo ? CARGO_DIM : PAX_DIM;
+  const bright = f.isCargo ? CARGO_COLOR.replace('0.9)', '0.6)') : GOV_COLOR.replace('0.9)', '0.6)');
+  const dim    = f.isCargo ? CARGO_DIM : GOV_DIM;
   if (f.srcLat && f.dstLat) {
     return { startLat: f.srcLat, startLng: f.srcLng, endLat: f.dstLat, endLng: f.dstLng, color: [dim, bright], id: f.id, progress: f.progress ?? 0 };
   }
@@ -129,7 +129,7 @@ const _rafFPF = new THREE.Vector3();
 // ── Plane sprite icons ─────────────────────────────────────────────────────
 const _planeTexCache = {};
 function makePlaneCanvas(isCargo) {
-  const color = isCargo ? CARGO_COLOR : PAX_COLOR;
+  const color = isCargo ? CARGO_COLOR : GOV_COLOR;
   const c = document.createElement('canvas');
   c.width = 56; c.height = 56;
   const ctx = c.getContext('2d');
@@ -150,7 +150,7 @@ function makePlaneCanvas(isCargo) {
   return c;
 }
 function makePlaneSprite(flight) {
-  const key = flight.isCargo ? 'cargo' : 'pax';
+  const key = flight.isCargo ? 'cargo' : 'gov';
   if (!_planeTexCache[key]) _planeTexCache[key] = new THREE.CanvasTexture(makePlaneCanvas(flight.isCargo));
   const mat = new THREE.SpriteMaterial({ map: _planeTexCache[key], transparent: true, depthWrite: false, sizeAttenuation: true });
   const sprite = new THREE.Sprite(mat);
@@ -177,12 +177,13 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
     ringMesh: null, ringGeom: null, ringMat: null,
     moonMesh: null, moonGeom: null, moonMat: null, moonTex: null,
     sprites: new Map(), // id → { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, globeRadius }
+    cam: null,
   });
 
-  // Clear sprite map when flights data refreshes (react-globe.gl recreates sprites on new data reference)
-  useEffect(() => {
-    threeRefs.current.sprites.clear();
-  }, [flights]);
+  // NOTE: do NOT clear the sprites map when flights refresh.
+  // React runs child effects (react-globe.gl's customThreeObjectUpdate) BEFORE parent effects,
+  // so clearing here would wipe out freshly-registered sprites every refresh cycle.
+  // Sprites overwrite themselves by ID on each refresh; stale entries are harmless.
 
   useEffect(() => {
     const refs = threeRefs.current;
@@ -266,63 +267,76 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
       scene.add(moonMesh);
       refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
 
+      // Capture camera reference once — used every RAF frame for sprite rotation
+      refs.cam = g.camera?.() ?? null;
+
       // ── Unified RAF: ring + moon orbit + real-time sprite animation ──
       refs.shouldAnimate = true;
       const animate = () => {
         if (!refs.shouldAnimate) return;
+
+        // Ring + moon — these are safe and stay in try/catch
         try {
           if (refs.ringMesh) refs.ringMesh.rotation.z += 0.0008;
           if (refs.moonMesh) {
             const t = Date.now() * 0.00008;
             refs.moonMesh.position.set(Math.cos(t) * 165, Math.sin(t * 0.28) * 28, Math.sin(t) * 165);
           }
-          // Animate each simulated flight sprite along its great-circle route
-          // Progress formula mirrors backend: (now/1000 + phase) % 86400 / 86400
-          // Simulated phases are stable, so we just advance from the fetched progress value.
-          if (refs.sprites.size > 0) {
-            const now = Date.now();
-            const cam = globeRef.current?.camera?.();
-            for (const entry of refs.sprites.values()) {
-              const { sprite, globeRadius } = entry;
-              let curLat, curLng, fwdLat, fwdLng;
+        } catch (_) {}
 
-              if (entry.isLive) {
-                // Live ADS-B: fixed position, heading-derived forward point
-                curLat = entry.lat; curLng = entry.lng;
-                const fp = forwardPoint(curLat, curLng, entry.heading ?? 0);
-                fwdLat = fp.lat; fwdLng = fp.lng;
-              } else {
-                // Simulated: advance along great-circle route
-                const { srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, cycleSecs } = entry;
-                const elapsed = (now - fetchTs) / 1000;
-                const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
-                const pt  = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
-                const ptF = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, Math.min(t + 0.005, 0.999));
-                curLat = pt.lat; curLng = pt.lng;
-                fwdLat = ptF.lat; fwdLng = ptF.lng;
-                setSpritePos(sprite, curLat, curLng, 0.04, globeRadius);
-              }
+        // Sprite animation — separate block so rotation errors don't suppress position updates
+        if (refs.sprites.size > 0) {
+          const now = Date.now();
+          // Re-check camera each frame in case it's initialized after first render
+          if (!refs.cam) refs.cam = globeRef.current?.camera?.() ?? null;
+          const cam = refs.cam;
 
-              // NDC screen-space rotation: nose points toward (fwdLat, fwdLng)
-              if (cam) {
-                const rC = globeRadius * 1.04;
-                const phi  = (90 - curLat) * Math.PI / 180;
-                const th   = (90 - curLng) * Math.PI / 180;
-                const phiF = (90 - fwdLat) * Math.PI / 180;
-                const thF  = (90 - fwdLng) * Math.PI / 180;
-                _rafWPF.set(rC * Math.sin(phi)  * Math.cos(th),  rC * Math.cos(phi),  rC * Math.sin(phi)  * Math.sin(th));
-                _rafFPF.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
-                _rafWPF.project(cam);
-                _rafFPF.project(cam);
-                const dx = _rafFPF.x - _rafWPF.x;
-                const dy = _rafFPF.y - _rafWPF.y;
-                if (dx * dx + dy * dy > 1e-10) {
-                  sprite.material.rotation = Math.atan2(dy, dx) - Math.PI / 2;
-                }
+          for (const entry of refs.sprites.values()) {
+            const { sprite, globeRadius } = entry;
+            let curLat, curLng, fwdLat, fwdLng;
+
+            let headingDeg = 0;
+            if (entry.isLive) {
+              headingDeg = entry.heading ?? 0;
+              curLat = entry.lat; curLng = entry.lng;
+              const fp = forwardPoint(curLat, curLng, headingDeg);
+              fwdLat = fp.lat; fwdLng = fp.lng;
+            } else {
+              const { srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, cycleSecs } = entry;
+              const elapsed = (now - fetchTs) / 1000;
+              const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
+              const pt  = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, t);
+              const ptF = gcFlightPoint(srcLat, srcLng, dstLat, dstLng, Math.min(t + 0.02, 0.999));
+              curLat = pt.lat; curLng = pt.lng;
+              fwdLat = ptF.lat; fwdLng = ptF.lng;
+              headingDeg = pt.heading ?? 0;
+              setSpritePos(sprite, curLat, curLng, 0.04, globeRadius);
+            }
+
+            // Always apply heading-based rotation as baseline (works even without NDC cam)
+            // Sprite nose points UP (canvas y≈20 = top), so rotation = -heading converts geographic heading to screen rotation
+            sprite.material.rotation = -headingDeg * Math.PI / 180;
+
+            // Override with NDC screen-space projection for globe-rotation-aware accuracy
+            if (cam) {
+              const rC = globeRadius * 1.04;
+              const phi  = (90 - curLat) * Math.PI / 180;
+              const th   = (90 - curLng) * Math.PI / 180;
+              const phiF = (90 - fwdLat) * Math.PI / 180;
+              const thF  = (90 - fwdLng) * Math.PI / 180;
+              _rafWPF.set(rC * Math.sin(phi)  * Math.cos(th),  rC * Math.cos(phi),  rC * Math.sin(phi)  * Math.sin(th));
+              _rafFPF.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
+              _rafWPF.project(cam);
+              _rafFPF.project(cam);
+              const dx = _rafFPF.x - _rafWPF.x;
+              const dy = _rafFPF.y - _rafWPF.y;
+              if (dx * dx + dy * dy > 1e-8) {
+                sprite.material.rotation = Math.atan2(dy, dx) - Math.PI / 2;
               }
             }
           }
-        } catch (_) {}
+        }
+
         refs.frame = requestAnimationFrame(animate);
       };
       animate();
@@ -349,6 +363,7 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
         refs.glowMesh = refs.ringMesh = refs.moonMesh = null;
         refs.glowGeom = refs.glowMat = refs.ringGeom = refs.ringMat = null;
         refs.moonGeom = refs.moonMat = refs.moonTex = null;
+        refs.cam = null;
         refs.sprites.clear();
       }
     };
@@ -463,7 +478,6 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
         customThreeObject={makePlaneSprite}
         customThreeObjectUpdate={(sprite, f, globeRadius) => {
           if (f.srcLat && f.dstLat) {
-            // Stable cycle duration from flight ID seed: 45–240 seconds per route completion
             const seed = parseInt(f.id.replace(/\D/g, '').slice(-4) || '100', 10) || 100;
             const cycleSecs = 45 + (seed % 196);
             threeRefs.current.sprites.set(f.id, {
@@ -472,13 +486,17 @@ export default function FlightsGlobe({ flights = [], ports = [], source, onFligh
               progress0: f.progress ?? 0, fetchTs: Date.now(), globeRadius, cycleSecs,
             });
             setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
+            // Apply heading-based rotation immediately so sprite is oriented before RAF fires
+            const initPt = gcFlightPoint(f.srcLat, f.srcLng, f.dstLat, f.dstLng, f.progress ?? 0);
+            sprite.material.rotation = -(initPt.heading ?? 0) * Math.PI / 180;
           } else {
-            // Live ADS-B: register with heading so RAF loop can rotate nose-forward
+            const heading = f.heading ?? 0;
             threeRefs.current.sprites.set(f.id, {
               sprite, lat: f.lat, lng: f.lng,
-              heading: f.heading ?? 0, globeRadius, isLive: true,
+              heading, globeRadius, isLive: true,
             });
             setSpritePos(sprite, f.lat, f.lng, 0.04, globeRadius);
+            sprite.material.rotation = -heading * Math.PI / 180;
           }
         }}
         onCustomLayerClick={handleFlightClick}
