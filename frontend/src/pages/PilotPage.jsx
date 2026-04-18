@@ -72,7 +72,7 @@ Use web search aggressively. Research products, manufacturing/sourcing locations
 Return STRUCTURED JSON (no markdown, no preamble):
 {
   "company": {"name":"...", "one_liner":"...", "size_signal":"revenue/employees/funding or 'Unknown'", "stage":"early-stage|growth-stage|mid-market|enterprise|public", "hq":"...", "recent_news":["Up to 3 items."]},
-  "freight_profile": {"relevance_score":"1-10", "relevance_reasoning":"2-3 sentences.", "likely_modes":["ocean","air","truck","customs"], "likely_trade_lanes":["China to US West Coast"], "estimated_volume_signal":"Inferred from revenue, product, footprint.", "pain_points":["3-4 specific pains."], "trigger_events":["1-3 reasons NOW is good, tied to real news/market."]},
+  "freight_profile": {"relevance_score":"Integer 1-10. Be brutally honest — most companies score 4-7. Score 9-10 ONLY if: significant international volume, clear pain with current forwarder, mid-market size (not so large they have in-house logistics), and strong trigger event. Score 1-3 if: domestic-only, tiny volume, or enterprise with locked-in contracts (e.g. Samsung, Amazon, Walmart). Score 4-6 for moderate fit. Score 7-8 for strong fit with one missing element. Do NOT give 10 unless all criteria are clearly met.", "relevance_reasoning":"2-3 sentences explaining the score with specific evidence.", "likely_modes":["ocean","air","truck","customs"], "likely_trade_lanes":["China to US West Coast"], "estimated_volume_signal":"Inferred from revenue, product, footprint.", "pain_points":["3-4 specific pains."], "trigger_events":["1-3 reasons NOW is good, tied to real news/market."]},
   "outreach": {
     "email_1": {"subject":"Researched, not templated. Lowercase or sentence case.", "body":"4-6 sentences, voice rules strict."},
     "email_2_followup": {"timing":"3 business days after email_1 if no reply", "subject":"re: or fresh angle", "body":"3-4 sentences, different angle, no guilt-trip."},
@@ -639,7 +639,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
   const [company, setCompany] = useState('');
   const [persona, setPersona] = useState('');
   const [notes, setNotes] = useState('');
-  const [useBackground, setUseBackground] = useState(true);
+  const [useBackground, setUseBackground] = useState(false);
   const [useMarket, setUseMarket] = useState(true);
   const [useDeep, setUseDeep] = useState(true);
   const [data, setData] = useState(null);
