@@ -544,11 +544,11 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
 
     try {
       if (mode === 'customer') {
-        const result = await callPilot({ model: 'gpt-5', system: SP_CUSTOMER_UPDATE, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setCustomerDraft(t) });
+        const result = await callPilot({ model: 'gpt-5.4', system: SP_CUSTOMER_UPDATE, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setCustomerDraft(t) });
         setCustomerDraft(result);
         setMarketHistory(prev => [{ id: Date.now(), type: 'customer_update', timestamp: new Date().toISOString(), content: result, context: customerCtx }, ...prev].slice(0, 20));
       } else {
-        const result = await callPilot({ model: 'gpt-5', system: SP_MARKET, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
+        const result = await callPilot({ model: 'gpt-5.4', system: SP_MARKET, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
         const parsed = extractJSON(result);
         if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
         else {
@@ -659,7 +659,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
     const prompt = `Research this prospect and build complete dossier with 3-touch outreach sequence.\n\nCompany: ${company}\n${persona ? `Target persona: ${persona}` : 'Target persona: best-fit logistics or supply chain decision maker'}\n${notes ? `Additional context: ${notes}` : ''}${marketBlock}${backgroundBlock}`;
 
     try {
-      const model = useDeep ? 'gpt-5' : 'gpt-5-mini';
+      const model = useDeep ? 'gpt-5.4' : 'gpt-5.4-mini';
       const result = await callPilot({ model, system: SP_PROSPECT, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
       const parsed = extractJSON(result);
       if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
@@ -689,13 +689,13 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes (e.g., 'just raised Series B', 'expanding to Europe', 'heavy importer from Vietnam')" style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.text, padding:'10px 14px', borderRadius:6, fontSize:13, outline:'none', fontFamily:'inherit' }} />
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-        <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-5' : 'GPT-5-MINI'} sub={useDeep ? '250k free/day · deep research' : '2.5M free/day · fast'} />
+        <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} sub={useDeep ? '250k free/day · deep research' : '2.5M free/day · fast'} />
         <Toggle active={useBackground} onClick={() => setUseBackground(!useBackground)} color={C.blue} label="USE MY BACKGROUND" sub="weave in chemical transport" />
         <Toggle active={useMarket && !!marketContext} onClick={() => setUseMarket(!useMarket)} color={C.accent} label={marketContext ? 'USE MARKET INTEL' : 'NO MARKET INTEL LOADED'} sub={marketContext ? 'live rate hooks' : 'run market panel first'} disabled={!marketContext} />
       </div>
 
       <button onClick={run} disabled={loading || !company.trim()} style={{ background:(loading || !company.trim()) ? 'transparent' : `linear-gradient(135deg, ${C.orange}22, ${C.orange}08)`, border:`1px solid ${(loading || !company.trim()) ? C.border : C.orange}`, color:(loading || !company.trim()) ? C.textMuted : C.orange, padding:'11px 22px', borderRadius:6, cursor:(loading || !company.trim()) ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', transition:'all 0.2s', alignSelf:'flex-start', display:'flex', alignItems:'center', gap:8 }}>
-        {loading ? <>RESEARCHING · {useDeep ? 'GPT-5' : 'GPT-5-MINI'} <TypingDots /></> : '▶ BUILD DOSSIER'}
+        {loading ? <>RESEARCHING · {useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} <TypingDots /></> : '▶ BUILD DOSSIER'}
       </button>
 
       {error && (
