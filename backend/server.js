@@ -1948,6 +1948,59 @@ app.get('/api/trucks', (req, res) => {
   res.json({ trucks: buildSimulatedTrucks(), source: 'simulated' });
 });
 
+// ── Pilot — Agentic Outreach streaming proxy (OpenAI) ─────────────────────
+app.post('/api/pilot-stream', async (req, res) => {
+  const { system, messages, model } = req.body;
+  if (!system || !messages) return res.status(400).json({ error: 'system and messages required' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+
+  try {
+    const axios = require('axios');
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: model || 'gpt-4o-search-preview',
+      messages: [{ role: 'system', content: system }, ...messages],
+      stream: true,
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+      responseType: 'stream',
+    });
+
+    response.data.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(l => l.trim());
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') { res.write('data: [DONE]\n\n'); return; }
+        try {
+          const parsed = JSON.parse(raw);
+          const text = parsed.choices?.[0]?.delta?.content || '';
+          if (text) res.write(`data: ${JSON.stringify({ text })}\n\n`);
+        } catch { /* skip malformed chunk */ }
+      }
+    });
+
+    response.data.on('end', () => {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+
+    response.data.on('error', (err) => {
+      console.error('pilot-stream error:', err);
+      if (!res.writableEnded) res.end();
+    });
+  } catch (e) {
+    console.error('pilot-stream error:', e.message);
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+      res.end();
+    }
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
   initDb()

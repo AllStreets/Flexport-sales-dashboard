@@ -2,7 +2,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   RiGlobalLine, RiLineChartLine, RiBarChartGroupedLine, RiRadarLine, RiPercentLine,
-  RiSettings3Line, RiSearchEyeLine, RiShipLine, RiPlaneLine, RiTruckLine,
+  RiSettings3Line, RiSearchEyeLine, RiShipLine, RiPlaneLine, RiTruckLine, RiRocketLine,
 } from 'react-icons/ri';
 import './Sidebar.css';
 
@@ -14,7 +14,8 @@ const NAV = [
   { to: '/market',      Icon: RiRadarLine,            label: 'Market Map'         },
   { to: '/trade',       Icon: RiLineChartLine,        label: 'Trade Intelligence' },
   { to: '/research',    Icon: RiSearchEyeLine,        label: 'Quick Research'     },
-  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'SDR Research'       },
+  { to: '/pilot',       Icon: RiRocketLine,           label: 'Agentic Outreach'   },
+  { to: '/performance', Icon: RiBarChartGroupedLine,  label: 'Sales CRM'          },
 ];
 
 function SidebarLink({ to, Icon, label, end = false }) {

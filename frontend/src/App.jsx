@@ -9,6 +9,7 @@ import PerformancePage from './pages/PerformancePage';
 import MarketMapPage from './pages/MarketMapPage';
 import TariffCalculatorPage from './pages/TariffCalculatorPage';
 import ResearchPage from './pages/ResearchPage';
+import PilotPage from './pages/PilotPage';
 import VesselsPage from './pages/VesselsPage';
 import FlightsPage from './pages/FlightsPage';
 import LandFreightPage from './pages/LandFreightPage';
@@ -188,6 +189,7 @@ export default function App() {
             <Route path="/market" element={<MarketMapPage />} />
             <Route path="/tariff" element={<TariffCalculatorPage />} />
             <Route path="/research" element={<ResearchPage />} />
+            <Route path="/pilot" element={<PilotPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
