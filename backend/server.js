@@ -1969,8 +1969,11 @@ app.post('/api/pilot-stream', async (req, res) => {
       responseType: 'stream',
     });
 
+    let pilotBuf = '';
     response.data.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n').filter(l => l.trim());
+      pilotBuf += chunk.toString();
+      const lines = pilotBuf.split('\n');
+      pilotBuf = lines.pop(); // hold incomplete last line across chunks
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const raw = line.slice(6).trim();
