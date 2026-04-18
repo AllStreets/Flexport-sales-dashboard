@@ -57,7 +57,7 @@ function generateFlightEvent(flight) {
 
 function FGStats({ flights }) {
   const cargo = flights.filter(f => f.isCargo).length;
-  const gov   = flights.filter(f => f.isGov).length;
+  const pax   = flights.filter(f => !f.isCargo).length;
   const avgFl      = flights.length
     ? Math.round(flights.reduce((s, f) => s + flightAltFl(f), 0) / flights.length)
     : 0;
@@ -70,7 +70,7 @@ function FGStats({ flights }) {
       <div className="fg-stats-grid">
         <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#94a3b8' }}>{flights.length}</span><span className="fg-stat-key">TOTAL</span></div>
         <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#00d4ff' }}>{cargo}</span><span className="fg-stat-key">CARGO</span></div>
-        <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#a78bfa' }}>{gov || '\u2014'}</span><span className="fg-stat-key">GOV</span></div>
+        <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#a78bfa' }}>{pax || '\u2014'}</span><span className="fg-stat-key">PAX</span></div>
         <div className="fg-stat"><span className="fg-stat-val" style={{ color: '#10b981', fontSize: 13 }}>FL{avgFl || '\u2014'}</span><span className="fg-stat-key">AVG ALT</span></div>
       </div>
       {avgSpd > 0 && (
@@ -174,7 +174,7 @@ function FGEventFeed({ flights, selectedFlight, onClear, onFeedFlightClick }) {
           <div className="fg-fd-row"><span>Heading</span><span>{selectedFlight.heading?.toFixed(0) ?? '\u2014'}{selectedFlight.heading != null ? '\u00b0' : ''}</span></div>
           <div className="fg-fd-row"><span>Origin</span><span>{selectedFlight.origin || '\u2014'}</span></div>
           <div className="fg-fd-row"><span>Destination</span><span>{selectedFlight.destination || '\u2014'}</span></div>
-          <div className="fg-fd-row"><span>Type</span><span>{selectedFlight.isCargo ? 'Cargo' : selectedFlight.isGov ? 'Government' : 'Unknown'}</span></div>
+          <div className="fg-fd-row"><span>Type</span><span>{selectedFlight.isCargo ? 'Cargo' : 'Passenger'}</span></div>
           {selectedFlight.id?.startsWith('SIM') && (
             <div className="fg-fd-sim">Simulated \u2014 set OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET for live data</div>
           )}
