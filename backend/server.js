@@ -1961,7 +1961,7 @@ app.post('/api/pilot-stream', async (req, res) => {
   try {
     const axios = require('axios');
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: model || 'gpt-4o-search-preview',
+      model: model || 'gpt-4.1',
       messages: [{ role: 'system', content: system }, ...messages],
       stream: true,
     }, {

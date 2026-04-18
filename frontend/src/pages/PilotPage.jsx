@@ -118,6 +118,7 @@ async function callPilot({ model, system, messages, onChunk }) {
       if (data === '[DONE]') continue;
       try {
         const p = JSON.parse(data);
+        if (p.error) throw new Error(p.error);
         const text = p.text || p.choices?.[0]?.delta?.content || '';
         if (text) { full += text; onChunk?.(full); }
       } catch {}
@@ -543,11 +544,11 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
 
     try {
       if (mode === 'customer') {
-        const result = await callPilot({ model: 'gpt-4o-search-preview', system: SP_CUSTOMER_UPDATE, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setCustomerDraft(t) });
+        const result = await callPilot({ model: 'gpt-4.1', system: SP_CUSTOMER_UPDATE, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setCustomerDraft(t) });
         setCustomerDraft(result);
         setMarketHistory(prev => [{ id: Date.now(), type: 'customer_update', timestamp: new Date().toISOString(), content: result, context: customerCtx }, ...prev].slice(0, 20));
       } else {
-        const result = await callPilot({ model: 'gpt-4o-search-preview', system: SP_MARKET, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
+        const result = await callPilot({ model: 'gpt-4.1', system: SP_MARKET, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
         const parsed = extractJSON(result);
         if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
         else {
@@ -589,7 +590,12 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
         {loading ? <>SEARCHING MARKET DATA<TypingDots /></> : '▶ RUN INTEL'}
       </button>
 
-      {error && <div style={{ padding:'10px 14px', background:C.roseDim, border:`1px solid ${C.rose}44`, borderRadius:6, fontSize:12, color:C.rose }}>{error}</div>}
+      {error && (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ padding:'10px 14px', background:C.roseDim, border:`1px solid ${C.rose}44`, borderRadius:6, fontSize:12, color:C.rose }}>{error}</div>
+          {rawOutput && <div style={{ padding:'10px 14px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:6, fontSize:11, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", whiteSpace:'pre-wrap', maxHeight:200, overflowY:'auto' }}>{rawOutput}</div>}
+        </div>
+      )}
 
       {mode === 'customer' && customerDraft && (
         <Card accent={C.accent}>
@@ -692,7 +698,12 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
         {loading ? <>RESEARCHING · {useDeep ? 'GPT-4.1' : 'GPT-4.1-MINI'}<TypingDots /></> : '▶ BUILD DOSSIER'}
       </button>
 
-      {error && <div style={{ padding:'10px 14px', background:C.roseDim, border:`1px solid ${C.rose}44`, borderRadius:6, fontSize:12, color:C.rose }}>{error}</div>}
+      {error && (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ padding:'10px 14px', background:C.roseDim, border:`1px solid ${C.rose}44`, borderRadius:6, fontSize:12, color:C.rose }}>{error}</div>
+          {rawOutput && <div style={{ padding:'10px 14px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:6, fontSize:11, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", whiteSpace:'pre-wrap', maxHeight:200, overflowY:'auto' }}>{rawOutput}</div>}
+        </div>
+      )}
 
       {data && <ProspectBriefing data={data} onExport={() => exportProspectAsHTML(data)} />}
 
