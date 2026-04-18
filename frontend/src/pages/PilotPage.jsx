@@ -689,13 +689,13 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes (e.g., 'just raised Series B', 'expanding to Europe', 'heavy importer from Vietnam')" style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.text, padding:'10px 14px', borderRadius:6, fontSize:13, outline:'none', fontFamily:'inherit' }} />
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-        <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-4.1' : 'GPT-4.1-MINI'} sub={useDeep ? 'deeper research' : 'faster, cheaper'} />
+        <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-4.1' : 'GPT-4.1-MINI'} sub={useDeep ? '250k free/day · deep research' : '2.5M free/day · fast'} />
         <Toggle active={useBackground} onClick={() => setUseBackground(!useBackground)} color={C.blue} label="USE MY BACKGROUND" sub="weave in chemical transport" />
         <Toggle active={useMarket && !!marketContext} onClick={() => setUseMarket(!useMarket)} color={C.accent} label={marketContext ? 'USE MARKET INTEL' : 'NO MARKET INTEL LOADED'} sub={marketContext ? 'live rate hooks' : 'run market panel first'} disabled={!marketContext} />
       </div>
 
       <button onClick={run} disabled={loading || !company.trim()} style={{ background:(loading || !company.trim()) ? 'transparent' : `linear-gradient(135deg, ${C.orange}22, ${C.orange}08)`, border:`1px solid ${(loading || !company.trim()) ? C.border : C.orange}`, color:(loading || !company.trim()) ? C.textMuted : C.orange, padding:'11px 22px', borderRadius:6, cursor:(loading || !company.trim()) ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', transition:'all 0.2s', alignSelf:'flex-start', display:'flex', alignItems:'center', gap:8 }}>
-        {loading ? <>RESEARCHING · {useDeep ? 'GPT-4.1' : 'GPT-4.1-MINI'}<TypingDots /></> : '▶ BUILD DOSSIER'}
+        {loading ? <>RESEARCHING · {useDeep ? 'GPT-4.1' : 'GPT-4.1-MINI'} <TypingDots /></> : '▶ BUILD DOSSIER'}
       </button>
 
       {error && (
