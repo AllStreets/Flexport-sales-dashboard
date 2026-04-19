@@ -1423,16 +1423,28 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
 
       {briefData && mode === 'brief' && (
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {briefData.market_pulse && (
+            <div style={{ padding:'14px 16px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:8, fontSize:13, color:C.text, lineHeight:1.6, fontStyle:'italic' }}>
+              <Label color={C.accent}>MARKET PULSE · {briefData.date_context || 'TODAY'}</Label>
+              <div style={{ marginTop:6 }}>{briefData.market_pulse}</div>
+            </div>
+          )}
           {briefData.signal_of_day && (
             <Card accent={C.amber}>
               <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev }}><Label color={C.amber}>SIGNAL OF THE DAY</Label></div>
               <div style={{ padding:'14px 16px' }}>
-                <div style={{ fontSize:14, fontWeight:600, color:C.textStrong, marginBottom:6 }}>{briefData.signal_of_day.headline || briefData.signal_of_day}</div>
-                {briefData.signal_of_day.implication && <div style={{ fontSize:12, color:C.text, lineHeight:1.6, marginBottom:8 }}>{briefData.signal_of_day.implication}</div>}
-                {briefData.signal_of_day.hook && (
+                <div style={{ fontSize:14, fontWeight:600, color:C.textStrong, marginBottom:8 }}>{briefData.signal_of_day.headline}</div>
+                {briefData.signal_of_day.affected_sectors?.length > 0 && (
+                  <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginBottom:8 }}>
+                    {briefData.signal_of_day.affected_sectors.map((s, i) => (
+                      <span key={i} style={{ padding:'2px 8px', background:C.amberDim, color:C.amber, border:`1px solid ${C.amber}33`, borderRadius:3, fontSize:10, fontWeight:700, fontFamily:"'JetBrains Mono', monospace", letterSpacing:'0.08em' }}>{s}</span>
+                    ))}
+                  </div>
+                )}
+                {briefData.signal_of_day.sdr_action && (
                   <div style={{ padding:'8px 12px', background:C.amberDim, border:`1px solid ${C.amber}44`, borderRadius:5, fontSize:12, color:C.text, fontStyle:'italic', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
-                    <span>{briefData.signal_of_day.hook}</span>
-                    <CopyBtn text={briefData.signal_of_day.hook} />
+                    <span>{briefData.signal_of_day.sdr_action}</span>
+                    <CopyBtn text={briefData.signal_of_day.sdr_action} />
                   </div>
                 )}
               </div>
@@ -1447,13 +1459,13 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
               {briefData.top_prospects.map((p, i) => (
                 <div key={i} style={{ padding:'12px 16px', borderBottom: i < briefData.top_prospects.length-1 ? `1px solid ${C.border}` : 'none' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-                    <span style={{ fontSize:13, fontWeight:700, color:C.textStrong }}>{p.company || p}</span>
+                    <span style={{ fontSize:13, fontWeight:700, color:C.textStrong }}>{p.company}</span>
                     {p.urgency && <SeverityBadge level={p.urgency} />}
                   </div>
                   {p.reason && <div style={{ fontSize:12, color:C.textDim, marginBottom:6 }}>{p.reason}</div>}
-                  {p.opener && (
+                  {p.angle && (
                     <div style={{ padding:'6px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:5, fontSize:12, color:C.text, fontStyle:'italic', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
-                      <span>{p.opener}</span><CopyBtn text={p.opener} />
+                      <span>{p.angle}</span><CopyBtn text={p.angle} />
                     </div>
                   )}
                 </div>
