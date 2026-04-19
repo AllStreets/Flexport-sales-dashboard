@@ -1058,9 +1058,20 @@ function SignalsPanel() {
 
 function BatchPanel({ marketContext, onAddToTracker }) {
   const [input, setInput] = useState('');
-  const [queue, setQueue] = useState([]);
+  const [queue, setQueue] = useState(() => {
+    try {
+      const s = localStorage.getItem('pilot_batch_queue');
+      if (!s) return [];
+      // reset any in-flight items to pending (page closed mid-run)
+      return JSON.parse(s).map(q => q.status === 'running' ? { ...q, status: 'pending' } : q);
+    } catch { return []; }
+  });
   const [running, setRunning] = useState(false);
   const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    try { localStorage.setItem('pilot_batch_queue', JSON.stringify(queue)); } catch {}
+  }, [queue]);
 
   const addToQueue = () => {
     const companies = input.split('\n').map(c => c.trim()).filter(c => c.length > 1);
