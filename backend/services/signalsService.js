@@ -70,7 +70,7 @@ Return a JSON array (same order as input):
   const signals = articles
     .map((a, i) => {
       const score = scores[i] || { urgency_score: 3, urgency_reason: '', affected_lanes: [], affected_sectors: [] };
-      return { ...a, ...score };
+      return { ...a, ...score, source: a.source?.name || a.source || '' };
     })
     .filter(s => (s.urgency_score || 0) >= 3)  // drop clearly irrelevant articles
     .sort((a, b) => b.urgency_score - a.urgency_score);
