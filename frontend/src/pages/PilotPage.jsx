@@ -194,10 +194,19 @@ async function callPilotSSE({ endpoint, body, onStatus, onChunk }) {
 
 function extractJSON(text) {
   if (!text) return null;
-  let c = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
-  const f = c.indexOf('{'), l = c.lastIndexOf('}');
+  // Try extracting from a ```json ... ``` block anywhere in the response
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch) {
+    const inner = fenceMatch[1].trim();
+    const f = inner.indexOf('{'), l = inner.lastIndexOf('}');
+    if (f !== -1 && l !== -1) {
+      try { return JSON.parse(inner.slice(f, l + 1)); } catch {}
+    }
+  }
+  // Fall back: first { to last } in the full string
+  const f = text.indexOf('{'), l = text.lastIndexOf('}');
   if (f === -1 || l === -1) return null;
-  try { return JSON.parse(c.slice(f, l + 1)); } catch { return null; }
+  try { return JSON.parse(text.slice(f, l + 1)); } catch { return null; }
 }
 
 function Pulse({ color = C.accent, size = 6 }) {
