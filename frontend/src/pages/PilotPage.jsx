@@ -677,7 +677,7 @@ function QualifyGate({ company }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => { throw new Error(`Server error (HTTP ${res.status})`); });
       if (data.error) throw new Error(data.error);
       setResult(data);
     } catch (e) { setError(e.message); }

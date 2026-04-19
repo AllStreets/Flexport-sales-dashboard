@@ -2339,7 +2339,7 @@ app.post('/api/pilot-variants', async (req, res) => {
   try {
     const result = await pilotOpenAIStream(
       SP_VARIANTS,
-      `COMPANY: ${company}\n\nEXISTING EMAIL 1:\nSubject: ${email1.subject}\n\n${email1.body}\n\nCOMPANY CONTEXT:\n${ctx || 'No additional context'}`,
+      `COMPANY: ${company}\n\nEXISTING EMAIL 1:\n${email1}\n\nCOMPANY CONTEXT:\n${ctx || 'No additional context'}`,
       (text) => send({ type: 'chunk', text })
     );
     send({ type: 'done', text: result });
