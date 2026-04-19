@@ -127,6 +127,38 @@ async function callPilot({ model, system, messages, onChunk }) {
   return full;
 }
 
+async function callPilotAgent({ company, persona, notes, marketContext, useBackground, onStep }) {
+  const response = await fetch(`${API}/api/pilot-agent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ company, persona, notes, marketContext, useBackground }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${response.status}`);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let agBuf = '', result = null;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    agBuf += decoder.decode(value, { stream: true });
+    const lines = agBuf.split('\n');
+    agBuf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      let event; try { event = JSON.parse(data); } catch { continue; }
+      onStep?.(event);
+      if (event.type === 'done') result = event.steps;
+      if (event.type === 'error') throw new Error(event.error);
+    }
+  }
+  return result;
+}
+
 function extractJSON(text) {
   if (!text) return null;
   let c = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '');
@@ -207,6 +239,81 @@ function DirectionArrow({ dir }) {
   if (d === 'up') return <span style={{ color:C.rose, fontSize:18, fontWeight:700 }}>↑</span>;
   if (d === 'down') return <span style={{ color:C.green, fontSize:18, fontWeight:700 }}>↓</span>;
   return <span style={{ color:C.textMuted, fontSize:18, fontWeight:700 }}>→</span>;
+}
+
+function AgentTrace({ trace }) {
+  if (!trace) return null;
+  const { steps, active, activeText } = trace;
+  const stepDefs = [
+    { step: 'research', label: 'RESEARCH', color: C.blue,  desc: 'Web search & company intelligence' },
+    { step: 'analyze',  label: 'ANALYZE',  color: C.amber, desc: 'Freight fit analysis'              },
+    { step: 'draft',    label: 'DRAFT',    color: C.accent, desc: 'Outreach sequence generation'    },
+  ];
+  return (
+    <Card accent={C.blue} style={{ marginBottom: 4 }}>
+      <div style={{ padding:'10px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <Label color={C.blue}>AGENT PIPELINE</Label>
+        <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em', color: active === 'complete' ? C.green : active ? C.amber : C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>
+          {active === 'complete' ? '● DONE' : active ? `● ${active.toUpperCase()}` : '○ QUEUED'}
+        </span>
+      </div>
+      <div style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:12 }}>
+        {stepDefs.map(def => {
+          const stepData = steps[def.step];
+          const isDone = typeof stepData === 'object' && stepData?.status === 'done';
+          const isRunning = active === def.step;
+          const dotColor = isDone ? C.green : isRunning ? def.color : C.border;
+          const labelColor = isDone ? C.green : isRunning ? def.color : C.textMuted;
+          return (
+            <div key={def.step} style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+              <div style={{ paddingTop:3, flexShrink:0 }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:dotColor, boxShadow: isRunning ? `0 0 10px ${def.color}` : 'none', animation: isRunning ? 'pilot-pulse 1.5s infinite' : 'none' }} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', color:labelColor, fontFamily:"'JetBrains Mono', monospace" }}>{def.label}</span>
+                  <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>
+                    {isDone && stepData?.elapsed ? `${(stepData.elapsed/1000).toFixed(1)}s` : null}
+                    {isRunning ? <TypingDots /> : null}
+                  </span>
+                </div>
+                <div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>{def.desc}</div>
+                {isRunning && activeText && (
+                  <div style={{ marginTop:8, padding:'8px 10px', background:C.surface, borderRadius:5, border:`1px solid ${C.border}`, fontSize:10, color:C.textDim, fontFamily:"'JetBrains Mono', monospace", lineHeight:1.5, maxHeight:80, overflowY:'auto', whiteSpace:'pre-wrap' }}>
+                    {activeText.slice(-500)}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {active === 'complete' && (
+          <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:6, borderTop:`1px solid ${C.border}` }}>
+            <div style={{ width:8, height:8, borderRadius:'50%', background:C.green, boxShadow:`0 0 8px ${C.green}`, flexShrink:0 }} />
+            <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', color:C.green, fontFamily:"'JetBrains Mono', monospace" }}>COMPLETE · OUTREACH READY</span>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ResearchNote({ text, label, color = C.textMuted }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return null;
+  return (
+    <div style={{ border:`1px solid ${C.border}`, borderRadius:8, overflow:'hidden', marginBottom:4 }}>
+      <button onClick={() => setExpanded(!expanded)} style={{ width:'100%', padding:'10px 14px', background:C.bgElev, border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', fontFamily:'inherit' }}>
+        <Label color={color}>{label}</Label>
+        <span style={{ fontSize:14, color:C.textMuted, transform: expanded ? 'rotate(90deg)' : 'none', transition:'transform 0.2s', display:'block' }}>›</span>
+      </button>
+      {expanded && (
+        <div style={{ padding:'12px 14px', fontSize:11, color:C.textDim, fontFamily:"'JetBrains Mono', monospace", lineHeight:1.65, maxHeight:280, overflowY:'auto', whiteSpace:'pre-wrap', background:C.surface }}>
+          {text}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function MarketBriefing({ data, onExport }) {
@@ -519,6 +626,276 @@ function Toggle({ active, onClick, color, label, sub, disabled }) {
   );
 }
 
+function BatchPanel({ marketContext, onAddToTracker }) {
+  const [input, setInput] = useState('');
+  const [queue, setQueue] = useState([]);
+  const [running, setRunning] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+
+  const addToQueue = () => {
+    const companies = input.split('\n').map(c => c.trim()).filter(c => c.length > 1);
+    if (!companies.length) return;
+    const existing = new Set(queue.map(q => q.company.toLowerCase()));
+    const newItems = companies
+      .filter(c => !existing.has(c.toLowerCase()))
+      .map(company => ({ id: Date.now() + Math.random(), company, status: 'pending', data: null, fitScore: null, error: null }));
+    setQueue(prev => [...prev, ...newItems]);
+    setInput('');
+  };
+
+  const runBatch = async () => {
+    const pending = queue.filter(q => q.status === 'pending');
+    if (!pending.length || running) return;
+    setRunning(true);
+    for (const item of pending) {
+      setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'running' } : q));
+      try {
+        const mktBlock = marketContext ? `\n\nCURRENT MARKET CONTEXT:\n${JSON.stringify(marketContext).slice(0, 1000)}` : '';
+        const prompt = `Research this prospect and build complete dossier with 3-touch outreach sequence.\n\nCompany: ${item.company}\nTarget persona: best-fit logistics or supply chain decision maker${mktBlock}`;
+        const result = await callPilot({ model: 'gpt-5.4-mini', system: SP_PROSPECT, messages: [{ role: 'user', content: prompt }], onChunk: () => {} });
+        const parsed = extractJSON(result);
+        if (!parsed) setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: 'Parse failed' } : q));
+        else setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'done', data: parsed, fitScore: parsed.freight_profile?.relevance_score } : q));
+      } catch (e) {
+        setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'error', error: e.message.slice(0, 60) } : q));
+      }
+    }
+    setRunning(false);
+  };
+
+  const exportAllHTML = () => {
+    const done = queue.filter(q => q.status === 'done' && q.data);
+    if (!done.length) return;
+    const scoreColor = s => parseInt(s) >= 7 ? '#059669' : parseInt(s) >= 5 ? '#a16207' : '#b91c1c';
+    const rows = done.map(q => {
+      const { company, freight_profile, outreach } = q.data;
+      return `<div style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #e5e5e5">
+        <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:12px">
+          <div style="font-size:28px;font-weight:700;color:${scoreColor(freight_profile?.relevance_score)};font-family:'SF Mono',monospace;width:40px">${freight_profile?.relevance_score || '?'}</div>
+          <div><h2 style="margin:0 0 4px;font-size:20px">${company?.name || q.company}</h2><div style="color:#525252;font-size:14px">${company?.one_liner || ''}</div></div>
+        </div>
+        ${freight_profile?.relevance_reasoning ? `<p style="color:#404040;font-size:13px;margin-bottom:12px">${freight_profile.relevance_reasoning}</p>` : ''}
+        ${freight_profile?.trigger_events?.length ? `<div style="background:#f0fdfa;border-left:3px solid #0d9488;padding:10px 14px;margin-bottom:12px;font-size:13px">${freight_profile.trigger_events.join(' · ')}</div>` : ''}
+        ${outreach?.email_1 ? `<div style="background:#fff;border:1px solid #e5e5e5;border-radius:6px;padding:14px"><div style="font-weight:600;margin-bottom:8px">${outreach.email_1.subject}</div><div style="white-space:pre-wrap;font-size:13px;color:#404040;line-height:1.7">${outreach.email_1.body}</div></div>` : ''}
+      </div>`;
+    }).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pilot Batch Export · ${new Date().toLocaleDateString()}</title><style>body{font-family:'Helvetica Neue',sans-serif;background:#fafaf7;color:#1a1a1a;max-width:800px;margin:40px auto;padding:0 24px;line-height:1.6}h1{font-family:Georgia,serif;font-size:28px;margin-bottom:4px}h2{font-size:18px;font-weight:600;margin:0}</style></head><body><h1>Batch Dossier Export</h1><p style="color:#737373;margin-bottom:32px">${done.length} companies · ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>${rows}</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `pilot-batch-${new Date().toISOString().slice(0,10)}.html`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const pendingCount = queue.filter(q => q.status === 'pending').length;
+  const doneCount = queue.filter(q => q.status === 'done').length;
+  const errorCount = queue.filter(q => q.status === 'error').length;
+  const runningItem = queue.find(q => q.status === 'running');
+  const statusColors = { pending:C.textMuted, running:C.amber, done:C.green, error:C.rose };
+  const statusLabels = { pending:'QUEUED', running:'RUNNING', done:'DONE', error:'ERROR' };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      <div style={{ padding:'16px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:10 }}>
+        <Label color={C.textMuted}>ADD COMPANIES · ONE PER LINE</Label>
+        <div style={{ marginTop:8, display:'flex', gap:8, alignItems:'flex-start' }}>
+          <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={"Allbirds\nSolo Stove\nBrooklinen\nCasper"} rows={4}
+            style={{ flex:1, background:C.bgElev, border:`1px solid ${C.border}`, color:C.text, padding:'10px 12px', borderRadius:6, fontSize:13, outline:'none', fontFamily:"'JetBrains Mono', monospace", resize:'vertical', lineHeight:1.5 }} />
+          <button onClick={addToQueue} disabled={!input.trim()}
+            style={{ padding:'10px 14px', borderRadius:6, border:`1px solid ${!input.trim() ? C.border : C.accent}`, background: !input.trim() ? 'transparent' : C.accentDim, color: !input.trim() ? C.textMuted : C.accent, cursor: !input.trim() ? 'not-allowed' : 'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.1em', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+            ADD TO<br />QUEUE
+          </button>
+        </div>
+        <div style={{ marginTop:8, fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>Uses GPT-5.4-MINI · 2.5M free tokens/day · processes sequentially</div>
+      </div>
+
+      {queue.length === 0 && (
+        <div style={{ padding:'40px 20px', textAlign:'center', color:C.textMuted, fontSize:13 }}>
+          Add companies above to build a research queue. Each company gets a full dossier and 3-touch outreach sequence.
+        </div>
+      )}
+
+      {queue.length > 0 && (
+        <>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div style={{ display:'flex', gap:14, fontSize:11, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>
+              <span>{pendingCount} QUEUED</span>
+              {doneCount > 0 && <span style={{ color:C.green }}>{doneCount} DONE</span>}
+              {errorCount > 0 && <span style={{ color:C.rose }}>{errorCount} FAILED</span>}
+            </div>
+            <div style={{ display:'flex', gap:6 }}>
+              {doneCount > 0 && <button onClick={exportAllHTML} style={{ padding:'5px 10px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, fontWeight:700, letterSpacing:'0.1em', fontFamily:'inherit', borderRadius:4 }}>EXPORT HTML</button>}
+              <button onClick={() => setQueue(prev => prev.filter(q => q.status !== 'done' && q.status !== 'error'))}
+                style={{ padding:'5px 10px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, fontWeight:700, letterSpacing:'0.1em', fontFamily:'inherit', borderRadius:4 }}>CLEAR DONE</button>
+            </div>
+          </div>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {queue.map(item => (
+              <div key={item.id} style={{ background:C.surface, border:`1px solid ${expanded === item.id ? C.borderHover : C.border}`, borderRadius:8, overflow:'hidden' }}>
+                <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:statusColors[item.status], flexShrink:0, animation: item.status === 'running' ? 'pilot-pulse 1.2s infinite' : 'none', boxShadow: item.status === 'running' ? `0 0 8px ${C.amber}` : 'none' }} />
+                  <span style={{ flex:1, fontSize:13, fontWeight:600, color:C.text }}>{item.company}</span>
+                  {item.fitScore != null && <span style={{ fontSize:11, color: parseInt(item.fitScore) >= 7 ? C.green : parseInt(item.fitScore) >= 5 ? C.amber : C.rose, fontFamily:"'JetBrains Mono', monospace", fontWeight:700 }}>{item.fitScore}/10</span>}
+                  <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em', color:statusColors[item.status], fontFamily:"'JetBrains Mono', monospace" }}>{statusLabels[item.status]}</span>
+                  {item.status === 'done' && (
+                    <button onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+                      style={{ padding:'3px 8px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit' }}>
+                      {expanded === item.id ? 'HIDE' : 'VIEW'}
+                    </button>
+                  )}
+                  {item.status === 'done' && onAddToTracker && (
+                    <button onClick={() => onAddToTracker(item.company, item.data)}
+                      style={{ padding:'3px 8px', border:`1px solid ${C.accent}44`, background:C.accentSoft, color:C.accent, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit', fontWeight:700 }}>
+                      TRACK
+                    </button>
+                  )}
+                </div>
+                {item.error && <div style={{ padding:'0 14px 10px', fontSize:11, color:C.rose, fontFamily:"'JetBrains Mono', monospace" }}>{item.error}</div>}
+                {expanded === item.id && item.data && (
+                  <div style={{ borderTop:`1px solid ${C.border}`, padding:'0 14px 14px' }}>
+                    <ProspectBriefing data={item.data} onExport={() => exportProspectAsHTML(item.data)} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {pendingCount > 0 && (
+            <button onClick={runBatch} disabled={running}
+              style={{ background: running ? 'transparent' : `linear-gradient(135deg, ${C.accent}22, ${C.accent}08)`, border:`1px solid ${running ? C.border : C.accent}`, color: running ? C.textMuted : C.accent, padding:'11px 22px', borderRadius:6, cursor: running ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', display:'flex', alignItems:'center', gap:8, alignSelf:'flex-start' }}>
+              {running ? <>{`PROCESSING ${runningItem?.company || '...'}`}<TypingDots /></> : `▶ RUN BATCH · ${pendingCount} COMPAN${pendingCount === 1 ? 'Y' : 'IES'}`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TrackerPanel({ tracked, setTracked }) {
+  const [expanded, setExpanded] = useState(null);
+
+  const markTouch = (itemId, touchId, status) => {
+    setTracked(prev => prev.map(item => item.id !== itemId ? item : {
+      ...item,
+      touches: item.touches.map(t => t.id === touchId ? { ...t, status, doneAt: new Date().toISOString() } : t),
+    }));
+  };
+
+  const daysSince = (dateStr) => Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+
+  const touchDefs = [
+    { id:'linkedin', label:'LinkedIn', color:C.blue   },
+    { id:'email_1',  label:'Email 1',  color:C.accent  },
+    { id:'call',     label:'Call',     color:C.amber   },
+    { id:'email_2',  label:'Email 2',  color:C.orange  },
+    { id:'email_3',  label:'Email 3',  color:C.rose    },
+  ];
+
+  const getContent = (item, touchId) => {
+    const o = item.outreach;
+    if (!o) return null;
+    if (touchId === 'linkedin') return o.linkedin_note;
+    if (touchId === 'email_1') return o.email_1 ? `Subject: ${o.email_1.subject}\n\n${o.email_1.body}` : null;
+    if (touchId === 'call') return o.call_opener;
+    if (touchId === 'email_2') return o.email_2_followup ? `Subject: ${o.email_2_followup.subject}\n\n${o.email_2_followup.body}` : null;
+    if (touchId === 'email_3') return o.email_3_breakup ? `Subject: ${o.email_3_breakup.subject}\n\n${o.email_3_breakup.body}` : null;
+    return null;
+  };
+
+  if (tracked.length === 0) {
+    return (
+      <div style={{ padding:'60px 20px', textAlign:'center', color:C.textMuted }}>
+        <div style={{ fontSize:13 }}>No sequences tracked yet.</div>
+        <div style={{ fontSize:11, marginTop:8, fontFamily:"'JetBrains Mono', monospace" }}>
+          After researching a prospect, click TRACK SEQUENCE to add it here.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+      {tracked.map(item => {
+        const days = daysSince(item.generatedAt);
+        const sentCount = item.touches.filter(t => t.status === 'sent').length;
+        const skippedCount = item.touches.filter(t => t.status === 'skipped').length;
+        const total = item.touches.length;
+        const allDone = sentCount + skippedCount === total;
+        const pct = (sentCount / total) * 100;
+        const scoreColor = parseInt(item.fitScore) >= 7 ? C.green : parseInt(item.fitScore) >= 5 ? C.amber : C.rose;
+        const isExpanded = expanded === item.id;
+
+        return (
+          <div key={item.id} style={{ background:C.surface, border:`1px solid ${isExpanded ? C.borderHover : C.border}`, borderRadius:10, overflow:'hidden' }}>
+            <div style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12, cursor:'pointer' }} onClick={() => setExpanded(isExpanded ? null : item.id)}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                  <span style={{ fontSize:14, fontWeight:700, color:C.textStrong }}>{item.company}</span>
+                  {item.fitScore && <span style={{ fontSize:11, color:scoreColor, fontFamily:"'JetBrains Mono', monospace", fontWeight:700 }}>{item.fitScore}/10</span>}
+                  {allDone && <span style={{ fontSize:9, padding:'2px 7px', background:`${C.green}22`, color:C.green, border:`1px solid ${C.green}44`, borderRadius:3, fontWeight:700, letterSpacing:'0.1em', fontFamily:"'JetBrains Mono', monospace" }}>DONE</span>}
+                </div>
+                <div style={{ height:3, background:C.border, borderRadius:2, overflow:'hidden', marginBottom:5 }}>
+                  <div style={{ height:'100%', width:`${pct}%`, background: allDone ? C.green : C.accent, borderRadius:2, transition:'width 0.3s' }} />
+                </div>
+                <div style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", display:'flex', gap:12 }}>
+                  <span>{sentCount}/{total} SENT</span>
+                  <span>{days === 0 ? 'TODAY' : `${days}d AGO`}</span>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+                {touchDefs.map(def => {
+                  const touch = item.touches.find(t => t.id === def.id);
+                  const s = touch?.status || 'unsent';
+                  return <div key={def.id} title={def.label} style={{ width:8, height:8, borderRadius:'50%', background: s === 'sent' ? C.green : s === 'skipped' ? C.border : `${def.color}55`, border:`1.5px solid ${s === 'sent' ? C.green : s === 'skipped' ? C.border : def.color}` }} />;
+                })}
+              </div>
+              <button onClick={e => { e.stopPropagation(); setTracked(prev => prev.filter(i => i.id !== item.id)); }}
+                style={{ padding:'3px 8px', background:'transparent', border:`1px solid ${C.border}`, color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit' }}>✕</button>
+            </div>
+
+            {isExpanded && (
+              <div style={{ borderTop:`1px solid ${C.border}` }}>
+                {touchDefs.map(def => {
+                  const touch = item.touches.find(t => t.id === def.id);
+                  if (!touch) return null;
+                  const content = getContent(item, def.id);
+                  const s = touch.status;
+                  return (
+                    <div key={def.id} style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background: s === 'sent' ? `${C.green}06` : 'transparent' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: content && s !== 'skipped' ? 8 : 0 }}>
+                        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                          <div style={{ width:7, height:7, borderRadius:'50%', background: s === 'sent' ? C.green : s === 'skipped' ? C.border : def.color, flexShrink:0 }} />
+                          <span style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', color: s === 'sent' ? C.green : def.color, fontFamily:"'JetBrains Mono', monospace" }}>{def.label}</span>
+                          {touch.doneAt && <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{new Date(touch.doneAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>}
+                        </div>
+                        {s === 'unsent' && (
+                          <div style={{ display:'flex', gap:5 }}>
+                            {content && <CopyBtn text={content} />}
+                            <button onClick={() => markTouch(item.id, def.id, 'sent')} style={{ padding:'3px 10px', border:`1px solid ${C.green}44`, background:`${C.green}11`, color:C.green, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit', fontWeight:700 }}>MARK SENT</button>
+                            <button onClick={() => markTouch(item.id, def.id, 'skipped')} style={{ padding:'3px 10px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit' }}>SKIP</button>
+                          </div>
+                        )}
+                        {s === 'sent' && <span style={{ fontSize:10, color:C.green, fontFamily:"'JetBrains Mono', monospace", fontWeight:700 }}>✓ SENT</span>}
+                        {s === 'skipped' && <button onClick={() => markTouch(item.id, def.id, 'unsent')} style={{ padding:'3px 8px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit' }}>UNDO</button>}
+                      </div>
+                      {content && s !== 'skipped' && (
+                        <div style={{ fontSize:12, color:C.textDim, lineHeight:1.6, whiteSpace:'pre-wrap', maxHeight:130, overflowY:'auto', padding:'8px 10px', background:C.bgElev, borderRadius:5, fontFamily:"'JetBrains Mono', monospace" }}>
+                          {content.slice(0, 500)}{content.length > 500 ? '...' : ''}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
   const [mode, setMode] = useState('global');
   const [selectedLanes, setSelectedLanes] = useState([]);
@@ -635,13 +1012,17 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
   );
 }
 
-function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
+function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onTrack }) {
   const [company, setCompany] = useState('');
   const [persona, setPersona] = useState('');
   const [notes, setNotes] = useState('');
   const [useBackground, setUseBackground] = useState(false);
   const [useMarket, setUseMarket] = useState(true);
   const [useDeep, setUseDeep] = useState(true);
+  const [agentMode, setAgentMode] = useState(false);
+  const [agentTrace, setAgentTrace] = useState(null);
+  const [agentResearch, setAgentResearch] = useState('');
+  const [agentAnalysis, setAgentAnalysis] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [rawOutput, setRawOutput] = useState('');
@@ -652,26 +1033,57 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
   const run = async () => {
     if (!company.trim()) return;
     setLoading(true); setData(null); setRawOutput(''); setError('');
+    setAgentResearch(''); setAgentAnalysis('');
 
-    const marketBlock = (useMarket && marketContext) ? `\n\nCURRENT MARKET CONTEXT (weave most relevant rate data into email_1 as opening hook):\n${JSON.stringify(marketContext, null, 2).slice(0, 2500)}` : '';
-    const backgroundBlock = useBackground ? `\n\nCONNOR'S BACKGROUND (use only if genuinely relevant):\n- Dad runs tank truck oil and chemical transportation company, giving Connor authentic freight familiarity\n- Recent UNC Chapel Hill grad, dual degrees in Management & Society and Sociology\n- Co-founded two companies (Ripple Technology Group, The Library Holdings)\n- RevOps internship in Barcelona using HubSpot and Apollo.AI\n- Recently started at Flexport Chicago as SDR` : '';
-
-    const prompt = `Research this prospect and build complete dossier with 3-touch outreach sequence.\n\nCompany: ${company}\n${persona ? `Target persona: ${persona}` : 'Target persona: best-fit logistics or supply chain decision maker'}\n${notes ? `Additional context: ${notes}` : ''}${marketBlock}${backgroundBlock}`;
-
-    try {
-      const model = useDeep ? 'gpt-5.4' : 'gpt-5.4-mini';
-      const result = await callPilot({ model, system: SP_PROSPECT, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
-      const parsed = extractJSON(result);
-      if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
-      else {
-        setData(parsed);
-        setProspectHistory(prev => [{ id: Date.now(), timestamp: new Date().toISOString(), company, data: parsed }, ...prev].slice(0, 30));
-      }
-    } catch (e) { setError(`Error: ${e.message}`); }
+    if (agentMode) {
+      setAgentTrace({ steps: { research: null, analyze: null, draft: null }, active: null, activeText: '' });
+      const handleStep = (event) => {
+        if (event.type === 'step_complete') {
+          if (event.step === 'research') setAgentResearch(event.text);
+          if (event.step === 'analyze') setAgentAnalysis(event.text);
+        }
+        setAgentTrace(prev => {
+          if (!prev) return prev;
+          if (event.type === 'step_start') return { ...prev, steps: { ...prev.steps, [event.step]: 'running' }, active: event.step, activeText: '' };
+          if (event.type === 'step_chunk') return { ...prev, activeText: event.text };
+          if (event.type === 'step_complete') return { ...prev, steps: { ...prev.steps, [event.step]: { status: 'done', elapsed: event.elapsed } } };
+          if (event.type === 'done') return { ...prev, active: 'complete', activeText: '' };
+          return prev;
+        });
+      };
+      try {
+        const result = await callPilotAgent({
+          company, persona, notes,
+          marketContext: (useMarket && marketContext) ? marketContext : null,
+          useBackground,
+          onStep: handleStep,
+        });
+        const parsed = extractJSON(result?.outreach || '');
+        if (!parsed) setError('Agent could not produce valid outreach JSON. Try refreshing.');
+        else {
+          setData(parsed);
+          setProspectHistory(prev => [{ id: Date.now(), timestamp: new Date().toISOString(), company, data: parsed, agent: true }, ...prev].slice(0, 30));
+        }
+      } catch (e) { setError(`Agent error: ${e.message}`); }
+    } else {
+      const marketBlock = (useMarket && marketContext) ? `\n\nCURRENT MARKET CONTEXT (weave most relevant rate data into email_1 as opening hook):\n${JSON.stringify(marketContext, null, 2).slice(0, 2500)}` : '';
+      const backgroundBlock = useBackground ? `\n\nCONNOR'S BACKGROUND (use only if genuinely relevant):\n- Dad runs tank truck oil and chemical transportation company, giving Connor authentic freight familiarity\n- Recent UNC Chapel Hill grad, dual degrees in Management & Society and Sociology\n- Co-founded two companies (Ripple Technology Group, The Library Holdings)\n- RevOps internship in Barcelona using HubSpot and Apollo.AI\n- Recently started at Flexport Chicago as SDR` : '';
+      const prompt = `Research this prospect and build complete dossier with 3-touch outreach sequence.\n\nCompany: ${company}\n${persona ? `Target persona: ${persona}` : 'Target persona: best-fit logistics or supply chain decision maker'}\n${notes ? `Additional context: ${notes}` : ''}${marketBlock}${backgroundBlock}`;
+      try {
+        const model = useDeep ? 'gpt-5.4' : 'gpt-5.4-mini';
+        const result = await callPilot({ model, system: SP_PROSPECT, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
+        const parsed = extractJSON(result);
+        if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
+        else {
+          setData(parsed);
+          setProspectHistory(prev => [{ id: Date.now(), timestamp: new Date().toISOString(), company, data: parsed }, ...prev].slice(0, 30));
+        }
+      } catch (e) { setError(`Error: ${e.message}`); }
+    }
     setLoading(false);
   };
 
-  const loadFromHistory = (item) => { setCompany(item.company); setData(item.data); };
+  const loadFromHistory = (item) => { setCompany(item.company); setData(item.data); setAgentTrace(null); setAgentResearch(''); setAgentAnalysis(''); };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
@@ -689,14 +1101,17 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes (e.g., 'just raised Series B', 'expanding to Europe', 'heavy importer from Vietnam')" style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.text, padding:'10px 14px', borderRadius:6, fontSize:13, outline:'none', fontFamily:'inherit' }} />
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-        <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} sub={useDeep ? '250k free/day · deep research' : '2.5M free/day · fast'} />
+        <Toggle active={agentMode} onClick={() => setAgentMode(!agentMode)} color={C.green} label="AGENT MODE" sub="3-step pipeline · trace UI" />
+        {!agentMode && <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} sub={useDeep ? '250k free/day · deep research' : '2.5M free/day · fast'} />}
         <Toggle active={useBackground} onClick={() => setUseBackground(!useBackground)} color={C.blue} label="USE MY BACKGROUND" sub="weave in chemical transport" />
         <Toggle active={useMarket && !!marketContext} onClick={() => setUseMarket(!useMarket)} color={C.accent} label={marketContext ? 'USE MARKET INTEL' : 'NO MARKET INTEL LOADED'} sub={marketContext ? 'live rate hooks' : 'run market panel first'} disabled={!marketContext} />
       </div>
 
-      <button onClick={run} disabled={loading || !company.trim()} style={{ background:(loading || !company.trim()) ? 'transparent' : `linear-gradient(135deg, ${C.orange}22, ${C.orange}08)`, border:`1px solid ${(loading || !company.trim()) ? C.border : C.orange}`, color:(loading || !company.trim()) ? C.textMuted : C.orange, padding:'11px 22px', borderRadius:6, cursor:(loading || !company.trim()) ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', transition:'all 0.2s', alignSelf:'flex-start', display:'flex', alignItems:'center', gap:8 }}>
-        {loading ? <>RESEARCHING · {useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} <TypingDots /></> : '▶ BUILD DOSSIER'}
+      <button onClick={run} disabled={loading || !company.trim()} style={{ background:(loading || !company.trim()) ? 'transparent' : `linear-gradient(135deg, ${agentMode ? C.green : C.orange}22, ${agentMode ? C.green : C.orange}08)`, border:`1px solid ${(loading || !company.trim()) ? C.border : agentMode ? C.green : C.orange}`, color:(loading || !company.trim()) ? C.textMuted : agentMode ? C.green : C.orange, padding:'11px 22px', borderRadius:6, cursor:(loading || !company.trim()) ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', transition:'all 0.2s', alignSelf:'flex-start', display:'flex', alignItems:'center', gap:8 }}>
+        {loading ? (agentMode ? <>AGENT RUNNING<TypingDots /></> : <>RESEARCHING · {useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} <TypingDots /></>) : agentMode ? '▶ LAUNCH AGENT' : '▶ BUILD DOSSIER'}
       </button>
+
+      {agentTrace && <AgentTrace trace={agentTrace} />}
 
       {error && (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -705,9 +1120,18 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
         </div>
       )}
 
+      {agentMode && agentResearch && <ResearchNote text={agentResearch} label="RESEARCH NOTES" color={C.blue} />}
+      {agentMode && agentAnalysis && <ResearchNote text={agentAnalysis} label="FREIGHT ANALYSIS" color={C.amber} />}
+
       {data && <ProspectBriefing data={data} onExport={() => exportProspectAsHTML(data)} />}
 
-      {loading && !data && (
+      {data && onTrack && (
+        <button onClick={() => onTrack(company, data)} style={{ padding:'10px 18px', border:`1px solid ${C.accent}`, background:C.accentDim, color:C.accent, cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.12em', borderRadius:6, fontFamily:'inherit', alignSelf:'flex-start' }}>
+          + TRACK SEQUENCE
+        </button>
+      )}
+
+      {loading && !data && !agentMode && (
         <div style={{ padding:20, background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, color:C.textDim, fontSize:13, fontFamily:"'JetBrains Mono', monospace" }}>
           Deep research on {company}<TypingDots />
           <div style={{ marginTop:12, fontSize:11, color:C.textMuted }}>{rawOutput.length > 0 && `${rawOutput.length} chars received`}</div>
@@ -723,6 +1147,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory }) {
                 <span style={{ display:'flex', gap:10, alignItems:'center', flex:1, minWidth:0 }}>
                   <span style={{ fontSize:13, color:C.text, fontWeight:600 }}>{h.company}</span>
                   <span style={{ fontSize:11, color:C.textMuted, padding:'1px 6px', border:`1px solid ${C.border}`, borderRadius:3, fontFamily:"'JetBrains Mono', monospace" }}>{h.data?.freight_profile?.relevance_score || '?'}/10</span>
+                  {h.agent && <span style={{ fontSize:9, color:C.green, fontFamily:"'JetBrains Mono', monospace", fontWeight:700 }}>AGENT</span>}
                 </span>
                 <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", flexShrink:0 }}>{new Date(h.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>
               </button>
@@ -739,12 +1164,14 @@ export default function PilotPage() {
   const [marketContext, setMarketContext] = useState(null);
   const [marketHistory, setMarketHistory] = useState([]);
   const [prospectHistory, setProspectHistory] = useState([]);
+  const [tracked, setTracked] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     try { const mh = localStorage.getItem('pilot_market_history'); if (mh) setMarketHistory(JSON.parse(mh)); } catch {}
     try { const ph = localStorage.getItem('pilot_prospect_history'); if (ph) setProspectHistory(JSON.parse(ph)); } catch {}
     try { const mc = localStorage.getItem('pilot_market_context'); if (mc) setMarketContext(JSON.parse(mc)); } catch {}
+    try { const tr = localStorage.getItem('pilot_sequence_tracker'); if (tr) setTracked(JSON.parse(tr)); } catch {}
     setLoaded(true);
   }, []);
 
@@ -762,6 +1189,30 @@ export default function PilotPage() {
     if (!loaded || !marketContext) return;
     try { localStorage.setItem('pilot_market_context', JSON.stringify(marketContext)); } catch {}
   }, [marketContext, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try { localStorage.setItem('pilot_sequence_tracker', JSON.stringify(tracked)); } catch {}
+  }, [tracked, loaded]);
+
+  const addToTracker = (company, data) => {
+    const item = {
+      id: Date.now(),
+      company,
+      generatedAt: new Date().toISOString(),
+      fitScore: data?.freight_profile?.relevance_score || null,
+      outreach: data?.outreach || null,
+      touches: [
+        { id: 'linkedin', status: 'unsent', doneAt: null },
+        { id: 'email_1',  status: 'unsent', doneAt: null },
+        { id: 'call',     status: 'unsent', doneAt: null },
+        { id: 'email_2',  status: 'unsent', doneAt: null },
+        { id: 'email_3',  status: 'unsent', doneAt: null },
+      ],
+    };
+    setTracked(prev => [item, ...prev].slice(0, 50));
+    setTab('tracker');
+  };
 
   return (
     <>
@@ -787,7 +1238,7 @@ export default function PilotPage() {
                 <span style={{ fontSize:22, fontWeight:700, color:C.textStrong, letterSpacing:'-0.02em' }}>Pilot</span>
                 <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.18em', color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", padding:'2px 7px', border:`1px solid ${C.border}`, borderRadius:3 }}>FLEXPORT SDR MODULE</span>
               </div>
-              <div style={{ fontSize:12, color:C.textMuted, marginTop:3, paddingLeft:19, letterSpacing:'0.02em' }}>freight intelligence, prospect research, and outreach drafting</div>
+              <div style={{ fontSize:12, color:C.textMuted, marginTop:3, paddingLeft:19, letterSpacing:'0.02em' }}>freight intelligence · agent pipeline · batch processing · sequence tracker</div>
             </div>
             {marketContext && (
               <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:4, fontSize:10, fontWeight:700, letterSpacing:'0.1em', color:C.accent, fontFamily:"'JetBrains Mono', monospace" }}>
@@ -797,19 +1248,23 @@ export default function PilotPage() {
           </div>
 
           <div style={{ display:'flex', gap:0 }}>
-            {[{id:'market',label:'MARKET INTEL',color:C.accent},{id:'prospect',label:'PROSPECT',color:C.orange}].map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{ padding:'10px 22px', background:'transparent', border:'none', borderBottom:`2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : C.textMuted, cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.14em', transition:'all 0.15s', fontFamily:"'JetBrains Mono', monospace" }}>{t.label}</button>
+            {[
+              {id:'market',  label:'MARKET INTEL', color:C.accent},
+              {id:'prospect',label:'PROSPECT',     color:C.orange},
+              {id:'batch',   label:'BATCH',        color:C.blue  },
+              {id:'tracker', label:`TRACKER${tracked.length > 0 ? ` · ${tracked.length}` : ''}`, color:C.amber},
+            ].map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ padding:'10px 20px', background:'transparent', border:'none', borderBottom:`2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : C.textMuted, cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.14em', transition:'all 0.15s', fontFamily:"'JetBrains Mono', monospace" }}>{t.label}</button>
             ))}
           </div>
         </div>
 
         <div style={{ flex:1, overflowY:'auto', padding:'28px 28px 60px', animation:'pilot-fadeIn 0.3s ease' }}>
           <div style={{ maxWidth:880, margin:'0 auto' }}>
-            {tab === 'market' ? (
-              <MarketPanel onContextReady={setMarketContext} marketHistory={marketHistory} setMarketHistory={setMarketHistory} />
-            ) : (
-              <ProspectPanel marketContext={marketContext} prospectHistory={prospectHistory} setProspectHistory={setProspectHistory} />
-            )}
+            {tab === 'market' && <MarketPanel onContextReady={setMarketContext} marketHistory={marketHistory} setMarketHistory={setMarketHistory} />}
+            {tab === 'prospect' && <ProspectPanel marketContext={marketContext} prospectHistory={prospectHistory} setProspectHistory={setProspectHistory} onTrack={addToTracker} />}
+            {tab === 'batch' && <BatchPanel marketContext={marketContext} onAddToTracker={addToTracker} />}
+            {tab === 'tracker' && <TrackerPanel tracked={tracked} setTracked={setTracked} />}
           </div>
         </div>
       </div>

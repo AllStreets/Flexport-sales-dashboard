@@ -2004,6 +2004,125 @@ app.post('/api/pilot-stream', async (req, res) => {
   }
 });
 
+// ── Pilot Agent — Multi-step orchestration ──────────────────────────────────
+const PILOT_VOICE_RULES = `Writing rules: No em dashes. Specific over abstract — real numbers, named lanes, named companies. No corporate filler (leverage/unlock/empower/robust/best-in-class). Contractions fine. No exclamation points. No emojis. Declarative openings. Low-friction CTAs.`;
+
+const SP_AGENT_RESEARCH = `You are a B2B freight research agent. Use web search aggressively — multiple searches expected.
+
+Find and document:
+1. Business overview: what they sell, business model, customer segments
+2. Scale signals: revenue, headcount, funding rounds, geographic footprint, DC/store count
+3. Supply chain structure: where do they manufacture or source? Import from which countries? Where do they sell?
+4. Trade/logistics clues: DC locations, 3PL/carrier relationships, import data, international expansion
+5. Recent news (past 12 months): funding, geographic expansion, supply chain disruptions, leadership changes, earnings logistics mentions
+
+Write detailed research notes in clear prose paragraphs — specific facts, real numbers, dates. No bullet points. This research directly determines outreach quality.`;
+
+const SP_AGENT_ANALYSIS = `You are a freight strategy analyst at Flexport. Given research notes, produce a sharp freight-fit analysis.
+
+Flexport sweet spot: mid-market to enterprise importers/exporters, DTC/e-commerce with international supply chains, manufacturers sourcing from Asia or Europe. Not ideal: domestic-only, very small SMBs, Fortune 50 with in-house logistics.
+
+Analyze:
+1. Primary freight modes (ocean FCL/LCL, air, domestic truck, customs brokerage)
+2. Trade lanes — be specific ("Vietnam to US West Coast via LA/Long Beach")
+3. Volume signal — what revenue/scale/SKU data implies about container volume
+4. Freight fit score 1-10 (most companies score 4-7; 9-10 only if all four: international volume + forwarder pain + mid-market scale + trigger event; 1-3 if domestic-only or locked-in enterprise)
+5. Specific pain points a tech-enabled forwarder solves
+6. Trigger events — why NOW is the right time
+
+Write analytical prose. Specific and opinionated. ${PILOT_VOICE_RULES}`;
+
+const SP_AGENT_OUTREACH = `You are an outreach writer for a Flexport SDR. Given research notes and freight analysis, produce a complete outreach package.
+
+Return STRUCTURED JSON only (no markdown, no preamble, no code fences):
+{"company":{"name":"...","one_liner":"...","size_signal":"revenue/employees/funding or Unknown","stage":"early-stage|growth-stage|mid-market|enterprise|public","hq":"City, State or Country","recent_news":["Up to 3 specific items"]},"freight_profile":{"relevance_score":<integer 1-10>,"relevance_reasoning":"2-3 sentences with specific evidence","likely_modes":["ocean","air","truck","customs"],"likely_trade_lanes":["Specific lane names"],"estimated_volume_signal":"...","pain_points":["3-4 specific pains"],"trigger_events":["1-3 reasons NOW is right"]},"outreach":{"email_1":{"subject":"researched, sentence case or lowercase","body":"4-6 sentences"},"email_2_followup":{"timing":"3 business days after email_1 if no reply","subject":"re: or fresh angle","body":"3-4 sentences, different angle"},"email_3_breakup":{"timing":"7-10 business days after email_2","subject":"closing the loop","body":"2-3 sentences, graceful"},"linkedin_note":"Under 300 chars. Sharp, specific.","call_opener":"30-45 sec verbal pitch, spoken dialogue."},"connor_angle":"One sentence on chemical transport relevance if genuine, else null"}
+
+Rules: No 'I hope this finds you well.' No 'Quick question.' No 'Just circling back.' Reference specific facts. ${PILOT_VOICE_RULES}`;
+
+async function pilotOpenAIStream(system, userContent, onChunk) {
+  const axios = require('axios');
+  const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+    model: 'gpt-5.4',
+    messages: [{ role: 'system', content: system }, { role: 'user', content: userContent }],
+    stream: true,
+  }, {
+    headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+    responseType: 'stream',
+  });
+  let text = '', buf = '';
+  await new Promise((resolve, reject) => {
+    response.data.on('data', (chunk) => {
+      buf += chunk.toString();
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') return;
+        try {
+          const parsed = JSON.parse(raw);
+          const delta = parsed.choices?.[0]?.delta?.content || '';
+          if (delta) { text += delta; onChunk(text); }
+        } catch {}
+      }
+    });
+    response.data.on('end', resolve);
+    response.data.on('error', reject);
+  });
+  return text;
+}
+
+app.post('/api/pilot-agent', async (req, res) => {
+  const { company, persona, notes, marketContext, useBackground } = req.body;
+  if (!company) return res.status(400).json({ error: 'company required' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
+
+  const marketBlock = marketContext ? `\n\nCURRENT FREIGHT MARKET CONTEXT (use for rate hooks in outreach):\n${JSON.stringify(marketContext).slice(0, 1500)}` : '';
+  const backgroundBlock = useBackground ? `\n\nSDR BACKGROUND NOTE: Connor's father runs a tank truck oil and chemical transportation company — use only if genuinely relevant.` : '';
+
+  try {
+    send({ type: 'step_start', step: 'research', label: 'RESEARCH' });
+    const researchStart = Date.now();
+    const research = await pilotOpenAIStream(
+      SP_AGENT_RESEARCH,
+      `Research this company for a Flexport SDR outreach campaign.\n\nCompany: ${company}\n${persona ? `Target persona: ${persona}` : ''}\n${notes ? `Additional context: ${notes}` : ''}${marketBlock}`,
+      (text) => send({ type: 'step_chunk', step: 'research', label: 'RESEARCH', text })
+    );
+    send({ type: 'step_complete', step: 'research', label: 'RESEARCH', text: research, elapsed: Date.now() - researchStart });
+
+    send({ type: 'step_start', step: 'analyze', label: 'ANALYZE' });
+    const analyzeStart = Date.now();
+    const analysis = await pilotOpenAIStream(
+      SP_AGENT_ANALYSIS,
+      `RESEARCH NOTES:\n${research}\n\nAnalyze the freight profile for ${company}.${marketBlock}`,
+      (text) => send({ type: 'step_chunk', step: 'analyze', label: 'ANALYZE', text })
+    );
+    send({ type: 'step_complete', step: 'analyze', label: 'ANALYZE', text: analysis, elapsed: Date.now() - analyzeStart });
+
+    send({ type: 'step_start', step: 'draft', label: 'DRAFT' });
+    const draftStart = Date.now();
+    const outreach = await pilotOpenAIStream(
+      SP_AGENT_OUTREACH,
+      `RESEARCH NOTES:\n${research}\n\nFREIGHT ANALYSIS:\n${analysis}\n\nProduce complete outreach package as JSON for: ${company}\nTarget persona: ${persona || 'best-fit logistics/supply chain decision maker'}\n${notes ? `Additional context: ${notes}` : ''}${marketBlock}${backgroundBlock}`,
+      (text) => send({ type: 'step_chunk', step: 'draft', label: 'DRAFT', text })
+    );
+    send({ type: 'step_complete', step: 'draft', label: 'DRAFT', text: outreach, elapsed: Date.now() - draftStart });
+
+    send({ type: 'done', steps: { research, analysis, outreach } });
+    res.end();
+  } catch (e) {
+    console.error('pilot-agent error:', e.message);
+    send({ type: 'error', error: e.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
   initDb()
