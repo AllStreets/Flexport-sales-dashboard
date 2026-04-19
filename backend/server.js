@@ -2039,10 +2039,88 @@ Return STRUCTURED JSON only (no markdown, no preamble, no code fences):
 
 Rules: No 'I hope this finds you well.' No 'Quick question.' No 'Just circling back.' Reference specific facts. ${PILOT_VOICE_RULES}`;
 
-async function pilotOpenAIStream(system, userContent, onChunk) {
+const SP_AGENT_CRITIQUE = `You are a senior SDR coach reviewing a prospect outreach email draft. Be specific and direct — no hedging.
+
+Review email_1 from the outreach JSON:
+1. Opening line — does it lead with something specific to THIS company? Or could it go to anyone?
+2. Personalization — are real facts from research woven in, or is it generic?
+3. Voice compliance — any em dashes, corporate filler, "I hope this finds you well", "quick question", "just circling back"?
+4. CTA friction — is the CTA low-friction ("worth 15 minutes?") or demanding?
+5. Subject line — does it feel human-in-a-rush, or AI-generated marketing copy?
+
+Return JSON:
+{"overall_score":<1-10>,"email_scores":{"opening":<1-10>,"personalization":<1-10>,"voice":<1-10>,"cta":<1-10>,"subject":<1-10>},"issues":[{"line_preview":"first 8 words of problem line","issue":"what is wrong","fix":"specific suggested replacement"}],"strengths":["what works — be specific, not generic praise"],"verdict":"send|needs_work|rewrite"}
+
+Score honestly. 9-10 only if genuinely excellent. Return ONLY JSON.`;
+
+const SP_AGENT_REFINE = `You are an expert outreach writer. You receive an original outreach JSON and a detailed critique. Produce an improved version.
+
+Apply every fix from the critique. Keep what scored 8+. Rewrite what scored below 7.
+
+Return the complete outreach object with improved email_1, email_2_followup, email_3_breakup, linkedin_note, and call_opener. Same JSON schema as input. No preamble, no code fences. ONLY JSON.`;
+
+const SP_DAILY_BRIEF = `You are Pilot's daily brief generator for Connor, a Flexport SDR in Chicago.
+
+You receive today's freight signals, current pipeline status, and a high-ICP prospect shortlist.
+
+Return JSON:
+{"date_context":"...","market_pulse":"One sentence on the single most actionable market condition right now.","top_prospects":[{"company":"...","reason":"Specific trigger event or market hook — why contact TODAY.","angle":"One-sentence opening line for outreach.","urgency":"high|medium|low"}],"signal_of_day":{"headline":"...","affected_sectors":["..."],"sdr_action":"What Connor should do with this signal."},"pipeline_action":"One specific task — e.g., Follow up with [company], X days since last touch.","market_hook":"One opening sentence to use across all outreach today, tied to real market data."}
+
+Return exactly 3 top_prospects using real company names from the shortlist. Market hook must be grounded in the signals provided. Return ONLY JSON.`;
+
+const SP_SIGNAL_MATCH = `You are a signal intelligence analyst for a Flexport SDR.
+
+Given freight market signals and a prospect shortlist, identify which companies are most directly affected and rank them by outreach urgency.
+
+Return JSON:
+{"signal_summary":"2-3 sentences on the most impactful signals today.","affected_prospects":[{"company":"...","sector":"...","why_affected":"One sentence: how this signal impacts their freight.","outreach_angle":"Specific opening line using this signal.","urgency":"high|medium|low","signal_source":"Which signal triggered this"}]}
+
+Rank high first. Up to 8 prospects. Reference specific signal data — no generic statements. Return ONLY JSON.`;
+
+const SP_QUALIFY = `You are a prospect qualification agent for a Flexport SDR. Use web search to assess a company quickly.
+
+Score on four criteria:
+1. International freight volume — significant imports/exports? Any trade data?
+2. Company stage — mid-market sweet spot (not tiny startup, not Fortune 50 with in-house logistics)?
+3. Pain signals — freight challenges, rapid growth, supply chain complexity, fragmented forwarders?
+4. Timing — recent news that makes NOW the right time?
+
+Return JSON:
+{"company":"...","verdict":"qualified|borderline|not_a_fit","qualification_score":<1-10>,"criteria":{"international_volume":{"score":<1-10>,"evidence":"specific evidence found"},"company_stage":{"score":<1-10>,"evidence":"..."},"pain_signals":{"score":<1-10>,"evidence":"..."},"timing":{"score":<1-10>,"evidence":"..."}},"recommendation":"One sentence — worth full research or why not.","fastest_angle":"If qualified: best opening hook from what was found."}
+
+Return ONLY JSON. Use web search — do not guess.`;
+
+const SP_REPLY = `You are a sales reply intelligence agent for a Flexport SDR.
+
+Analyze an email reply or call notes, classify the intent, and draft the ideal next touchpoint.
+
+Return JSON:
+{"reply_classification":"interested|objection|positive_not_ready|cold_follow_up|referral|unsubscribe","sentiment_score":<1-10>,"key_signals":["extracted intent signals from their words"],"objections":["any explicit objections"],"recommended_next":"email|call|linkedin|nurture|close|disqualify","next_touchpoint":{"timing":"specific — e.g., tomorrow morning or 3 business days","subject":"...","body":"3-5 sentences drafted based on their reply context"},"deal_probability_change":"up|down|neutral","sdr_note":"One sentence of coaching for Connor going into next touch."}
+
+Reference specific things from their reply. If interest, accelerate. If objection, address it directly. ${PILOT_VOICE_RULES} Return ONLY JSON.`;
+
+const SP_VARIANTS = `You are an email optimization agent. Given an existing Email 1 draft and company context, generate 2 alternative versions with genuinely different strategic angles.
+
+Available angles: rate-shock hook, trigger-event hook, supply-chain-pain hook, social-proof hook, lane-specific hook, growth-stage hook, competitive-displacement hook.
+
+Return JSON:
+{"original":{"angle":"Name the strategic angle used","score":<1-10>,"score_reasoning":"Why this score"},"variant_b":{"angle":"...","subject":"...","body":"4-6 sentences","score":<1-10>,"score_reasoning":"...","when_to_use":"What context makes this variant optimal"},"variant_c":{"angle":"...","subject":"...","body":"4-6 sentences","score":<1-10>,"score_reasoning":"...","when_to_use":"..."},"recommendation":"original|b|c","recommendation_reasoning":"Why this is strongest for this specific company."}
+
+Variants must use genuinely different angles — not just rephrased versions. ${PILOT_VOICE_RULES} Return ONLY JSON.`;
+
+const SP_PIPELINE_GAPS = `You are a pipeline strategy analyst for a Flexport SDR.
+
+Given current pipeline deals, sector coverage data, and a high-ICP prospect list, identify gaps and recommend targets.
+
+Return JSON:
+{"pipeline_summary":"2-3 sentences on the current pipeline state — what's strong, what's missing.","gaps":[{"sector":"...","issue":"Why this sector is underrepresented or at risk.","opportunity":"What the SDR is missing by not having it covered."}],"recommended_targets":[{"company":"...","sector":"...","why_now":"One sentence on why this company fills the gap.","pipeline_stage_fit":"Which stage they'd realistically enter at."}],"action":"Single highest-priority pipeline action to take today."}
+
+Be specific — use real company names from the prospect list. Up to 3 gaps and 5 recommended targets. Return ONLY JSON.`;
+
+async function pilotOpenAIStream(system, userContent, onChunk, model = 'gpt-5.4') {
   const axios = require('axios');
   const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-    model: 'gpt-5.4',
+    model,
     messages: [{ role: 'system', content: system }, { role: 'user', content: userContent }],
     stream: true,
   }, {
@@ -2073,7 +2151,7 @@ async function pilotOpenAIStream(system, userContent, onChunk) {
 }
 
 app.post('/api/pilot-agent', async (req, res) => {
-  const { company, persona, notes, marketContext, useBackground } = req.body;
+  const { company, persona, notes, marketContext, useBackground, withCritique } = req.body;
   if (!company) return res.status(400).json({ error: 'company required' });
   if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
 
@@ -2114,10 +2192,215 @@ app.post('/api/pilot-agent', async (req, res) => {
     );
     send({ type: 'step_complete', step: 'draft', label: 'DRAFT', text: outreach, elapsed: Date.now() - draftStart });
 
-    send({ type: 'done', steps: { research, analysis, outreach } });
+    let critique = null, refined = null;
+    if (withCritique) {
+      send({ type: 'step_start', step: 'critique', label: 'CRITIQUE' });
+      const critiqueStart = Date.now();
+      critique = await pilotOpenAIStream(
+        SP_AGENT_CRITIQUE,
+        `COMPANY: ${company}\n\nOUTREACH DRAFT (JSON):\n${outreach}`,
+        (text) => send({ type: 'step_chunk', step: 'critique', label: 'CRITIQUE', text })
+      );
+      send({ type: 'step_complete', step: 'critique', label: 'CRITIQUE', text: critique, elapsed: Date.now() - critiqueStart });
+
+      send({ type: 'step_start', step: 'refine', label: 'REFINE' });
+      const refineStart = Date.now();
+      refined = await pilotOpenAIStream(
+        SP_AGENT_REFINE,
+        `ORIGINAL OUTREACH JSON:\n${outreach}\n\nCRITIQUE:\n${critique}\n\nProduce improved version.`,
+        (text) => send({ type: 'step_chunk', step: 'refine', label: 'REFINE', text })
+      );
+      send({ type: 'step_complete', step: 'refine', label: 'REFINE', text: refined, elapsed: Date.now() - refineStart });
+    }
+
+    send({ type: 'done', steps: { research, analysis, outreach: refined || outreach, critique, refined } });
     res.end();
   } catch (e) {
     console.error('pilot-agent error:', e.message);
+    send({ type: 'error', error: e.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
+// ── Pilot — Daily Autonomous Brief ───────────────────────────────────────────
+app.post('/api/pilot-daily-brief', async (req, res) => {
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
+  try {
+    send({ type: 'status', message: 'Gathering signals...' });
+    let signals = [];
+    try { signals = (await fetchAndScoreSignals()).slice(0, 12); } catch {}
+
+    send({ type: 'status', message: 'Loading high-ICP prospects...' });
+    let prospects = [];
+    try { prospects = await getProspects({ icp_min: 75, limit: 30 }); } catch {}
+
+    send({ type: 'status', message: 'Checking pipeline...' });
+    let pipeline = [];
+    try { pipeline = await getPipeline(); } catch {}
+
+    const signalLines = signals.length
+      ? signals.map(s => `• ${s.title || s.headline || 'Signal'} [urgency: ${s.urgency_score || s.score || 'med'}]${s.description ? ' — ' + String(s.description).slice(0, 120) : ''}`).join('\n')
+      : 'No live signals available.';
+    const prospectLines = prospects.slice(0, 20).map(p => `${p.name} (${p.sector}, ICP:${p.icp_score})`).join(', ');
+    const pipelineLines = pipeline.length
+      ? pipeline.map(d => `${d.company || d.name || 'Deal'}: ${d.stage}${d.deal_value ? ' $' + d.deal_value : ''}`).join(' · ')
+      : 'No active pipeline.';
+
+    send({ type: 'generating' });
+    const result = await pilotOpenAIStream(
+      SP_DAILY_BRIEF,
+      `TODAY'S FREIGHT SIGNALS:\n${signalLines}\n\nHIGH-ICP PROSPECT SHORTLIST:\n${prospectLines}\n\nCURRENT PIPELINE:\n${pipelineLines}`,
+      (text) => send({ type: 'chunk', text })
+    );
+    send({ type: 'done', text: result });
+    res.end();
+  } catch (e) {
+    console.error('pilot-daily-brief error:', e.message);
+    send({ type: 'error', error: e.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
+// ── Pilot — Signal-Triggered Prospect Surfacing ───────────────────────────────
+app.post('/api/pilot-signal-prospects', async (req, res) => {
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
+  try {
+    send({ type: 'status', message: 'Fetching live signals...' });
+    let signals = [];
+    try { signals = (await fetchAndScoreSignals()).slice(0, 15); } catch {}
+
+    send({ type: 'status', message: 'Loading prospect database...' });
+    let prospects = [];
+    try { prospects = await getProspects({ icp_min: 65, limit: 60 }); } catch {}
+
+    const signalLines = signals.map(s =>
+      `${s.title || s.headline || 'Signal'} [${s.urgency_score || s.score || 5}] — ${String(s.description || '').slice(0, 150)}`
+    ).join('\n') || 'No live signals';
+    const prospectLines = prospects.map(p =>
+      `${p.name} | ${p.sector} | ICP:${p.icp_score}${p.description ? ' | ' + String(p.description).slice(0, 80) : ''}`
+    ).join('\n');
+
+    send({ type: 'generating' });
+    const result = await pilotOpenAIStream(
+      SP_SIGNAL_MATCH,
+      `TODAY'S FREIGHT SIGNALS:\n${signalLines}\n\nPROSPECT DATABASE (high ICP):\n${prospectLines}`,
+      (text) => send({ type: 'chunk', text })
+    );
+    send({ type: 'done', text: result });
+    res.end();
+  } catch (e) {
+    console.error('pilot-signal-prospects error:', e.message);
+    send({ type: 'error', error: e.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
+// ── Pilot — Auto-Qualification Gate (fast, gpt-5.4-mini) ─────────────────────
+app.post('/api/pilot-qualify', async (req, res) => {
+  const { company } = req.body;
+  if (!company) return res.status(400).json({ error: 'company required' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  try {
+    const axios = require('axios');
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-5.4-mini',
+      messages: [
+        { role: 'system', content: SP_QUALIFY },
+        { role: 'user', content: `Qualify this prospect for a Flexport SDR outreach campaign: ${company}` },
+      ],
+    }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` } });
+    const text = response.data.choices?.[0]?.message?.content || '';
+    const f = text.indexOf('{'), l = text.lastIndexOf('}');
+    if (f === -1 || l === -1) return res.status(500).json({ error: 'Parse failed', raw: text.slice(0, 200) });
+    res.json(JSON.parse(text.slice(f, l + 1)));
+  } catch (e) {
+    console.error('pilot-qualify error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Pilot — A/B Email Variant Generator ──────────────────────────────────────
+app.post('/api/pilot-variants', async (req, res) => {
+  const { company, email1, context: ctx } = req.body;
+  if (!email1) return res.status(400).json({ error: 'email1 required' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
+  try {
+    const result = await pilotOpenAIStream(
+      SP_VARIANTS,
+      `COMPANY: ${company}\n\nEXISTING EMAIL 1:\nSubject: ${email1.subject}\n\n${email1.body}\n\nCOMPANY CONTEXT:\n${ctx || 'No additional context'}`,
+      (text) => send({ type: 'chunk', text })
+    );
+    send({ type: 'done', text: result });
+    res.end();
+  } catch (e) {
+    console.error('pilot-variants error:', e.message);
+    send({ type: 'error', error: e.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
+// ── Pilot — Conversation Reply Agent ─────────────────────────────────────────
+app.post('/api/pilot-reply', async (req, res) => {
+  const { company, originalEmail, replyText } = req.body;
+  if (!replyText) return res.status(400).json({ error: 'replyText required' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
+  try {
+    const result = await pilotOpenAIStream(
+      SP_REPLY,
+      `COMPANY: ${company || 'Unknown'}\n\nORIGINAL OUTREACH:\n${originalEmail || 'Not provided'}\n\nTHEIR REPLY / CALL NOTES:\n${replyText}`,
+      (text) => send({ type: 'chunk', text })
+    );
+    send({ type: 'done', text: result });
+    res.end();
+  } catch (e) {
+    console.error('pilot-reply error:', e.message);
+    send({ type: 'error', error: e.message });
+    if (!res.writableEnded) res.end();
+  }
+});
+
+// ── Pilot — Pipeline Gap Analysis ─────────────────────────────────────────────
+app.post('/api/pilot-pipeline-gaps', async (req, res) => {
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI not configured' });
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders();
+  const send = (obj) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(obj)}\n\n`); };
+  try {
+    let pipeline = [], sectors = [], prospects = [];
+    try { pipeline = await getPipeline(); } catch {}
+    try { sectors = await getSectors(); } catch {}
+    try { prospects = await getProspects({ icp_min: 70, limit: 50 }); } catch {}
+
+    const pipelineLines = pipeline.map(d => `${d.company || d.name || 'Deal'}: ${d.stage}`).join(' · ') || 'Empty pipeline';
+    const sectorLines = sectors.map(s => `${s.sector}: ${s.count} prospects, avg ICP ${Math.round(s.avg_icp || s.avg_score || 0)}`).join('\n');
+    const prospectLines = prospects.slice(0, 30).map(p => `${p.name} (${p.sector}, ICP:${p.icp_score})`).join(', ');
+
+    const result = await pilotOpenAIStream(
+      SP_PIPELINE_GAPS,
+      `CURRENT PIPELINE:\n${pipelineLines}\n\nSECTOR DATABASE:\n${sectorLines}\n\nHIGH-ICP PROSPECTS AVAILABLE:\n${prospectLines}`,
+      (text) => send({ type: 'chunk', text })
+    );
+    send({ type: 'done', text: result });
+    res.end();
+  } catch (e) {
+    console.error('pilot-pipeline-gaps error:', e.message);
     send({ type: 'error', error: e.message });
     if (!res.writableEnded) res.end();
   }

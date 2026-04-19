@@ -127,11 +127,11 @@ async function callPilot({ model, system, messages, onChunk }) {
   return full;
 }
 
-async function callPilotAgent({ company, persona, notes, marketContext, useBackground, onStep }) {
+async function callPilotAgent({ company, persona, notes, marketContext, useBackground, withCritique, onStep }) {
   const response = await fetch(`${API}/api/pilot-agent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ company, persona, notes, marketContext, useBackground }),
+    body: JSON.stringify({ company, persona, notes, marketContext, useBackground, withCritique }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -153,6 +153,39 @@ async function callPilotAgent({ company, persona, notes, marketContext, useBackg
       let event; try { event = JSON.parse(data); } catch { continue; }
       onStep?.(event);
       if (event.type === 'done') result = event.steps;
+      if (event.type === 'error') throw new Error(event.error);
+    }
+  }
+  return result;
+}
+
+async function callPilotSSE({ endpoint, body, onStatus, onChunk }) {
+  const response = await fetch(`${API}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${response.status}`);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let sseBuf = '', result = null;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    sseBuf += decoder.decode(value, { stream: true });
+    const lines = sseBuf.split('\n');
+    sseBuf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      let event; try { event = JSON.parse(data); } catch { continue; }
+      if (event.type === 'status') onStatus?.(event.message);
+      if (event.type === 'chunk') onChunk?.(event.text || '');
+      if (event.type === 'done') result = event.text;
       if (event.type === 'error') throw new Error(event.error);
     }
   }
@@ -244,10 +277,15 @@ function DirectionArrow({ dir }) {
 function AgentTrace({ trace }) {
   if (!trace) return null;
   const { steps, active, activeText } = trace;
+  const hasCritique = trace.steps.critique !== undefined || trace.active === 'critique' || trace.active === 'refine';
   const stepDefs = [
-    { step: 'research', label: 'RESEARCH', color: C.blue,  desc: 'Web search & company intelligence' },
-    { step: 'analyze',  label: 'ANALYZE',  color: C.amber, desc: 'Freight fit analysis'              },
-    { step: 'draft',    label: 'DRAFT',    color: C.accent, desc: 'Outreach sequence generation'    },
+    { step: 'research', label: 'RESEARCH', color: C.blue,   desc: 'Web search & company intelligence' },
+    { step: 'analyze',  label: 'ANALYZE',  color: C.amber,  desc: 'Freight fit analysis'              },
+    { step: 'draft',    label: 'DRAFT',    color: C.accent, desc: 'Outreach sequence generation'      },
+    ...(hasCritique ? [
+      { step: 'critique', label: 'CRITIQUE', color: C.rose,  desc: 'Quality scoring & issue flagging'  },
+      { step: 'refine',   label: 'REFINE',   color: C.green, desc: 'Apply critique improvements'       },
+    ] : []),
   ];
   return (
     <Card accent={C.blue} style={{ marginBottom: 4 }}>
@@ -626,6 +664,389 @@ function Toggle({ active, onClick, color, label, sub, disabled }) {
   );
 }
 
+function QualifyGate({ company }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+
+  const run = async () => {
+    if (!company.trim()) return;
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(`${API}/api/pilot-qualify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResult(data);
+    } catch (e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  if (!company.trim()) return null;
+  const verdictColors = { qualified:C.green, borderline:C.amber, not_a_fit:C.rose };
+  const vColor = result ? (verdictColors[result.verdict] || C.textMuted) : C.textMuted;
+
+  return (
+    <div style={{ padding:'12px 14px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:8 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <Label color={C.textMuted}>AUTO-QUALIFY · GPT-5.4-MINI</Label>
+        {!result && (
+          <button onClick={run} disabled={loading} style={{ padding:'4px 12px', border:`1px solid ${loading ? C.border : C.amber}`, background: loading ? 'transparent' : C.amberDim, color: loading ? C.textMuted : C.amber, cursor: loading ? 'not-allowed' : 'pointer', fontSize:10, fontWeight:700, letterSpacing:'0.1em', fontFamily:'inherit', borderRadius:4, display:'flex', alignItems:'center', gap:5 }}>
+            {loading ? <>QUALIFYING<TypingDots /></> : 'QUICK QUALIFY'}
+          </button>
+        )}
+        {result && (
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.14em', color:vColor, fontFamily:"'JetBrains Mono', monospace", padding:'2px 8px', background:`${vColor}18`, border:`1px solid ${vColor}44`, borderRadius:3 }}>{result.verdict?.replace('_',' ').toUpperCase()}</span>
+            <span style={{ fontSize:14, fontWeight:700, color:vColor, fontFamily:"'JetBrains Mono', monospace" }}>{result.qualification_score}/10</span>
+            <button onClick={() => { setResult(null); setError(''); }} style={{ padding:'2px 6px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit' }}>✕</button>
+          </div>
+        )}
+      </div>
+      {error && <div style={{ marginTop:6, fontSize:11, color:C.rose }}>{error}</div>}
+      {result && (
+        <div style={{ marginTop:10 }}>
+          <div style={{ fontSize:12, color:C.text, lineHeight:1.5, marginBottom:8 }}>{result.recommendation}</div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom: result.fastest_angle ? 8 : 0 }}>
+            {Object.entries(result.criteria || {}).map(([key, val]) => (
+              <div key={key} style={{ padding:'5px 8px', background:C.bgElev, border:`1px solid ${C.border}`, borderRadius:4, minWidth:70 }}>
+                <div style={{ fontSize:8, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", letterSpacing:'0.1em', marginBottom:2 }}>{key.replace('_',' ').toUpperCase()}</div>
+                <div style={{ fontSize:12, fontWeight:700, color: val.score >= 7 ? C.green : val.score >= 5 ? C.amber : C.rose, fontFamily:"'JetBrains Mono', monospace" }}>{val.score}/10</div>
+                {val.evidence && <div style={{ fontSize:9, color:C.textMuted, marginTop:2, lineHeight:1.4 }}>{val.evidence.slice(0,60)}{val.evidence.length>60?'...':''}</div>}
+              </div>
+            ))}
+          </div>
+          {result.fastest_angle && (
+            <div style={{ padding:'8px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:5, fontSize:12, color:C.text, lineHeight:1.5, fontStyle:'italic' }}>
+              {result.fastest_angle}
+              <div style={{ marginTop:4, textAlign:'right' }}><CopyBtn text={result.fastest_angle} /></div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompanyMemory({ company }) {
+  const memKey = company ? `pilot_mem_${company.toLowerCase().replace(/[^a-z0-9]/g, '_')}` : null;
+  const [mem, setMem] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  useEffect(() => {
+    if (!memKey) return;
+    try { const s = localStorage.getItem(memKey); if (s) setMem(JSON.parse(s)); else setMem(null); } catch {}
+  }, [memKey]);
+
+  if (!memKey || (!mem && !editing)) return null;
+
+  const daysSince = (d) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : null;
+  const lastD = daysSince(mem?.lastResearched);
+  const save = () => {
+    const updated = { ...mem, notes:draft, lastUpdated:new Date().toISOString() };
+    setMem(updated);
+    try { localStorage.setItem(memKey, JSON.stringify(updated)); } catch {}
+    setEditing(false);
+  };
+
+  return (
+    <div style={{ padding:'10px 14px', background:`${C.amber}08`, border:`1px solid ${C.amber}33`, borderRadius:8 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <Label color={C.amber}>COMPANY MEMORY</Label>
+        <div style={{ display:'flex', gap:8, fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>
+          {lastD !== null && <span>Last researched {lastD === 0 ? 'today' : `${lastD}d ago`}</span>}
+          {mem?.score && <span>· Score: {mem.score}/10</span>}
+        </div>
+      </div>
+      {mem?.notes && !editing && <div style={{ marginTop:6, fontSize:12, color:C.textDim, lineHeight:1.55 }}>{mem.notes}</div>}
+      {editing && (
+        <div style={{ marginTop:8, display:'flex', gap:6 }}>
+          <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Notes: last call, objections, context, timing..." autoFocus
+            style={{ flex:1, background:C.surface, border:`1px solid ${C.amber}44`, color:C.text, padding:'6px 10px', borderRadius:5, fontSize:12, outline:'none', fontFamily:'inherit' }} />
+          <button onClick={save} style={{ padding:'6px 12px', border:`1px solid ${C.amber}`, background:C.amberDim, color:C.amber, cursor:'pointer', fontSize:10, borderRadius:4, fontFamily:'inherit', fontWeight:700 }}>SAVE</button>
+          <button onClick={() => setEditing(false)} style={{ padding:'6px 8px', border:`1px solid ${C.border}`, background:'transparent', color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:4, fontFamily:'inherit' }}>✕</button>
+        </div>
+      )}
+      {!editing && (
+        <button onClick={() => { setDraft(mem?.notes || ''); setEditing(true); }} style={{ marginTop:6, padding:'3px 8px', background:'transparent', border:`1px solid ${C.border}`, color:C.textMuted, cursor:'pointer', fontSize:10, borderRadius:3, fontFamily:'inherit' }}>
+          {mem?.notes ? 'EDIT NOTES' : '+ ADD NOTES'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function updateCompanyMemory(company, fields) {
+  if (!company) return;
+  const key = `pilot_mem_${company.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  try {
+    const existing = JSON.parse(localStorage.getItem(key) || '{}');
+    localStorage.setItem(key, JSON.stringify({ ...existing, ...fields }));
+  } catch {}
+}
+
+function VariantPanel({ company, email1, ctx }) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+
+  const run = async () => {
+    setLoading(true); setError('');
+    try {
+      const result = await callPilotSSE({ endpoint:'/api/pilot-variants', body:{ company, email1, context:ctx }, onChunk:() => {} });
+      const parsed = extractJSON(result);
+      if (!parsed) setError('Could not parse variants.');
+      else setData(parsed);
+    } catch (e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const variantDefs = [
+    { key:'original', label:'A · ORIGINAL', color:C.accent },
+    { key:'variant_b', label:'B',            color:C.blue   },
+    { key:'variant_c', label:'C',            color:C.rose   },
+  ];
+
+  return (
+    <Card accent={C.rose}>
+      <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <Label color={C.rose}>A/B EMAIL VARIANTS</Label>
+        {!loading && !data && <button onClick={run} style={{ padding:'4px 12px', border:`1px solid ${C.rose}`, background:C.roseDim, color:C.rose, cursor:'pointer', fontSize:10, fontWeight:700, letterSpacing:'0.1em', fontFamily:'inherit', borderRadius:4 }}>GENERATE 3 VARIANTS</button>}
+        {loading && <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", display:'flex', alignItems:'center', gap:4 }}>GENERATING<TypingDots /></span>}
+      </div>
+      {error && <div style={{ padding:'10px 14px', fontSize:11, color:C.rose }}>{error}</div>}
+      {data && (
+        <div style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:12 }}>
+          {data.recommendation_reasoning && (
+            <div style={{ padding:'8px 12px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:6, fontSize:12, color:C.text, lineHeight:1.5 }}>
+              <span style={{ color:C.accent, fontWeight:700, fontSize:10, letterSpacing:'0.1em', fontFamily:"'JetBrains Mono', monospace" }}>RECOMMENDED: {data.recommendation?.toUpperCase()} · </span>
+              {data.recommendation_reasoning}
+            </div>
+          )}
+          {variantDefs.map(({ key, label, color }) => {
+            const v = data[key]; if (!v) return null;
+            const isRec = key === data.recommendation || (key === 'original' && data.recommendation === 'original');
+            return (
+              <div key={key} style={{ border:`1px solid ${isRec ? color : C.border}`, borderRadius:8, overflow:'hidden', background: isRec ? `${color}08` : 'transparent' }}>
+                <div style={{ padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', background: isRec ? `${color}12` : C.bgElev }}>
+                  <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <span style={{ fontSize:10, fontWeight:700, color, fontFamily:"'JetBrains Mono', monospace", letterSpacing:'0.1em' }}>VARIANT {label}</span>
+                    {isRec && <span style={{ fontSize:9, color, fontFamily:"'JetBrains Mono', monospace" }}>★ RECOMMENDED</span>}
+                    {v.score && <span style={{ fontSize:11, color, fontFamily:"'JetBrains Mono', monospace", fontWeight:700 }}>{v.score}/10</span>}
+                  </div>
+                  {v.angle && <span style={{ fontSize:10, color:C.textMuted, fontStyle:'italic', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v.angle}</span>}
+                </div>
+                {v.subject && (
+                  <div style={{ padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
+                    <Label color={C.textMuted}>SUBJECT</Label>
+                    <div style={{ fontSize:13, fontWeight:600, color:C.textStrong, marginTop:4 }}>{v.subject}</div>
+                  </div>
+                )}
+                {v.body && (
+                  <div style={{ padding:'10px 14px' }}>
+                    <div style={{ fontSize:12, color:C.text, lineHeight:1.65, whiteSpace:'pre-wrap' }}>{v.body}</div>
+                    <div style={{ marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      {v.score_reasoning && <span style={{ fontSize:10, color:C.textMuted, fontStyle:'italic', flex:1, marginRight:8 }}>{v.score_reasoning}</span>}
+                      <CopyBtn text={`Subject: ${v.subject || ''}\n\n${v.body}`} label="COPY" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ReplyAgent({ company, outreach }) {
+  const [reply, setReply] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+
+  const run = async () => {
+    if (!reply.trim()) return;
+    setLoading(true); setError(''); setData(null);
+    const originalEmail = outreach?.email_1 ? `Subject: ${outreach.email_1.subject}\n\n${outreach.email_1.body}` : '';
+    try {
+      const result = await callPilotSSE({ endpoint:'/api/pilot-reply', body:{ company, originalEmail, replyText:reply }, onChunk:() => {} });
+      const parsed = extractJSON(result);
+      if (!parsed) setError('Could not parse reply analysis.');
+      else setData(parsed);
+    } catch (e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const classColors = { interested:C.green, positive_not_ready:C.accent, cold_follow_up:C.textMuted, objection:C.amber, referral:C.blue, unsubscribe:C.rose };
+  const sentimentColor = data?.sentiment_score >= 7 ? C.green : data?.sentiment_score >= 4 ? C.amber : C.rose;
+
+  return (
+    <div style={{ marginTop:14, padding:'12px 14px', background:`${C.blue}08`, border:`1px solid ${C.blue}33`, borderRadius:8 }}>
+      <Label color={C.blue}>REPLY INTELLIGENCE AGENT</Label>
+      <div style={{ marginTop:8, display:'flex', gap:6 }}>
+        <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Paste their email reply or paste call notes here..." rows={3}
+          style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.text, padding:'8px 10px', borderRadius:6, fontSize:12, outline:'none', fontFamily:'inherit', resize:'vertical', lineHeight:1.5 }} />
+        <button onClick={run} disabled={loading || !reply.trim()} style={{ padding:'8px 12px', border:`1px solid ${loading || !reply.trim() ? C.border : C.blue}`, background: loading || !reply.trim() ? 'transparent' : C.blueDim, color: loading || !reply.trim() ? C.textMuted : C.blue, cursor: loading || !reply.trim() ? 'not-allowed' : 'pointer', fontSize:10, fontWeight:700, letterSpacing:'0.1em', fontFamily:'inherit', borderRadius:5, alignSelf:'flex-start', whiteSpace:'nowrap' }}>
+          {loading ? <><span>ANALYZING</span><TypingDots /></> : 'ANALYZE REPLY'}
+        </button>
+      </div>
+      {error && <div style={{ marginTop:6, fontSize:11, color:C.rose }}>{error}</div>}
+      {data && (
+        <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+            {data.reply_classification && <span style={{ fontSize:9, fontWeight:700, padding:'2px 8px', background:`${classColors[data.reply_classification] || C.textMuted}22`, color:classColors[data.reply_classification] || C.textMuted, border:`1px solid ${classColors[data.reply_classification] || C.textMuted}44`, borderRadius:3, letterSpacing:'0.12em', fontFamily:"'JetBrains Mono', monospace" }}>{data.reply_classification.replace('_',' ').toUpperCase()}</span>}
+            {data.sentiment_score && <span style={{ fontSize:11, fontWeight:700, color:sentimentColor, fontFamily:"'JetBrains Mono', monospace" }}>SENTIMENT {data.sentiment_score}/10</span>}
+            {data.deal_probability_change && <span style={{ fontSize:10, color: data.deal_probability_change === 'up' ? C.green : data.deal_probability_change === 'down' ? C.rose : C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{data.deal_probability_change === 'up' ? '↑ PROBABILITY UP' : data.deal_probability_change === 'down' ? '↓ PROBABILITY DOWN' : '→ NEUTRAL'}</span>}
+          </div>
+          {data.sdr_note && <div style={{ fontSize:12, color:C.textDim, fontStyle:'italic', lineHeight:1.5 }}>{data.sdr_note}</div>}
+          {data.objections?.length > 0 && (
+            <div>
+              <Label color={C.amber}>OBJECTIONS DETECTED</Label>
+              <div style={{ marginTop:4, display:'flex', flexDirection:'column', gap:3 }}>
+                {data.objections.map((o, i) => <div key={i} style={{ fontSize:12, color:C.text, padding:'4px 8px', background:C.amberDim, border:`1px solid ${C.amber}33`, borderRadius:4 }}>{o}</div>)}
+              </div>
+            </div>
+          )}
+          {data.next_touchpoint && (
+            <div style={{ padding:'12px 14px', background:C.bgElev, border:`1px solid ${C.border}`, borderRadius:7 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <Label color={C.blue}>NEXT TOUCHPOINT · {data.recommended_next?.toUpperCase()}</Label>
+                  {data.next_touchpoint.timing && <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{data.next_touchpoint.timing}</span>}
+                </div>
+                <CopyBtn text={`Subject: ${data.next_touchpoint.subject || ''}\n\n${data.next_touchpoint.body || ''}`} label="COPY" />
+              </div>
+              {data.next_touchpoint.subject && <div style={{ fontSize:13, fontWeight:600, color:C.textStrong, marginBottom:8 }}>{data.next_touchpoint.subject}</div>}
+              <div style={{ fontSize:12, color:C.text, lineHeight:1.65, whiteSpace:'pre-wrap' }}>{data.next_touchpoint.body}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SignalsPanel() {
+  const [mode, setMode] = useState('signals');
+  const [loading, setLoading] = useState(false);
+  const [raw, setRaw] = useState('');
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+
+  const run = async () => {
+    setLoading(true); setData(null); setRaw(''); setError(''); setStatus('');
+    const endpoint = mode === 'signals' ? '/api/pilot-signal-prospects' : '/api/pilot-pipeline-gaps';
+    try {
+      const result = await callPilotSSE({ endpoint, body:{}, onStatus:setStatus, onChunk:(t) => setRaw(t) });
+      const parsed = extractJSON(result);
+      if (!parsed) { setError('Could not parse response.'); }
+      else setData(parsed);
+    } catch (e) { setError(e.message); }
+    setLoading(false); setStatus('');
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      <div style={{ display:'flex', gap:6 }}>
+        {[{id:'signals',label:'SIGNAL PROSPECTS'},{id:'gaps',label:'PIPELINE GAPS'}].map(m => (
+          <button key={m.id} onClick={() => { setMode(m.id); setData(null); setRaw(''); setError(''); }} style={{ padding:'7px 14px', borderRadius:5, border:`1px solid ${mode===m.id ? C.accent : C.border}`, background: mode===m.id ? C.accentDim : 'transparent', color: mode===m.id ? C.accent : C.textMuted, cursor:'pointer', fontSize:12, fontWeight:600, fontFamily:'inherit', transition:'all 0.15s' }}>{m.label}</button>
+        ))}
+      </div>
+      <div style={{ fontSize:12, color:C.textMuted, lineHeight:1.5 }}>
+        {mode === 'signals' ? 'Fetches live freight signals, cross-references the 250-prospect database, and surfaces the companies most directly affected — with pre-drafted outreach angles.' : 'Analyzes your current pipeline, identifies underrepresented sectors and lanes, and recommends high-ICP companies to fill the gaps.'}
+      </div>
+      <button onClick={run} disabled={loading} style={{ background: loading ? 'transparent' : `linear-gradient(135deg, ${C.accent}22, ${C.accent}08)`, border:`1px solid ${loading ? C.border : C.accent}`, color: loading ? C.textMuted : C.accent, padding:'11px 22px', borderRadius:6, cursor: loading ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', alignSelf:'flex-start', display:'flex', alignItems:'center', gap:8 }}>
+        {loading ? <>{status || (mode==='signals' ? 'MATCHING SIGNALS TO PROSPECTS' : 'ANALYZING PIPELINE')}<TypingDots /></> : mode==='signals' ? '▶ SURFACE SIGNAL PROSPECTS' : '▶ FIND PIPELINE GAPS'}
+      </button>
+      {error && <div style={{ padding:'10px 14px', background:C.roseDim, border:`1px solid ${C.rose}44`, borderRadius:6, fontSize:12, color:C.rose }}>{error}</div>}
+      {loading && !data && raw && (
+        <div style={{ padding:16, background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, color:C.textDim, fontSize:11, fontFamily:"'JetBrains Mono', monospace" }}>
+          {status || 'Processing...'}<TypingDots />
+          <div style={{ marginTop:6, fontSize:10, color:C.textMuted }}>{raw.length} chars</div>
+        </div>
+      )}
+
+      {data && mode === 'signals' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {data.signal_summary && <div style={{ padding:'12px 16px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:8, fontSize:13, color:C.text, lineHeight:1.6, fontStyle:'italic' }}>{data.signal_summary}</div>}
+          <Card accent={C.accent}>
+            <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev, display:'flex', justifyContent:'space-between' }}>
+              <Label color={C.accent}>AFFECTED PROSPECTS</Label>
+              <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{data.affected_prospects?.length || 0} COMPANIES</span>
+            </div>
+            {(data.affected_prospects || []).map((p, i) => (
+              <div key={i} style={{ padding:'14px 16px', borderBottom: i < (data.affected_prospects.length-1) ? `1px solid ${C.border}` : 'none' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, marginBottom:8 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:4 }}>
+                      <span style={{ fontSize:14, fontWeight:700, color:C.textStrong }}>{p.company}</span>
+                      <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{p.sector}</span>
+                    </div>
+                    <div style={{ fontSize:12, color:C.textDim, marginBottom:6 }}>{p.why_affected}</div>
+                    <div style={{ padding:'8px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:5, fontSize:12, color:C.text, lineHeight:1.5, fontStyle:'italic' }}>
+                      "{p.outreach_angle}"
+                      <div style={{ marginTop:6, textAlign:'right' }}><CopyBtn text={p.outreach_angle || ''} label="COPY ANGLE" /></div>
+                    </div>
+                  </div>
+                  <SeverityBadge level={p.urgency} />
+                </div>
+                <div style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>SIGNAL: {p.signal_source}</div>
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
+
+      {data && mode === 'gaps' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {data.pipeline_summary && <div style={{ padding:'12px 16px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:8, fontSize:13, color:C.text, lineHeight:1.6, fontStyle:'italic' }}>{data.pipeline_summary}</div>}
+          {data.gaps?.length > 0 && (
+            <Card accent={C.rose}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev }}><Label color={C.rose}>PIPELINE GAPS</Label></div>
+              {data.gaps.map((g, i) => (
+                <div key={i} style={{ padding:'12px 16px', borderBottom: i < data.gaps.length-1 ? `1px solid ${C.border}` : 'none' }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.textStrong, marginBottom:4 }}>{g.sector}</div>
+                  <div style={{ fontSize:12, color:C.rose, marginBottom:4 }}>{g.issue}</div>
+                  <div style={{ fontSize:12, color:C.textDim }}>{g.opportunity}</div>
+                </div>
+              ))}
+            </Card>
+          )}
+          {data.recommended_targets?.length > 0 && (
+            <Card accent={C.green}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev }}><Label color={C.green}>RECOMMENDED TARGETS</Label></div>
+              {data.recommended_targets.map((t, i) => (
+                <div key={i} style={{ padding:'12px 16px', borderBottom: i < data.recommended_targets.length-1 ? `1px solid ${C.border}` : 'none', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:4 }}>
+                      <span style={{ fontSize:13, fontWeight:600, color:C.textStrong }}>{t.company}</span>
+                      <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{t.sector}</span>
+                    </div>
+                    <div style={{ fontSize:12, color:C.textDim }}>{t.why_now}</div>
+                  </div>
+                  <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", flexShrink:0 }}>{t.pipeline_stage_fit}</span>
+                </div>
+              ))}
+            </Card>
+          )}
+          {data.action && (
+            <div style={{ padding:'12px 14px', background:C.amberDim, border:`1px solid ${C.amber}44`, borderRadius:8 }}>
+              <Label color={C.amber}>TODAY'S ACTION</Label>
+              <div style={{ marginTop:6, fontSize:13, color:C.text }}>{data.action}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BatchPanel({ marketContext, onAddToTracker }) {
   const [input, setInput] = useState('');
   const [queue, setQueue] = useState([]);
@@ -887,6 +1308,9 @@ function TrackerPanel({ tracked, setTracked }) {
                     </div>
                   );
                 })}
+                <div style={{ padding:'14px 16px' }}>
+                  <ReplyAgent company={item.company} outreach={item.outreach} />
+                </div>
               </div>
             )}
           </div>
@@ -902,6 +1326,8 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
   const [customerCtx, setCustomerCtx] = useState('');
   const [data, setData] = useState(null);
   const [customerDraft, setCustomerDraft] = useState('');
+  const [briefData, setBriefData] = useState(null);
+  const [briefStatus, setBriefStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [rawOutput, setRawOutput] = useState('');
   const [error, setError] = useState('');
@@ -911,26 +1337,33 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
   const toggleLane = (lane) => setSelectedLanes(prev => prev.includes(lane) ? prev.filter(l => l !== lane) : [...prev, lane]);
 
   const run = async () => {
-    setLoading(true); setData(null); setCustomerDraft(''); setRawOutput(''); setError('');
-    let prompt = '';
-    if (mode === 'global') prompt = 'Pull latest global freight market intelligence. Search broadly for FBX, SCFI, WCI, air cargo indexes, and major news from past 2 weeks. Produce comprehensive global briefing.';
-    else if (mode === 'lanes') {
-      if (selectedLanes.length === 0) { setError('Pick at least one trade lane.'); setLoading(false); return; }
-      prompt = `Produce focused freight market briefing for these lanes: ${selectedLanes.join(', ')}. Search for current rates, recent movements, drivers. Include global_signal for context.`;
-    } else prompt = `Draft customer market update. ${customerCtx ? `Customer context: ${customerCtx}` : 'No specific context; general update.'}`;
-
+    setLoading(true); setData(null); setCustomerDraft(''); setBriefData(null); setBriefStatus(''); setRawOutput(''); setError('');
     try {
-      if (mode === 'customer') {
-        const result = await callPilot({ model: 'gpt-5.4', system: SP_CUSTOMER_UPDATE, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setCustomerDraft(t) });
-        setCustomerDraft(result);
-        setMarketHistory(prev => [{ id: Date.now(), type: 'customer_update', timestamp: new Date().toISOString(), content: result, context: customerCtx }, ...prev].slice(0, 20));
-      } else {
-        const result = await callPilot({ model: 'gpt-5.4', system: SP_MARKET, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
+      if (mode === 'brief') {
+        const result = await callPilotSSE({ endpoint:'/api/pilot-daily-brief', body:{}, onStatus:setBriefStatus, onChunk:(t) => setRawOutput(t) });
         const parsed = extractJSON(result);
-        if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
-        else {
-          setData(parsed); onContextReady(parsed);
-          setMarketHistory(prev => [{ id: Date.now(), type: 'market_brief', timestamp: new Date().toISOString(), mode, lanes: selectedLanes, data: parsed }, ...prev].slice(0, 20));
+        if (!parsed) setError('Could not parse daily brief.');
+        else setBriefData(parsed);
+      } else {
+        let prompt = '';
+        if (mode === 'global') prompt = 'Pull latest global freight market intelligence. Search broadly for FBX, SCFI, WCI, air cargo indexes, and major news from past 2 weeks. Produce comprehensive global briefing.';
+        else if (mode === 'lanes') {
+          if (selectedLanes.length === 0) { setError('Pick at least one trade lane.'); setLoading(false); return; }
+          prompt = `Produce focused freight market briefing for these lanes: ${selectedLanes.join(', ')}. Search for current rates, recent movements, drivers. Include global_signal for context.`;
+        } else prompt = `Draft customer market update. ${customerCtx ? `Customer context: ${customerCtx}` : 'No specific context; general update.'}`;
+
+        if (mode === 'customer') {
+          const result = await callPilot({ model: 'gpt-5.4', system: SP_CUSTOMER_UPDATE, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setCustomerDraft(t) });
+          setCustomerDraft(result);
+          setMarketHistory(prev => [{ id: Date.now(), type: 'customer_update', timestamp: new Date().toISOString(), content: result, context: customerCtx }, ...prev].slice(0, 20));
+        } else {
+          const result = await callPilot({ model: 'gpt-5.4', system: SP_MARKET, messages: [{ role: 'user', content: prompt }], onChunk: (t) => setRawOutput(t) });
+          const parsed = extractJSON(result);
+          if (!parsed) { setError('Response could not be parsed. Raw output below.'); setRawOutput(result); }
+          else {
+            setData(parsed); onContextReady(parsed);
+            setMarketHistory(prev => [{ id: Date.now(), type: 'market_brief', timestamp: new Date().toISOString(), mode, lanes: selectedLanes, data: parsed }, ...prev].slice(0, 20));
+          }
         }
       }
     } catch (e) { setError(`Error: ${e.message}`); }
@@ -945,7 +1378,7 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-        {[{id:'global',label:'Global Snapshot'},{id:'lanes',label:'Specific Lanes'},{id:'customer',label:'Customer Update'}].map(m => (
+        {[{id:'global',label:'Global Snapshot'},{id:'lanes',label:'Specific Lanes'},{id:'customer',label:'Customer Update'},{id:'brief',label:'Daily Brief'}].map(m => (
           <button key={m.id} onClick={() => setMode(m.id)} style={{ padding:'7px 14px', borderRadius:5, border:`1px solid ${mode === m.id ? C.accent : C.border}`, background: mode === m.id ? C.accentDim : 'transparent', color: mode === m.id ? C.accent : C.textMuted, cursor:'pointer', fontSize:12, fontWeight:600, letterSpacing:'0.02em', fontFamily:'inherit', transition:'all 0.15s' }}>{m.label}</button>
         ))}
       </div>
@@ -964,7 +1397,7 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
       )}
 
       <button onClick={run} disabled={loading} style={{ background: loading ? 'transparent' : `linear-gradient(135deg, ${C.accent}22, ${C.accent}08)`, border:`1px solid ${loading ? C.border : C.accent}`, color: loading ? C.textMuted : C.accent, padding:'11px 22px', borderRadius:6, cursor: loading ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:700, letterSpacing:'0.12em', fontFamily:'inherit', transition:'all 0.2s', alignSelf:'flex-start', display:'flex', alignItems:'center', gap:8 }}>
-        {loading ? <>SEARCHING MARKET DATA<TypingDots /></> : '▶ RUN INTEL'}
+        {loading ? <>{mode === 'brief' ? (briefStatus || 'BUILDING DAILY BRIEF') : 'SEARCHING MARKET DATA'}<TypingDots /></> : mode === 'brief' ? '▶ BUILD DAILY BRIEF' : '▶ RUN INTEL'}
       </button>
 
       {error && (
@@ -988,9 +1421,66 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
 
       {data && mode !== 'customer' && <MarketBriefing data={data} onExport={() => exportMarketAsHTML(data)} />}
 
-      {loading && !data && mode !== 'customer' && (
+      {briefData && mode === 'brief' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {briefData.signal_of_day && (
+            <Card accent={C.amber}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev }}><Label color={C.amber}>SIGNAL OF THE DAY</Label></div>
+              <div style={{ padding:'14px 16px' }}>
+                <div style={{ fontSize:14, fontWeight:600, color:C.textStrong, marginBottom:6 }}>{briefData.signal_of_day.headline || briefData.signal_of_day}</div>
+                {briefData.signal_of_day.implication && <div style={{ fontSize:12, color:C.text, lineHeight:1.6, marginBottom:8 }}>{briefData.signal_of_day.implication}</div>}
+                {briefData.signal_of_day.hook && (
+                  <div style={{ padding:'8px 12px', background:C.amberDim, border:`1px solid ${C.amber}44`, borderRadius:5, fontSize:12, color:C.text, fontStyle:'italic', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+                    <span>{briefData.signal_of_day.hook}</span>
+                    <CopyBtn text={briefData.signal_of_day.hook} />
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+          {briefData.top_prospects?.length > 0 && (
+            <Card accent={C.accent}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev, display:'flex', justifyContent:'space-between' }}>
+                <Label color={C.accent}>TOP PROSPECTS · CALL TODAY</Label>
+                <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace" }}>{briefData.top_prospects.length} COMPANIES</span>
+              </div>
+              {briefData.top_prospects.map((p, i) => (
+                <div key={i} style={{ padding:'12px 16px', borderBottom: i < briefData.top_prospects.length-1 ? `1px solid ${C.border}` : 'none' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:C.textStrong }}>{p.company || p}</span>
+                    {p.urgency && <SeverityBadge level={p.urgency} />}
+                  </div>
+                  {p.reason && <div style={{ fontSize:12, color:C.textDim, marginBottom:6 }}>{p.reason}</div>}
+                  {p.opener && (
+                    <div style={{ padding:'6px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:5, fontSize:12, color:C.text, fontStyle:'italic', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+                      <span>{p.opener}</span><CopyBtn text={p.opener} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Card>
+          )}
+          {briefData.pipeline_action && (
+            <div style={{ padding:'14px 16px', background:`${C.green}0a`, border:`1px solid ${C.green}44`, borderRadius:8 }}>
+              <Label color={C.green}>PIPELINE ACTION</Label>
+              <div style={{ marginTop:6, fontSize:13, color:C.text, lineHeight:1.6 }}>{briefData.pipeline_action}</div>
+            </div>
+          )}
+          {briefData.market_hook && (
+            <Card accent={C.blue}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.bgElev, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <Label color={C.blue}>TODAY'S MARKET HOOK</Label>
+                <CopyBtn text={briefData.market_hook} />
+              </div>
+              <div style={{ padding:'14px 16px', fontSize:13, color:C.text, lineHeight:1.7, fontStyle:'italic' }}>{briefData.market_hook}</div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {loading && !data && !briefData && mode !== 'customer' && (
         <div style={{ padding:20, background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, color:C.textDim, fontSize:13, fontFamily:"'JetBrains Mono', monospace" }}>
-          Searching FBX · SCFI · WCI · Drewry · JOC · Reuters<TypingDots />
+          {mode === 'brief' ? <>{briefStatus || 'Analyzing pipeline · scoring signals · ranking prospects'}<TypingDots /></> : <>Searching FBX · SCFI · WCI · Drewry · JOC · Reuters<TypingDots /></>}
           <div style={{ marginTop:12, fontSize:11, color:C.textMuted }}>{rawOutput.length > 0 && `${rawOutput.length} chars received`}</div>
         </div>
       )}
@@ -1020,6 +1510,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onT
   const [useMarket, setUseMarket] = useState(true);
   const [useDeep, setUseDeep] = useState(true);
   const [agentMode, setAgentMode] = useState(false);
+  const [withCritique, setWithCritique] = useState(false);
   const [agentTrace, setAgentTrace] = useState(null);
   const [agentResearch, setAgentResearch] = useState('');
   const [agentAnalysis, setAgentAnalysis] = useState('');
@@ -1056,6 +1547,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onT
           company, persona, notes,
           marketContext: (useMarket && marketContext) ? marketContext : null,
           useBackground,
+          withCritique,
           onStep: handleStep,
         });
         const parsed = extractJSON(result?.outreach || '');
@@ -1063,6 +1555,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onT
         else {
           setData(parsed);
           setProspectHistory(prev => [{ id: Date.now(), timestamp: new Date().toISOString(), company, data: parsed, agent: true }, ...prev].slice(0, 30));
+          updateCompanyMemory(company, { lastResearched: new Date().toISOString(), score: parsed?.freight_profile?.relevance_score });
         }
       } catch (e) { setError(`Agent error: ${e.message}`); }
     } else {
@@ -1077,6 +1570,7 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onT
         else {
           setData(parsed);
           setProspectHistory(prev => [{ id: Date.now(), timestamp: new Date().toISOString(), company, data: parsed }, ...prev].slice(0, 30));
+          updateCompanyMemory(company, { lastResearched: new Date().toISOString(), score: parsed?.freight_profile?.relevance_score });
         }
       } catch (e) { setError(`Error: ${e.message}`); }
     }
@@ -1100,8 +1594,12 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onT
 
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes (e.g., 'just raised Series B', 'expanding to Europe', 'heavy importer from Vietnam')" style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.text, padding:'10px 14px', borderRadius:6, fontSize:13, outline:'none', fontFamily:'inherit' }} />
 
+      <QualifyGate company={company} />
+      <CompanyMemory company={company} />
+
       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
         <Toggle active={agentMode} onClick={() => setAgentMode(!agentMode)} color={C.green} label="AGENT MODE" sub="3-step pipeline · trace UI" />
+        {agentMode && <Toggle active={withCritique} onClick={() => setWithCritique(!withCritique)} color={C.rose} label="SELF-CRITIQUE" sub="5-step refine loop" />}
         {!agentMode && <Toggle active={useDeep} onClick={() => setUseDeep(!useDeep)} color={C.amber} label={useDeep ? 'GPT-5.4' : 'GPT-5.4-MINI'} sub={useDeep ? '250k free/day · deep research' : '2.5M free/day · fast'} />}
         <Toggle active={useBackground} onClick={() => setUseBackground(!useBackground)} color={C.blue} label="USE MY BACKGROUND" sub="weave in chemical transport" />
         <Toggle active={useMarket && !!marketContext} onClick={() => setUseMarket(!useMarket)} color={C.accent} label={marketContext ? 'USE MARKET INTEL' : 'NO MARKET INTEL LOADED'} sub={marketContext ? 'live rate hooks' : 'run market panel first'} disabled={!marketContext} />
@@ -1124,6 +1622,10 @@ function ProspectPanel({ marketContext, prospectHistory, setProspectHistory, onT
       {agentMode && agentAnalysis && <ResearchNote text={agentAnalysis} label="FREIGHT ANALYSIS" color={C.amber} />}
 
       {data && <ProspectBriefing data={data} onExport={() => exportProspectAsHTML(data)} />}
+
+      {data?.outreach?.email_1 && (
+        <VariantPanel company={company} email1={`Subject: ${data.outreach.email_1.subject}\n\n${data.outreach.email_1.body}`} ctx={[data.company?.one_liner, data.freight_profile?.relevance_reasoning].filter(Boolean).join(' · ')} />
+      )}
 
       {data && onTrack && (
         <button onClick={() => onTrack(company, data)} style={{ padding:'10px 18px', border:`1px solid ${C.accent}`, background:C.accentDim, color:C.accent, cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.12em', borderRadius:6, fontFamily:'inherit', alignSelf:'flex-start' }}>
@@ -1238,7 +1740,7 @@ export default function PilotPage() {
                 <span style={{ fontSize:22, fontWeight:700, color:C.textStrong, letterSpacing:'-0.02em' }}>Pilot</span>
                 <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.18em', color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", padding:'2px 7px', border:`1px solid ${C.border}`, borderRadius:3 }}>FLEXPORT SDR MODULE</span>
               </div>
-              <div style={{ fontSize:12, color:C.textMuted, marginTop:3, paddingLeft:19, letterSpacing:'0.02em' }}>freight intelligence · agent pipeline · batch processing · sequence tracker</div>
+              <div style={{ fontSize:12, color:C.textMuted, marginTop:3, paddingLeft:19, letterSpacing:'0.02em' }}>freight intelligence · agent pipeline · batch processing · sequence tracker · signal surfacing</div>
             </div>
             {marketContext && (
               <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:4, fontSize:10, fontWeight:700, letterSpacing:'0.1em', color:C.accent, fontFamily:"'JetBrains Mono', monospace" }}>
@@ -1253,6 +1755,7 @@ export default function PilotPage() {
               {id:'prospect',label:'PROSPECT',     color:C.orange},
               {id:'batch',   label:'BATCH',        color:C.blue  },
               {id:'tracker', label:`TRACKER${tracked.length > 0 ? ` · ${tracked.length}` : ''}`, color:C.amber},
+              {id:'signals', label:'SIGNALS',      color:C.rose  },
             ].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{ padding:'10px 20px', background:'transparent', border:'none', borderBottom:`2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : C.textMuted, cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.14em', transition:'all 0.15s', fontFamily:"'JetBrains Mono', monospace" }}>{t.label}</button>
             ))}
@@ -1265,6 +1768,7 @@ export default function PilotPage() {
             {tab === 'prospect' && <ProspectPanel marketContext={marketContext} prospectHistory={prospectHistory} setProspectHistory={setProspectHistory} onTrack={addToTracker} />}
             {tab === 'batch' && <BatchPanel marketContext={marketContext} onAddToTracker={addToTracker} />}
             {tab === 'tracker' && <TrackerPanel tracked={tracked} setTracked={setTracked} />}
+            {tab === 'signals' && <SignalsPanel />}
           </div>
         </div>
       </div>
