@@ -511,22 +511,27 @@ function IntegrationsSection({ health, onTestHealth, healthLoading }) {
         <SettingRow label="Enable AI Features" description="Powers prospect analysis, AI Message Composer, semantic search, signal scoring, live call suggestions, and research briefs" icon={RiCpuLine}>
           <SettingToggle value={aiEnabled} onChange={(v) => { setAiEnabled(v); flash(); }} />
         </SettingRow>
-        <SettingRow label="Model Preference" description="Used for all AI features across the platform" icon={RiRobotLine}>
+        <SettingRow label="Model Preference" description="Used for platform AI features (Account 360, signals, call prep, outreach sequences). Agentic Outreach uses gpt-5.4 / gpt-5.4-mini independently." icon={RiRobotLine}>
           <select
             className="setting-input setting-select"
             value={model}
             onChange={e => { setModel(e.target.value); flash(); }}
           >
             <option value="gpt-4.1-mini">gpt-4.1-mini (default — fast + cost-efficient)</option>
+            <option value="gpt-4.1-nano">gpt-4.1-nano (fastest, 2.5M free/day)</option>
+            <option value="gpt-4.1">gpt-4.1 (250k free/day)</option>
+            <option value="gpt-5.4-mini">gpt-5.4-mini (2.5M free/day)</option>
+            <option value="gpt-5.4">gpt-5.4 (best quality, 250k free/day)</option>
             <option value="gpt-4o-mini">gpt-4o-mini</option>
-            <option value="gpt-4o">gpt-4o (highest quality)</option>
-            <option value="gpt-4.1">gpt-4.1</option>
+            <option value="gpt-4o">gpt-4o</option>
           </select>
         </SettingRow>
       </SettingCard>
 
       <SettingCard title="AI Features Active on This Platform">
         {[
+          { label: 'Agentic Outreach — Market Intel',   desc: 'gpt-5.4 · Live freight market briefings — FBX, SCFI, WCI, disruptions, SDR playbook hooks, customer update drafts' },
+          { label: 'Agentic Outreach — Prospect Research', desc: 'gpt-5.4 / gpt-5.4-mini · Full prospect dossier — freight fit score, trade lanes, pain points, trigger events, 3-touch outreach sequence, LinkedIn note, cold call opener' },
           { label: 'Prospect Analysis',      desc: 'Freight mix, urgency score, pain points, talking points — Account 360 + Home' },
           { label: 'AI Message Composer',    desc: 'Generate email + LinkedIn outreach by tone (direct / consultative / challenger)' },
           { label: 'Semantic Prospect Search', desc: 'Natural language → SQL: "electronics importers from Asia with high ICP"' },
@@ -671,6 +676,7 @@ const API_ROUTES = [
   { method: 'GET',    path: '/api/hot-prospects',         desc: 'Top 8 by opportunity score'                      },
   { method: 'POST',   path: '/api/semantic-search',       desc: 'AI natural language → SQL prospect search'       },
   // AI — analysis & messaging
+  { method: 'POST',   path: '/api/pilot-stream',          desc: 'Agentic Outreach stream (SSE) — market intel + prospect dossier via gpt-5.4' },
   { method: 'POST',   path: '/api/analyze',               desc: 'Prospect analysis stream (SSE) — freight mix, urgency, talking pts' },
   { method: 'POST',   path: '/api/compose-email',         desc: 'AI Message Composer stream (SSE) — email + LinkedIn by tone'        },
   { method: 'POST',   path: '/api/research',              desc: 'Company intelligence brief — trade profile, signals, why-now'       },
@@ -730,7 +736,7 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
           { key: 'Version',        val: 'v2.1.0'                        },
           { key: 'Frontend',       val: 'React 19 + Vite 7'             },
           { key: 'Backend',        val: 'Express 5 + SQLite 3'          },
-          { key: 'AI Engine',      val: 'OpenAI GPT-4.1-mini'           },
+          { key: 'AI Engine',      val: 'OpenAI GPT-5.4 · GPT-5.4-mini · GPT-4.1-mini' },
           { key: 'Data Sources',   val: 'NewsAPI · FRED · AISstream · OpenSky · ExchangeRate · Serper · Terminal49' },
           { key: 'Design System',  val: '#060b18 · #00d4ff · Space Grotesk + JetBrains Mono' },
         ].map(({ key, val }) => (
@@ -750,7 +756,8 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
           { page: 'Trade Data',     path: '/trade',        desc: 'Bloomberg-style terminal — FRED macro data, FX rates, trigger events' },
           { page: 'Market Map',     path: '/market',       desc: '250-prospect radial node graph across 15 sectors — TAM, freight avg, live ICP signals' },
           { page: 'Account 360',    path: '/account/:id',  desc: 'Full prospect profile — supply chain diagram, AI analysis, MAP, objection handler' },
-          { page: 'Performance',    path: '/performance',  desc: 'SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart' },
+          { page: 'Agentic Outreach', path: '/pilot',       desc: 'Pilot module — live freight market briefings (gpt-5.4), prospect dossier with 3-touch outreach sequence, customer update drafts, SDR playbook hooks' },
+          { page: 'Sales CRM',      path: '/performance',  desc: 'SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart' },
           { page: 'Research',       path: '/research',     desc: 'AI company intelligence briefs — trade profile, signals, why-now' },
         ].map(({ page, path, desc }) => (
           <div key={page} className="setting-row" style={{ alignItems: 'flex-start' }}>

@@ -2,7 +2,7 @@
 
 A full-stack sales intelligence platform built for Flexport SDRs. Combines live prospect data, AI-generated insights, global trade intelligence, live AIS vessel tracking, port disruption monitoring, tariff analysis, pipeline management, and live call assistance into a single dark-mode terminal interface.
 
-![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=white) ![Express](https://img.shields.io/badge/Express-5-black?logo=express) ![SQLite](https://img.shields.io/badge/SQLite-3-003b57?logo=sqlite) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4.1--mini-412991?logo=openai)
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=white) ![Express](https://img.shields.io/badge/Express-5-black?logo=express) ![SQLite](https://img.shields.io/badge/SQLite-3-003b57?logo=sqlite) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--5.4-412991?logo=openai)
 
 ---
 
@@ -18,8 +18,10 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 | `/account/:id` | Account 360 | Full prospect deep-dive — animated supply chain diagram with correct US port routing, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser (always visible; auto-populates from Live Call notes) |
 | `/performance` | SDR Performance | 365-day activity heatmap, quota attainment rings (calls, emails, demos, LinkedIn, pipeline), activity funnel, win/loss chart and logger, follow-up radar, pipeline velocity, recent activity feed |
 | `/market` | Market Map | Zoomable radial SVG node graph of 250 prospects across 15 sectors (apparel, beauty, electronics, CPG, outdoor, accessories, home-goods, furniture, health, footwear, activewear, jewelry, home-textiles, pet, baby) with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations, signal timeline per company |
+| `/pilot` | Agentic Outreach | Pilot module — live freight market briefings (gpt-5.4, pulls FBX/SCFI/WCI/Drewry), prospect dossier builder with freight fit scoring, 3-touch outreach sequence, LinkedIn note, cold call opener, customer update drafts, SDR playbook hooks. History persists in localStorage. |
 | `/tariff` | Tariff Calculator | Landed cost modeling — origin country, product HS code, cargo value, weight, Ocean FCL vs Air mode; §301 + reciprocal tariff breakdown, SDR angle generator, HS code lookup |
-| `/settings` | Settings | Profile, quota targets (calls, emails, demos, LinkedIn, pipeline), notifications, Live Call (mic auto-start, AI prediction frequency), appearance (accent color, density), AI model selection, API key status, data export, keyboard shortcuts reference, platform pages reference, server health |
+| `/performance` | Sales CRM | SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart |
+| `/settings` | Settings | Profile, quota targets, notifications, Live Call, appearance, AI model selection (incl. gpt-5.4 free tier), API key status, data export, keyboard shortcuts, platform pages reference, server health |
 
 ---
 
@@ -39,7 +41,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 
 **Frontend** — React 19, Vite 7, React Router v7, Recharts, Three.js / react-globe.gl, @dnd-kit (Kanban drag-and-drop), react-icons/ri
 
-**Backend** — Express 5, SQLite3, OpenAI GPT-4.1-mini (all AI features), FRED API (Federal Reserve macro data), NewsAPI (signal feed + trigger events), exchangerate-api.com + frankfurter.app (live FX rates with 1-day % change), Serper API (prospect enrichment), AISstream WebSocket (live AIS vessel positions), Terminal49 API (container tracking)
+**Backend** — Express 5, SQLite3, OpenAI GPT-5.4 + GPT-5.4-mini (Agentic Outreach), GPT-4.1-mini (platform AI features), FRED API (Federal Reserve macro data), NewsAPI (signal feed + trigger events), exchangerate-api.com + frankfurter.app (live FX rates with 1-day % change), Serper API (prospect enrichment), AISstream WebSocket (live AIS vessel positions), Terminal49 API (container tracking)
 
 ---
 
@@ -62,7 +64,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   │   │   ├── BattleCardsModal.jsx        # Competitive intelligence overlay
 │   │   │   ├── OutreachSequenceModal.jsx   # AI multi-touch outreach sequence builder
 │   │   │   ├── PortStatusBar.jsx           # Sticky header with port ticker + global action buttons
-│   │   │   ├── Sidebar.jsx                 # Collapsible nav sidebar (Home/Air/Land/Ocean/Market/Trade/Research)
+│   │   │   ├── Sidebar.jsx                 # Collapsible nav sidebar (Home/Air/Land/Ocean/Market/Trade/Research/Pilot/Sales CRM)
 │   │   │   ├── AnalysisPanel.jsx           # Inline AI analysis on Home
 │   │   │   ├── SignalFeed.jsx              # Live supply chain signals with AI outreach match
 │   │   │   ├── SignalTicker.jsx            # Scrolling signal ticker (hourly refresh)
@@ -79,6 +81,7 @@ A full-stack sales intelligence platform built for Flexport SDRs. Combines live 
 │   │   │   ├── PerformancePage.jsx / .css
 │   │   │   ├── MarketMapPage.jsx / .css
 │   │   │   ├── TariffCalculatorPage.jsx / .css
+│   │   │   ├── PilotPage.jsx               # Agentic Outreach — market intel + prospect dossier (gpt-5.4)
 │   │   │   └── SettingsPage.jsx / .css
 │   │   ├── App.jsx                         # Route layout, global modals, keyboard shortcuts
 │   │   └── main.jsx
@@ -183,6 +186,7 @@ cd frontend && npm run dev
 | POST | `/api/pipeline` | Add deal |
 | PUT | `/api/pipeline/:id` | Update stage, value, or notes |
 | DELETE | `/api/pipeline/:id` | Remove deal |
+| POST | `/api/pilot-stream` | Agentic Outreach stream (SSE) — market intel briefings + prospect dossiers via gpt-5.4 |
 | POST | `/api/analyze` | AI prospect analysis — profile, pain points, outreach angle, value props, decision makers |
 | POST | `/api/call-prep` | AI call prep — opening hook, discovery questions, objection responses, CTA |
 | POST | `/api/call-intelligence` | AI call notes parser — pain points, signals, objections, next steps, sentiment, deal probability |
@@ -216,7 +220,7 @@ cd frontend && npm run dev
 ### Backend (`backend/.env`)
 
 ```
-OPENAI_API_KEY=sk-...                      # Required — all AI features (GPT-4.1-mini)
+OPENAI_API_KEY=sk-...                      # Required — all AI features (GPT-5.4 for Agentic Outreach, GPT-4.1-mini for platform)
 FRED_API_KEY=your_fred_key                 # Optional — FRED macro data charts
 NEWS_API_KEY=your_newsapi_key              # Optional — live signal feed + trigger events
 SERPER_API_KEY=your_serper_key             # Optional — prospect web enrichment
