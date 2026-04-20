@@ -923,7 +923,7 @@ function FollowupRadar({ refreshKey }) {
 // ── Pipeline Velocity ─────────────────────────────────────────────────────────
 function PipelineVelocity({ refreshKey }) {
   const [stages, setStages] = useState(null);
-  const staleDays = Math.max(1, parseInt(localStorage.getItem('sdr_notif_stale_days'), 10) || 7);
+  const staleDays = Math.max(1, parseInt(localStorage.getItem('sdr_pipeline_stale_days'), 10) || parseInt(localStorage.getItem('sdr_notif_stale_days'), 10) || 14);
   const staleAlertsOn = localStorage.getItem('sdr_notif_stale') !== 'false';
 
   useEffect(() => {
