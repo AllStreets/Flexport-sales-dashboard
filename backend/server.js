@@ -2058,11 +2058,14 @@ Return JSON:
 
 Score honestly. 9-10 only if genuinely excellent. Return ONLY JSON.`;
 
-const SP_AGENT_REFINE = `You are an expert outreach writer. You receive an original outreach JSON and a detailed critique. Produce an improved version.
+const SP_AGENT_REFINE = `You are an expert outreach writer. You receive an original prospect dossier JSON and a detailed critique of email_1. Produce an improved version.
 
 Apply every fix from the critique. Keep what scored 8+. Rewrite what scored below 7.
 
-Return the complete outreach object with improved email_1, email_2_followup, email_3_breakup, linkedin_note, and call_opener. Same JSON schema as input. No preamble, no code fences. ONLY JSON.`;
+Return the COMPLETE dossier JSON — all fields including company, freight_profile, and outreach. Use exactly this schema:
+{"company":{...},"freight_profile":{...},"outreach":{"email_1":{"subject":"...","body":"..."},"email_2_followup":{"timing":"...","subject":"...","body":"..."},"email_3_breakup":{"timing":"...","subject":"...","body":"..."},"linkedin_note":"...","call_opener":"..."},"connor_angle":"..."}
+
+Do not omit company or freight_profile — copy them from the input and only modify the outreach fields. No preamble. No code fences. ONLY JSON.`;
 
 const SP_DAILY_BRIEF = `You are Pilot's daily brief generator for Connor, a Flexport SDR in Chicago.
 
@@ -2121,6 +2124,34 @@ Return JSON:
 {"pipeline_summary":"2-3 sentences on the current pipeline state — what's strong, what's missing.","gaps":[{"sector":"...","issue":"Why this sector is underrepresented or at risk.","opportunity":"What the SDR is missing by not having it covered."}],"recommended_targets":[{"company":"...","sector":"...","why_now":"One sentence on why this company fills the gap.","pipeline_stage_fit":"Which stage they'd realistically enter at."}],"action":"Single highest-priority pipeline action to take today."}
 
 Be specific — use real company names from the prospect list. Up to 3 gaps and 5 recommended targets. Return ONLY JSON.`;
+
+// Extract the first complete JSON object from a raw model response string.
+// Mirrors the frontend's balancedExtract — keeps backend and frontend in sync.
+function extractCleanJSON(text) {
+  if (!text) return text;
+  // Try code fence first
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const source = fenceMatch ? fenceMatch[1].trim() : text;
+  const start = source.indexOf('{');
+  if (start === -1) return text;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < source.length; i++) {
+    const c = source[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') depth++;
+    if (c === '}') {
+      depth--;
+      if (depth === 0) {
+        const candidate = source.slice(start, i + 1);
+        try { JSON.parse(candidate); return candidate; } catch { return text; }
+      }
+    }
+  }
+  return text;
+}
 
 async function pilotOpenAIStream(system, userContent, onChunk, model = 'gpt-5.4') {
   const axios = require('axios');
@@ -2210,9 +2241,10 @@ app.post('/api/pilot-agent', async (req, res) => {
 
       send({ type: 'step_start', step: 'refine', label: 'REFINE' });
       const refineStart = Date.now();
+      const cleanOutreach = extractCleanJSON(outreach);
       refined = await pilotOpenAIStream(
         SP_AGENT_REFINE,
-        `ORIGINAL OUTREACH JSON:\n${outreach}\n\nCRITIQUE:\n${critique}\n\nProduce improved version.`,
+        `ORIGINAL OUTREACH JSON:\n${cleanOutreach}\n\nCRITIQUE:\n${critique}\n\nProduce improved version. Return the full dossier JSON — do not omit company or freight_profile.`,
         (text) => send({ type: 'step_chunk', step: 'refine', label: 'REFINE', text })
       );
       send({ type: 'step_complete', step: 'refine', label: 'REFINE', text: refined, elapsed: Date.now() - refineStart });
@@ -2393,7 +2425,9 @@ app.post('/api/pilot-pipeline-gaps', async (req, res) => {
     try { sectors = await getSectors(); } catch {}
     try { prospects = await getProspects({ icp_min: 70, limit: 50 }); } catch {}
 
-    const pipelineLines = pipeline.map(d => `${d.company || d.name || 'Deal'}: ${d.stage}`).join(' · ') || 'Empty pipeline';
+    // getPipeline() returns grouped object {new:[...], researched:[...], ...} — flatten first
+    const pipelineArr = Array.isArray(pipeline) ? pipeline : Object.values(pipeline).flat();
+    const pipelineLines = pipelineArr.map(d => `${d.company_name || d.company || d.name || 'Deal'}: ${d.stage}`).join(' · ') || 'Empty pipeline';
     const sectorLines = sectors.map(s => `${s.sector}: ${s.count} prospects, avg ICP ${Math.round(s.avg_icp || s.avg_score || 0)}`).join('\n');
     const prospectLines = prospects.slice(0, 30).map(p => `${p.name} (${p.sector}, ICP:${p.icp_score})`).join(', ');
 

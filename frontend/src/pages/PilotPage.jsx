@@ -193,21 +193,35 @@ async function callPilotSSE({ endpoint, body, onStatus, onChunk }) {
   return result;
 }
 
+// Balanced-brace parser — finds first complete top-level JSON object,
+// respecting string boundaries so trailing text with {placeholders} doesn't break extraction.
+function balancedExtract(text, startFrom = 0) {
+  const start = text.indexOf('{', startFrom);
+  if (start === -1) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') depth++;
+    if (c === '}') { depth--; if (depth === 0) { try { return JSON.parse(text.slice(start, i + 1)); } catch { return null; } } }
+  }
+  return null;
+}
+
 function extractJSON(text) {
   if (!text) return null;
-  // Try extracting from a ```json ... ``` block anywhere in the response
+  // Strategy 1: code fence block anywhere in the response
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fenceMatch) {
     const inner = fenceMatch[1].trim();
-    const f = inner.indexOf('{'), l = inner.lastIndexOf('}');
-    if (f !== -1 && l !== -1) {
-      try { return JSON.parse(inner.slice(f, l + 1)); } catch {}
-    }
+    const result = balancedExtract(inner);
+    if (result) return result;
   }
-  // Fall back: first { to last } in the full string
-  const f = text.indexOf('{'), l = text.lastIndexOf('}');
-  if (f === -1 || l === -1) return null;
-  try { return JSON.parse(text.slice(f, l + 1)); } catch { return null; }
+  // Strategy 2: balanced-brace extraction from full text
+  return balancedExtract(text);
 }
 
 function Pulse({ color = C.accent, size = 6 }) {
@@ -1364,7 +1378,10 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
         const result = await callPilotSSE({ endpoint:'/api/pilot-daily-brief', body:{}, onStatus:setBriefStatus, onChunk:(t) => setRawOutput(t) });
         const parsed = extractJSON(result);
         if (!parsed) setError('Could not parse daily brief.');
-        else setBriefData(parsed);
+        else {
+          setBriefData(parsed);
+          setMarketHistory(prev => [{ id: Date.now(), type: 'daily_brief', timestamp: new Date().toISOString(), data: parsed }, ...prev].slice(0, 20));
+        }
       } else {
         let prompt = '';
         if (mode === 'global') prompt = 'Pull latest global freight market intelligence. Search broadly for FBX, SCFI, WCI, air cargo indexes, and major news from past 2 weeks. Produce comprehensive global briefing.';
@@ -1393,6 +1410,7 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
 
   const loadFromHistory = (item) => {
     if (item.type === 'market_brief') { setData(item.data); setMode(item.mode); setSelectedLanes(item.lanes || []); onContextReady(item.data); }
+    else if (item.type === 'daily_brief') { setBriefData(item.data); setMode('brief'); }
     else { setMode('customer'); setCustomerDraft(item.content); setCustomerCtx(item.context || ''); }
   };
 
@@ -1524,7 +1542,7 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
           <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
             {marketHistory.slice(0, 5).map(h => (
               <button key={h.id} onClick={() => loadFromHistory(h)} style={{ background:'transparent', border:`1px solid ${C.border}`, borderRadius:5, padding:'8px 12px', cursor:'pointer', textAlign:'left', color:C.textDim, fontFamily:'inherit', display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, transition:'all 0.15s' }} onMouseEnter={e => e.currentTarget.style.borderColor = C.borderHover} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-                <span style={{ fontSize:12, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.type === 'market_brief' ? (h.data?.headline || 'Market brief') : (h.content?.slice(0, 60) + '...')}</span>
+                <span style={{ fontSize:12, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.type === 'market_brief' ? (h.data?.headline || 'Market brief') : h.type === 'daily_brief' ? (h.data?.market_pulse || 'Daily brief') : (h.content?.slice(0, 60) + '...')}</span>
                 <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", flexShrink:0 }}>{new Date(h.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>
               </button>
             ))}
