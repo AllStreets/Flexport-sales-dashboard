@@ -1,5 +1,6 @@
 // frontend/src/pages/PilotPage.jsx
 import { useState, useEffect } from 'react';
+import AutonomousPanel from './AutonomousPanel';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -1772,7 +1773,7 @@ export default function PilotPage() {
                 <span style={{ fontSize:22, fontWeight:700, color:C.textStrong, letterSpacing:'-0.02em' }}>Pilot</span>
                 <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.18em', color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", padding:'2px 7px', border:`1px solid ${C.border}`, borderRadius:3 }}>FLEXPORT SDR MODULE</span>
               </div>
-              <div style={{ fontSize:12, color:C.textMuted, marginTop:3, paddingLeft:19, letterSpacing:'0.02em' }}>freight intelligence · agent pipeline · batch processing · sequence tracker · signal surfacing</div>
+              <div style={{ fontSize:12, color:C.textMuted, marginTop:3, paddingLeft:19, letterSpacing:'0.02em' }}>freight intelligence · agent pipeline · batch processing · sequence tracker · autonomous outreach</div>
             </div>
             {marketContext && (
               <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 10px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:4, fontSize:10, fontWeight:700, letterSpacing:'0.1em', color:C.accent, fontFamily:"'JetBrains Mono', monospace" }}>
@@ -1787,7 +1788,8 @@ export default function PilotPage() {
               {id:'prospect',label:'PROSPECT',     color:C.orange},
               {id:'batch',   label:'BATCH',        color:C.blue  },
               {id:'tracker', label:`TRACKER${tracked.length > 0 ? ` · ${tracked.length}` : ''}`, color:C.amber},
-              {id:'signals', label:'SIGNALS',      color:C.rose  },
+              {id:'signals',    label:'SIGNALS',      color:C.rose  },
+              {id:'autonomous', label:'AUTONOMOUS',   color:C.green },
             ].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{ padding:'10px 20px', background:'transparent', border:'none', borderBottom:`2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : C.textMuted, cursor:'pointer', fontSize:11, fontWeight:700, letterSpacing:'0.14em', transition:'all 0.15s', fontFamily:"'JetBrains Mono', monospace" }}>{t.label}</button>
             ))}
@@ -1801,6 +1803,7 @@ export default function PilotPage() {
             {tab === 'batch' && <BatchPanel marketContext={marketContext} onAddToTracker={addToTracker} />}
             {tab === 'tracker' && <TrackerPanel tracked={tracked} setTracked={setTracked} />}
             {tab === 'signals' && <SignalsPanel />}
+            {tab === 'autonomous' && <AutonomousPanel />}
           </div>
         </div>
       </div>

@@ -34,6 +34,10 @@ function getDb() {
   return new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'flexport.db'));
 }
 const { lookupHSCode } = require('./services/usitcService');
+const agentRoutes = require('./routes/agentRoutes');
+
+// ── Agent routes ───────────────────────────────────
+app.use('/api/agent', agentRoutes);
 
 // ── Prospects ──────────────────────────────────────
 app.get('/api/prospects', async (req, res) => {
@@ -1213,6 +1217,7 @@ function connectAisStream() {
 }
 
 connectAisStream();
+require('./cron/agentCron');
 
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);

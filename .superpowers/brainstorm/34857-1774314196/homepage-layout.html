@@ -1,0 +1,252 @@
+<h2>Homepage Layout</h2>
+<p class="subtitle">3D city map fills the screen — floating feed sits top-right, doesn't cover the map</p>
+
+<div class="mockup" style="max-width:860px;margin:0 auto">
+  <div class="mockup-header">/ — Home · Chicago Explorer</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;border-radius:0 0 6px 6px">
+
+    <!-- Full layout -->
+    <div style="display:flex;flex-direction:column;height:540px;background:#060b18;position:relative;font-family:'Space Grotesk',sans-serif">
+
+      <!-- Top bar -->
+      <div style="height:38px;background:#060b1899;backdrop-filter:blur(8px);border-bottom:1px solid #0f2040;display:flex;align-items:center;padding:0 16px;gap:16px;z-index:10;flex-shrink:0">
+        <span style="font-size:13px;font-weight:700;color:#e2e8f0;letter-spacing:0.05em">CHICAGO</span>
+        <span style="font-size:10px;color:#00d4ff;font-family:'JetBrains Mono',monospace">EXPLORER</span>
+        <div style="flex:1"></div>
+        <!-- Status pills -->
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;align-items:center;gap:4px;background:#0f2040;border-radius:12px;padding:3px 8px;border:1px solid #1e3a5f">
+            <div style="width:5px;height:5px;border-radius:50%;background:#10b981;box-shadow:0 0 4px #10b981"></div>
+            <span style="font-size:9px;color:#94a3b8;font-family:'JetBrains Mono',monospace">CTA LIVE · 312 TRAINS</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#0f2040;border-radius:12px;padding:3px 8px;border:1px solid #1e3a5f">
+            <div style="width:5px;height:5px;border-radius:50%;background:#f59e0b;box-shadow:0 0 4px #f59e0b"></div>
+            <span style="font-size:9px;color:#94a3b8;font-family:'JetBrains Mono',monospace">41°F · WINDS 18MPH</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#0f2040;border-radius:12px;padding:3px 8px;border:1px solid #1e3a5f">
+            <span style="font-size:9px;color:#94a3b8;font-family:'JetBrains Mono',monospace">SAT · 8:41PM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div style="position:absolute;left:0;top:38px;bottom:0;width:48px;background:#060b18cc;backdrop-filter:blur(8px);border-right:1px solid #0f2040;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:6px;z-index:10">
+        <div style="width:32px;height:32px;border-radius:6px;background:#00d4ff22;border:1px solid #00d4ff44;display:flex;align-items:center;justify-content:center">
+          <div style="width:14px;height:10px;border:1.5px solid #00d4ff;border-radius:2px"></div>
+        </div>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <div style="width:12px;height:12px;border-radius:50%;border:1.5px solid #475569"></div>
+        </div>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <div style="width:10px;height:10px;background:#475569;border-radius:2px"></div>
+        </div>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:9px;color:#475569;font-family:'JetBrains Mono',monospace;font-weight:700">NL</div>
+        </div>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:9px;color:#475569;font-family:'JetBrains Mono',monospace;font-weight:700">SP</div>
+        </div>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <div style="width:12px;height:2px;background:#475569;box-shadow:0 4px 0 #475569,0 -4px 0 #475569"></div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center">
+          <div style="width:12px;height:12px;border:1.5px solid #334155;border-radius:2px"></div>
+        </div>
+      </div>
+
+      <!-- 3D Map area — the hero -->
+      <div style="position:absolute;left:48px;top:38px;right:0;bottom:0;background:linear-gradient(180deg,#0a1628 0%,#060d1a 100%);overflow:hidden">
+
+        <!-- Map grid (street grid of Chicago) -->
+        <svg width="100%" height="100%" style="position:absolute;inset:0" viewBox="0 0 812 502" preserveAspectRatio="xMidYMid slice">
+          <!-- Lake Michigan (east/right side) -->
+          <path d="M650,0 Q680,60 670,150 Q655,250 660,350 Q655,430 665,502 L812,502 L812,0 Z" fill="#0a1f3a" opacity="0.9"/>
+          <path d="M650,0 Q680,60 670,150 Q655,250 660,350 Q655,430 665,502" stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.3"/>
+          <!-- Lake label -->
+          <text x="730" y="200" font-size="9" fill="#00d4ff" opacity="0.25" font-family="JetBrains Mono" text-anchor="middle" transform="rotate(90,730,200)">LAKE MICHIGAN</text>
+
+          <!-- Chicago street grid (N/S streets) -->
+          <line x1="100" y1="0" x2="100" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="160" y1="0" x2="160" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="220" y1="0" x2="220" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="280" y1="0" x2="280" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="340" y1="0" x2="340" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="400" y1="0" x2="400" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="460" y1="0" x2="460" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="520" y1="0" x2="520" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="580" y1="0" x2="580" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="640" y1="0" x2="640" y2="502" stroke="#1a2f4a" stroke-width="0.5"/>
+          <!-- Major N/S arteries -->
+          <line x1="340" y1="0" x2="340" y2="502" stroke="#1e3a5f" stroke-width="1.5"/>
+          <line x1="460" y1="0" x2="460" y2="502" stroke="#1e3a5f" stroke-width="1.5"/>
+          <line x1="580" y1="0" x2="580" y2="502" stroke="#1e3a5f" stroke-width="1"/>
+
+          <!-- Chicago street grid (E/W streets) -->
+          <line x1="48" y1="80" x2="660" y2="80" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="48" y1="140" x2="660" y2="140" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="48" y1="200" x2="660" y2="200" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="48" y1="260" x2="660" y2="260" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="48" y1="320" x2="660" y2="320" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="48" y1="380" x2="660" y2="380" stroke="#1a2f4a" stroke-width="0.5"/>
+          <line x1="48" y1="440" x2="660" y2="440" stroke="#1a2f4a" stroke-width="0.5"/>
+          <!-- Major E/W arteries -->
+          <line x1="48" y1="200" x2="660" y2="200" stroke="#1e3a5f" stroke-width="1.5"/>
+          <line x1="48" y1="320" x2="660" y2="320" stroke="#1e3a5f" stroke-width="1.5"/>
+
+          <!-- Chicago River -->
+          <path d="M48,300 Q200,295 340,280 Q380,278 420,260 Q440,245 460,240 L660,240" stroke="#1a4060" stroke-width="4" fill="none" opacity="0.8"/>
+          <path d="M48,310 Q200,305 340,290 Q380,288 420,270 Q440,255 460,250 L660,250" stroke="#0f3050" stroke-width="3" fill="none" opacity="0.6"/>
+
+          <!-- CTA Red Line -->
+          <path d="M580,0 L580,80 L590,140 L600,200 L610,260 L615,320 L610,380 L600,440 L595,502" stroke="#ef4444" stroke-width="2.5" fill="none" opacity="0.85"/>
+          <!-- CTA Blue Line -->
+          <path d="M48,200 L100,200 L160,198 L220,195 L280,200 L340,210 L400,220 L460,230 L520,235 L580,238 L640,240" stroke="#3b82f6" stroke-width="2.5" fill="none" opacity="0.85"/>
+          <!-- CTA Brown/Purple Line -->
+          <path d="M340,0 L340,80 L342,140 L346,200 L348,250 L346,280 L340,310 L334,340 L330,380" stroke="#a78bfa" stroke-width="2" fill="none" opacity="0.75"/>
+          <!-- CTA Green Line -->
+          <path d="M48,320 L100,320 L160,318 L220,316 L280,318 L340,320 L400,322 L460,325 L520,328 L580,330" stroke="#10b981" stroke-width="2" fill="none" opacity="0.8"/>
+          <!-- CTA Orange Line -->
+          <path d="M340,320 L380,360 L400,400 L410,440 L415,502" stroke="#f97316" stroke-width="2" fill="none" opacity="0.75"/>
+          <!-- CTA Pink Line -->
+          <path d="M48,260 L100,260 L160,258 L220,256 L280,260 L320,268 L340,280" stroke="#ec4899" stroke-width="2" fill="none" opacity="0.7"/>
+
+          <!-- Live train dots with animation suggestions -->
+          <circle cx="580" cy="180" r="4" fill="#ef4444" opacity="0.95"/>
+          <circle cx="580" cy="180" r="8" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.4"/>
+          <circle cx="580" cy="340" r="4" fill="#ef4444" opacity="0.95"/>
+          <circle cx="320" cy="200" r="4" fill="#3b82f6" opacity="0.95"/>
+          <circle cx="320" cy="200" r="8" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.4"/>
+          <circle cx="480" cy="225" r="4" fill="#3b82f6" opacity="0.95"/>
+          <circle cx="344" cy="120" r="4" fill="#a78bfa" opacity="0.9"/>
+          <circle cx="180" cy="320" r="4" fill="#10b981" opacity="0.9"/>
+          <circle cx="440" cy="323" r="4" fill="#10b981" opacity="0.9"/>
+
+          <!-- 3D buildings (downtown/Loop suggestion) -->
+          <rect x="420" y="240" width="12" height="28" fill="#1e3a5f" stroke="#2a4a7f" stroke-width="0.5"/>
+          <polygon points="420,240 432,240 432,236 426,233" fill="#253a5e"/>
+          <rect x="436" y="235" width="10" height="33" fill="#1e3a5f" stroke="#2a4a7f" stroke-width="0.5"/>
+          <polygon points="436,235 446,235 446,230 441,227" fill="#253a5e"/>
+          <rect x="450" y="238" width="8" height="30" fill="#1e3a5f" stroke="#2a4a7f" stroke-width="0.5"/>
+          <rect x="462" y="243" width="14" height="25" fill="#1e3a5f" stroke="#2a4a7f" stroke-width="0.5"/>
+          <polygon points="462,243 476,243 476,238 469,235" fill="#253a5e"/>
+          <!-- Willis Tower suggestion -->
+          <rect x="478" y="226" width="10" height="42" fill="#1a3050" stroke="#2a4a7f" stroke-width="0.5"/>
+          <rect x="480" y="222" width="6" height="46" fill="#1a3050" stroke="#2a4a7f" stroke-width="0.5"/>
+          <polygon points="478,226 488,226 488,220 483,217" fill="#1e3a5f"/>
+          <!-- Antenna -->
+          <line x1="483" y1="217" x2="483" y2="208" stroke="#00d4ff" stroke-width="1" opacity="0.6"/>
+          <circle cx="483" cy="207" r="1.5" fill="#00d4ff" opacity="0.8"/>
+
+          <!-- Buzz circles (popular places) -->
+          <circle cx="490" cy="260" r="14" fill="#f59e0b" opacity="0.08"/>
+          <circle cx="490" cy="260" r="14" fill="none" stroke="#f59e0b" stroke-width="1" opacity="0.3"/>
+          <circle cx="490" cy="260" r="4" fill="#f59e0b" opacity="0.6"/>
+
+          <circle cx="350" cy="240" r="10" fill="#f59e0b" opacity="0.06"/>
+          <circle cx="350" cy="240" r="10" fill="none" stroke="#f59e0b" stroke-width="1" opacity="0.2"/>
+          <circle cx="350" cy="240" r="3" fill="#f59e0b" opacity="0.5"/>
+
+          <circle cx="540" cy="300" r="8" fill="#f59e0b" opacity="0.05"/>
+          <circle cx="540" cy="300" r="3" fill="#f59e0b" opacity="0.4"/>
+
+          <!-- Navy Pier -->
+          <rect x="620" y="230" width="35" height="8" fill="#1a3a5f" stroke="#00d4ff" stroke-width="0.5" opacity="0.7"/>
+          <text x="637" y="226" font-size="7" fill="#00d4ff" opacity="0.5" font-family="JetBrains Mono" text-anchor="middle">NAVY PIER</text>
+
+          <!-- Streeterville home marker -->
+          <circle cx="615" cy="245" r="6" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.9"/>
+          <circle cx="615" cy="245" r="3" fill="#00d4ff" opacity="0.9"/>
+          <circle cx="615" cy="245" r="12" fill="none" stroke="#00d4ff" stroke-width="0.5" opacity="0.3"/>
+          <text x="615" y="236" font-size="7" fill="#00d4ff" opacity="0.7" font-family="JetBrains Mono" text-anchor="middle">HOME</text>
+        </svg>
+
+        <!-- Map controls bottom-left -->
+        <div style="position:absolute;bottom:16px;left:16px;display:flex;flex-direction:column;gap:4px">
+          <div style="background:#0f1f3a;border:1px solid #1e3a5f;border-radius:4px;padding:4px 8px;display:flex;gap:8px;align-items:center">
+            <div style="width:16px;height:3px;background:#ef4444;border-radius:2px"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">RED</span>
+            <div style="width:16px;height:3px;background:#3b82f6;border-radius:2px"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">BLUE</span>
+            <div style="width:16px;height:3px;background:#a78bfa;border-radius:2px"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">BROWN/PURPLE</span>
+            <div style="width:16px;height:3px;background:#10b981;border-radius:2px"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">GREEN</span>
+            <div style="width:16px;height:3px;background:#f97316;border-radius:2px"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">ORANGE</span>
+            <div style="width:16px;height:3px;background:#ec4899;border-radius:2px"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">PINK</span>
+          </div>
+          <div style="background:#0f1f3a;border:1px solid #1e3a5f;border-radius:4px;padding:4px 8px;display:flex;gap:8px;align-items:center">
+            <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;opacity:0.6"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">BUZZING NOW</span>
+            <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff"></div><span style="font-size:8px;color:#64748b;font-family:'JetBrains Mono',monospace">HOME</span>
+          </div>
+        </div>
+
+        <!-- Layer toggles top-left (just above map) -->
+        <div style="position:absolute;top:8px;left:8px;display:flex;gap:6px">
+          <div style="background:#00d4ff22;border:1px solid #00d4ff44;border-radius:12px;padding:3px 8px;font-size:8px;color:#00d4ff;font-family:'JetBrains Mono',monospace">TRANSIT ON</div>
+          <div style="background:#f59e0b22;border:1px solid #f59e0b44;border-radius:12px;padding:3px 8px;font-size:8px;color:#f59e0b;font-family:'JetBrains Mono',monospace">BUZZ ON</div>
+          <div style="background:#0f2040;border:1px solid #1e3a5f;border-radius:12px;padding:3px 8px;font-size:8px;color:#475569;font-family:'JetBrains Mono',monospace">3D BUILDINGS</div>
+        </div>
+      </div>
+
+      <!-- Floating intel feed — right side, top-anchored, doesn't reach the bottom -->
+      <div style="position:absolute;top:58px;right:12px;width:220px;display:flex;flex-direction:column;gap:6px;z-index:10">
+
+        <!-- Feed header -->
+        <div style="background:#060b18e8;backdrop-filter:blur(12px);border:1px solid #0f2040;border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:9px;color:#00d4ff;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em">CITY PULSE</span>
+          <span style="font-size:8px;color:#334155;font-family:'JetBrains Mono',monospace">NOW</span>
+        </div>
+
+        <!-- Transit card -->
+        <div style="background:#060b18e8;backdrop-filter:blur(12px);border:1px solid #0f2040;border-radius:8px;padding:10px 12px;border-left:2px solid #3b82f6">
+          <div style="font-size:9px;color:#64748b;font-family:'JetBrains Mono',monospace;margin-bottom:4px">TRANSIT NEARBY</div>
+          <div style="font-size:11px;color:#e2e8f0;font-weight:600;margin-bottom:2px">Red Line · 3 min</div>
+          <div style="font-size:9px;color:#64748b">Grand Ave Station · northbound</div>
+          <div style="font-size:11px;color:#e2e8f0;font-weight:600;margin-top:4px;margin-bottom:2px">Blue Line · 8 min</div>
+          <div style="font-size:9px;color:#64748b">Chicago Ave Station</div>
+        </div>
+
+        <!-- Buzzing now -->
+        <div style="background:#060b18e8;backdrop-filter:blur(12px);border:1px solid #0f2040;border-radius:8px;padding:10px 12px;border-left:2px solid #f59e0b">
+          <div style="font-size:9px;color:#64748b;font-family:'JetBrains Mono',monospace;margin-bottom:6px">BUZZING NOW</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:10px;color:#e2e8f0;font-weight:600">Maple & Ash</span>
+              <span style="font-size:8px;color:#f59e0b;font-family:'JetBrains Mono',monospace">0.3mi</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:10px;color:#e2e8f0;font-weight:600">Tiny Tapp &amp; Cap</span>
+              <span style="font-size:8px;color:#f59e0b;font-family:'JetBrains Mono',monospace">0.5mi</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:10px;color:#e2e8f0;font-weight:600">RPM Steak</span>
+              <span style="font-size:8px;color:#f59e0b;font-family:'JetBrains Mono',monospace">0.6mi</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tonight event -->
+        <div style="background:#060b18e8;backdrop-filter:blur(12px);border:1px solid #0f2040;border-radius:8px;padding:10px 12px;border-left:2px solid #8b5cf6">
+          <div style="font-size:9px;color:#64748b;font-family:'JetBrains Mono',monospace;margin-bottom:4px">TONIGHT</div>
+          <div style="font-size:11px;color:#e2e8f0;font-weight:600;margin-bottom:2px">Navy Pier Fireworks</div>
+          <div style="font-size:9px;color:#64748b">9:30pm · 0.1mi from home</div>
+        </div>
+
+        <!-- Weather strip -->
+        <div style="background:#060b18e8;backdrop-filter:blur(12px);border:1px solid #0f2040;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:14px;color:#e2e8f0;font-weight:700;font-family:'JetBrains Mono',monospace">41°F</div>
+            <div style="font-size:8px;color:#64748b">feels like 34° · lake wind</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;color:#64748b;font-family:'JetBrains Mono',monospace">LAKE</div>
+            <div style="font-size:9px;color:#00d4ff;font-family:'JetBrains Mono',monospace">48°F · CHOPPY</div>
+          </div>
+        </div>
+
+        <!-- Note: feed ends here, map visible below -->
+        <div style="height:8px"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px;text-align:center">Feed is top-anchored and floats — map stays visible below it and in the left 2/3. Does this layout feel right?</p>

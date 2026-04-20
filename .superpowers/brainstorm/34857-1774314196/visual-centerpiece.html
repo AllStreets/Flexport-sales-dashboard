@@ -1,0 +1,128 @@
+<h2>What's the visual centerpiece?</h2>
+<p class="subtitle">The hero of the homepage — the thing that makes someone say "whoa" on first load</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#060b18;height:180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:6px 6px 0 0">
+      <!-- Globe mockup -->
+      <div style="width:160px;height:160px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #1a3a5c, #060b18);border:1px solid #00d4ff33;box-shadow:0 0 40px #00d4ff22;position:relative;overflow:hidden">
+        <!-- Grid lines -->
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 24px,#00d4ff08 24px,#00d4ff08 25px),repeating-linear-gradient(90deg,transparent,transparent 24px,#00d4ff08 24px,#00d4ff08 25px)"></div>
+        <!-- Chicago dot -->
+        <div style="position:absolute;top:52%;left:58%;width:8px;height:8px;border-radius:50%;background:#00d4ff;box-shadow:0 0 12px #00d4ff;transform:translate(-50%,-50%)"></div>
+        <!-- Orbit ring -->
+        <div style="position:absolute;top:50%;left:50%;width:200px;height:200px;border-radius:50%;border:1px solid #00d4ff22;transform:translate(-50%,-50%) rotateX(70deg)"></div>
+        <!-- CTA lines radiating -->
+        <div style="position:absolute;top:52%;left:58%;width:30px;height:1px;background:linear-gradient(90deg,#f59e0b,transparent);transform-origin:0 50%;transform:rotate(-30deg)"></div>
+        <div style="position:absolute;top:52%;left:58%;width:25px;height:1px;background:linear-gradient(90deg,#10b981,transparent);transform-origin:0 50%;transform:rotate(60deg)"></div>
+        <div style="position:absolute;top:52%;left:58%;width:28px;height:1px;background:linear-gradient(90deg,#8b5cf6,transparent);transform-origin:0 50%;transform:rotate(150deg)"></div>
+      </div>
+      <div style="position:absolute;top:12px;left:12px;font-size:9px;font-family:JetBrains Mono,monospace;color:#00d4ff;opacity:0.7">LIVE CTA · 147 TRAINS</div>
+      <div style="position:absolute;bottom:12px;right:12px;font-size:9px;font-family:JetBrains Mono,monospace;color:#10b981;opacity:0.7">STREETERVILLE</div>
+    </div>
+    <div class="card-body">
+      <h3>3D Globe — Chicago from orbit</h3>
+      <p>Same globe.gl engine as Flexport, tilted and locked to Chicago. CTA trains orbit the city as animated arcs. Familiar tech, immediate wow factor from day one.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#060b18;height:180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:6px 6px 0 0">
+      <!-- City map mockup -->
+      <div style="width:100%;height:100%;position:relative">
+        <!-- Dark map base -->
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,#060b18 0%,#0a1628 100%)"></div>
+        <!-- Grid streets -->
+        <svg width="100%" height="100%" style="position:absolute;inset:0" viewBox="0 0 240 180">
+          <!-- Major streets -->
+          <line x1="0" y1="90" x2="240" y2="90" stroke="#1e3a5f" stroke-width="2"/>
+          <line x1="120" y1="0" x2="120" y2="180" stroke="#1e3a5f" stroke-width="2"/>
+          <line x1="0" y1="45" x2="240" y2="45" stroke="#1e3a5f" stroke-width="1"/>
+          <line x1="0" y1="135" x2="240" y2="135" stroke="#1e3a5f" stroke-width="1"/>
+          <line x1="60" y1="0" x2="60" y2="180" stroke="#1e3a5f" stroke-width="1"/>
+          <line x1="180" y1="0" x2="180" y2="180" stroke="#1e3a5f" stroke-width="1"/>
+          <!-- Lake Michigan -->
+          <path d="M200,0 Q220,40 210,90 Q200,140 215,180 L240,180 L240,0 Z" fill="#0a2440" opacity="0.8"/>
+          <path d="M200,0 Q220,40 210,90 Q200,140 215,180" stroke="#00d4ff" stroke-width="1" fill="none" opacity="0.4"/>
+          <!-- Red Line -->
+          <path d="M120,0 L120,60 L130,90 L120,180" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.8"/>
+          <!-- Blue Line -->
+          <path d="M0,90 L60,90 L120,80 L200,75" stroke="#3b82f6" stroke-width="2" fill="none" opacity="0.8"/>
+          <!-- Green Line -->
+          <path d="M20,45 L80,45 L120,55 L160,60 L200,55" stroke="#10b981" stroke-width="2" fill="none" opacity="0.8"/>
+          <!-- Train dots (live positions) -->
+          <circle cx="85" cy="90" r="3" fill="#3b82f6"><animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></circle>
+          <circle cx="140" cy="58" r="3" fill="#10b981"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle>
+          <circle cx="120" cy="120" r="3" fill="#ef4444"><animate attributeName="opacity" values="1;0.3;1" dur="2.2s" repeatCount="indefinite"/></circle>
+          <!-- Streeterville dot -->
+          <circle cx="200" cy="85" r="5" fill="#00d4ff" opacity="0.9"/>
+          <circle cx="200" cy="85" r="10" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.4"><animate attributeName="r" values="6;14;6" dur="3s" repeatCount="indefinite"/></circle>
+          <!-- 3D buildings suggestion -->
+          <rect x="105" y="60" width="8" height="20" fill="#1e3a5f" stroke="#2a4a7f" stroke-width="0.5"/>
+          <rect x="115" y="55" width="6" height="25" fill="#1e3a5f" stroke="#2a4a7f" stroke-width="0.5"/>
+          <polygon points="105,60 113,60 113,55 109,52" fill="#253a5e"/>
+        </svg>
+        <div style="position:absolute;top:10px;left:12px;font-size:9px;font-family:JetBrains Mono,monospace;color:#00d4ff;opacity:0.8">LIVE CTA · 3 TRAINS NEARBY</div>
+        <div style="position:absolute;bottom:10px;left:12px;display:flex;gap:10px">
+          <span style="font-size:8px;color:#ef4444;font-family:JetBrains Mono,monospace">RED LINE</span>
+          <span style="font-size:8px;color:#3b82f6;font-family:JetBrains Mono,monospace">BLUE LINE</span>
+          <span style="font-size:8px;color:#10b981;font-family:JetBrains Mono,monospace">GREEN LINE</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3D city map — street-level Chicago</h3>
+      <p>Mapbox GL or Deck.gl with 3D extruded buildings, real street grid, Lake Michigan shoreline. Live CTA train dots moving on actual tracks. More city-accurate, more immersive at street level.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#060b18;height:180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:6px 6px 0 0;gap:2px">
+      <!-- Split view -->
+      <div style="width:50%;height:100%;position:relative;overflow:hidden;border-right:1px solid #00d4ff22">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,#060b18,#0a1628)"></div>
+        <svg width="100%" height="100%" viewBox="0 0 120 180" style="position:absolute">
+          <line x1="0" y1="90" x2="120" y2="90" stroke="#1e3a5f" stroke-width="1.5"/>
+          <line x1="60" y1="0" x2="60" y2="180" stroke="#1e3a5f" stroke-width="1.5"/>
+          <line x1="0" y1="45" x2="120" y2="45" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="0" y1="135" x2="120" y2="135" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="30" y1="0" x2="30" y2="180" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="90" y1="0" x2="90" y2="180" stroke="#1e3a5f" stroke-width="0.5"/>
+          <path d="M100,0 Q110,40 105,90 Q100,140 108,180 L120,180 L120,0 Z" fill="#0a2440" opacity="0.8"/>
+          <path d="M60,0 L60,30 L65,90 L60,180" stroke="#ef4444" stroke-width="1.5" fill="none" opacity="0.8"/>
+          <path d="M0,90 L30,90 L60,85 L100,80" stroke="#3b82f6" stroke-width="1.5" fill="none" opacity="0.8"/>
+          <circle cx="100" cy="83" r="4" fill="#00d4ff" opacity="0.9"/>
+          <circle cx="100" cy="83" r="8" fill="none" stroke="#00d4ff" stroke-width="0.8" opacity="0.3"/>
+        </svg>
+        <div style="position:absolute;top:8px;left:8px;font-size:8px;font-family:JetBrains Mono,monospace;color:#00d4ff;opacity:0.8">LIVE MAP</div>
+      </div>
+      <div style="width:50%;height:100%;padding:10px;display:flex;flex-direction:column;gap:6px;overflow:hidden">
+        <div style="font-size:8px;font-family:JetBrains Mono,monospace;color:#00d4ff;opacity:0.7;margin-bottom:2px">NEIGHBORHOOD FEED</div>
+        <div style="background:#0f1f3a;border-radius:4px;padding:6px;border-left:2px solid #10b981">
+          <div style="font-size:8px;color:#e2e8f0;font-weight:600">The Gage</div>
+          <div style="font-size:7px;color:#64748b">0.4mi · Millennium Park</div>
+        </div>
+        <div style="background:#0f1f3a;border-radius:4px;padding:6px;border-left:2px solid #f59e0b">
+          <div style="font-size:8px;color:#e2e8f0;font-weight:600">Navy Pier Fireworks</div>
+          <div style="font-size:7px;color:#64748b">Tonight 9:30pm</div>
+        </div>
+        <div style="background:#0f1f3a;border-radius:4px;padding:6px;border-left:2px solid #8b5cf6">
+          <div style="font-size:8px;color:#e2e8f0;font-weight:600">Red Line · 4 min</div>
+          <div style="font-size:7px;color:#64748b">Grand Station</div>
+        </div>
+        <div style="background:#0f1f3a;border-radius:4px;padding:6px;border-left:2px solid #3b82f6">
+          <div style="font-size:8px;color:#e2e8f0;font-weight:600">Lake: 58°F · Calm</div>
+          <div style="font-size:7px;color:#64748b">Good for running</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Split — live map + intelligence feed</h3>
+      <p>City map on the left, live discovery feed on the right. Transit, events, restaurant signals, weather — all in one glance. Like the Flexport home page but for city life.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:24px">Click your preferred direction — or tell me in the terminal if you want to mix elements</p>
