@@ -303,6 +303,9 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
       scene.add(moonMesh);
       refs.moonMesh = moonMesh; refs.moonGeom = moonGeom; refs.moonMat = moonMat; refs.moonTex = moonTex;
 
+      // Cache camera reference once at init — re-checked each frame if null
+      refs.cam = g.camera?.() ?? null;
+
       // ── Unified RAF: ring rotation + moon orbit + real-time sprite animation ──
       refs.shouldAnimate = true;
       const animate = () => {
@@ -315,49 +318,55 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
           }
           if (refs.sprites.size > 0) {
             const now = Date.now();
-            const cam = globeRef.current?.camera?.();
+            // Re-acquire camera each frame in case it wasn't ready at init
+            if (!refs.cam) refs.cam = globeRef.current?.camera?.() ?? null;
+            const cam = refs.cam;
+
             for (const entry of refs.sprites.values()) {
               const { sprite, srcLat, srcLng, dstLat, dstLng, progress0, fetchTs, cycleSecs, globeRadius } = entry;
               const elapsed = (now - fetchTs) / 1000;
               const t = (progress0 + elapsed / (cycleSecs || 120)) % 1;
               const pt = gcPoint(srcLat, srcLng, dstLat, dstLng, t);
               setSpritePos(sprite, pt.lat, pt.lng, 0.035, globeRadius);
-
-              // OrbitControls rotates the CAMERA around the globe (the globe mesh stays
-              // at a fixed world position), so lat/lng → world-pos is always valid with
-              // no parent matrix transforms needed.
-              const phiC = (90 - pt.lat) * Math.PI / 180;
-              const thC  = (90 - pt.lng) * Math.PI / 180;
-              const rC   = globeRadius * 1.035;
-              _rafWP.set(rC * Math.sin(phiC) * Math.cos(thC), rC * Math.cos(phiC), rC * Math.sin(phiC) * Math.sin(thC));
-
-              const tFwd  = Math.min(t + 0.005, 0.999);
-              const ptFwd = gcPoint(srcLat, srcLng, dstLat, dstLng, tFwd);
-              const phiF  = (90 - ptFwd.lat) * Math.PI / 180;
-              const thF   = (90 - ptFwd.lng) * Math.PI / 180;
-              _rafFP.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
-
               sprite.scale.set(3, 1.39, 1);
 
+              const headingDeg = pt.heading ?? 0;
+
+              // ── Baseline: heading-based rotation (works even without NDC cam) ──
+              // Landscape truck sprite: cab faces RIGHT at rotation=0.
+              // Formula: PI/2 - heading*PI/180 orients cab in the direction of travel.
+              const baseAngle = Math.PI / 2 - headingDeg * Math.PI / 180;
+              const goingLeftBaseline = headingDeg > 90 && headingDeg < 270;
+              sprite.material.rotation = goingLeftBaseline ? baseAngle + Math.PI : baseAngle;
+              const baselineTex = goingLeftBaseline ? sprite.userData.texL : sprite.userData.texR;
+              if (baselineTex && sprite.material.map !== baselineTex) {
+                sprite.material.map = baselineTex;
+                sprite.material.needsUpdate = true;
+              }
+
+              // ── Override: NDC screen-space projection for globe-rotation accuracy ──
               if (cam) {
-                // Project to NDC to get screen-space travel angle.
+                const rC   = globeRadius * 1.035;
+                const phiC = (90 - pt.lat) * Math.PI / 180;
+                const thC  = (90 - pt.lng) * Math.PI / 180;
+                _rafWP.set(rC * Math.sin(phiC) * Math.cos(thC), rC * Math.cos(phiC), rC * Math.sin(phiC) * Math.sin(thC));
+                const ptFwd = gcPoint(srcLat, srcLng, dstLat, dstLng, Math.min(t + 0.005, 0.999));
+                const phiF  = (90 - ptFwd.lat) * Math.PI / 180;
+                const thF   = (90 - ptFwd.lng) * Math.PI / 180;
+                _rafFP.set(rC * Math.sin(phiF) * Math.cos(thF), rC * Math.cos(phiF), rC * Math.sin(phiF) * Math.sin(thF));
                 _rafWP.project(cam);
                 _rafFP.project(cam);
                 const dx = _rafFP.x - _rafWP.x;
                 const dy = _rafFP.y - _rafWP.y;
-                if (dx * dx + dy * dy > 1e-10) {
+                if (dx * dx + dy * dy > 1e-8) {
                   const angle = Math.atan2(dy, dx);
                   const goingLeft = Math.abs(angle) > Math.PI / 2;
-                  // Rotate sprite to face direction of travel (cab leads).
                   sprite.material.rotation = goingLeft ? angle - Math.PI : angle;
-                  // Swap to correct facing texture.
                   const targetTex = goingLeft ? sprite.userData.texL : sprite.userData.texR;
                   if (targetTex && sprite.material.map !== targetTex) {
                     sprite.material.map = targetTex;
                     sprite.material.needsUpdate = true;
                   }
-                } else {
-                  sprite.material.rotation = 0;
                 }
               }
             }
