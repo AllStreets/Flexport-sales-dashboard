@@ -1417,8 +1417,16 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-        {[{id:'global',label:'Global Snapshot'},{id:'lanes',label:'Specific Lanes'},{id:'customer',label:'Customer Update'},{id:'brief',label:'Daily Brief'}].map(m => (
-          <button key={m.id} onClick={() => setMode(m.id)} style={{ padding:'7px 14px', borderRadius:5, border:`1px solid ${mode === m.id ? C.accent : C.border}`, background: mode === m.id ? C.accentDim : 'transparent', color: mode === m.id ? C.accent : C.textMuted, cursor:'pointer', fontSize:12, fontWeight:600, letterSpacing:'0.02em', fontFamily:'inherit', transition:'all 0.15s' }}>{m.label}</button>
+        {[
+          {id:'global',   label:'Global Snapshot', color:C.accent, dim:C.accentDim},
+          {id:'lanes',    label:'Specific Lanes',  color:C.blue,   dim:C.blueDim},
+          {id:'customer', label:'Customer Update', color:C.amber,  dim:C.amberDim},
+          {id:'brief',    label:'Daily Brief',     color:C.green,  dim:'#4ade8022'},
+        ].map(m => (
+          <button key={m.id} onClick={() => { setMode(m.id); setData(null); setBriefData(null); setCustomerDraft(''); setRawOutput(''); setError(''); }}
+            style={{ padding:'7px 14px', borderRadius:5, border:`1px solid ${mode === m.id ? m.color : C.border}`, background: mode === m.id ? m.dim : 'transparent', color: mode === m.id ? m.color : C.textMuted, cursor:'pointer', fontSize:12, fontWeight:600, letterSpacing:'0.02em', fontFamily:'inherit', transition:'all 0.15s' }}>
+            {m.label}
+          </button>
         ))}
       </div>
 
@@ -1540,12 +1548,18 @@ function MarketPanel({ onContextReady, marketHistory, setMarketHistory }) {
         <div style={{ marginTop:12 }}>
           <Label color={C.textMuted}>RECENT BRIEFS</Label>
           <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
-            {marketHistory.slice(0, 5).map(h => (
-              <button key={h.id} onClick={() => loadFromHistory(h)} style={{ background:'transparent', border:`1px solid ${C.border}`, borderRadius:5, padding:'8px 12px', cursor:'pointer', textAlign:'left', color:C.textDim, fontFamily:'inherit', display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, transition:'all 0.15s' }} onMouseEnter={e => e.currentTarget.style.borderColor = C.borderHover} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-                <span style={{ fontSize:12, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.type === 'market_brief' ? (h.data?.headline || 'Market brief') : h.type === 'daily_brief' ? (h.data?.market_pulse || 'Daily brief') : (h.content?.slice(0, 60) + '...')}</span>
-                <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", flexShrink:0 }}>{new Date(h.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>
-              </button>
-            ))}
+            {marketHistory.slice(0, 5).map(h => {
+              const hColor = h.type === 'daily_brief' ? C.green
+                : h.type === 'customer_update' || h.mode === 'customer' ? C.amber
+                : h.mode === 'lanes' ? C.blue
+                : C.accent;
+              return (
+                <button key={h.id} onClick={() => loadFromHistory(h)} style={{ background:`${hColor}09`, border:`1px solid ${hColor}33`, borderLeft:`3px solid ${hColor}88`, borderRadius:5, padding:'8px 12px', cursor:'pointer', textAlign:'left', color:C.textDim, fontFamily:'inherit', display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, transition:'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = `${hColor}14`; e.currentTarget.style.borderColor = `${hColor}66`; e.currentTarget.style.borderLeftColor = hColor; }} onMouseLeave={e => { e.currentTarget.style.background = `${hColor}09`; e.currentTarget.style.borderColor = `${hColor}33`; e.currentTarget.style.borderLeftColor = `${hColor}88`; }}>
+                  <span style={{ fontSize:12, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{h.type === 'market_brief' ? (h.data?.headline || 'Market brief') : h.type === 'daily_brief' ? (h.data?.market_pulse || 'Daily brief') : (h.content?.slice(0, 60) + '...')}</span>
+                  <span style={{ fontSize:10, color:C.textMuted, fontFamily:"'JetBrains Mono', monospace", flexShrink:0 }}>{new Date(h.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
