@@ -196,6 +196,13 @@ export default function VesselsGlobe({ vessels = [], ports = [], onVesselClick, 
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, []);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof globeRef.current?.globeImageUrl === 'function')
+        globeRef.current.globeImageUrl(globeTexture);
+    }, 650);
+    return () => clearTimeout(t);
+  }, [globeTexture]);
 
   // Single ref object for all Three.js scene objects — safe across React strict-mode double-mount
   const threeRefs = useRef({

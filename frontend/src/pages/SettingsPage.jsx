@@ -395,9 +395,9 @@ function AppearanceSection() {
         </div>
         {[
           { label: 'Home',          val: homeTexture,  setter: setHomeTexture,  storageKey: 'sdr_globe_texture_home'  },
-          { label: 'Ocean Freight', val: oceanTexture, setter: setOceanTexture, storageKey: 'sdr_globe_texture_ocean' },
           { label: 'Air Freight',   val: airTexture,   setter: setAirTexture,   storageKey: 'sdr_globe_texture_air'   },
           { label: 'Land Freight',  val: landTexture,  setter: setLandTexture,  storageKey: 'sdr_globe_texture_land'  },
+          { label: 'Ocean Freight', val: oceanTexture, setter: setOceanTexture, storageKey: 'sdr_globe_texture_ocean' },
         ].map(({ label, val, setter, storageKey }) => (
           <SettingRow key={label} label={label} icon={RiGlobalLine}>
             <div className="globe-texture-picker">

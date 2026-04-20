@@ -32,6 +32,13 @@ export default function GlobeView({ selectedProspect, onPortClick, fullscreen = 
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, []);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof globeRef.current?.globeImageUrl === 'function')
+        globeRef.current.globeImageUrl(globeTexture);
+    }, 650);
+    return () => clearTimeout(t);
+  }, [globeTexture]);
   const [overlayMode, setOverlayMode] = useState(0);
   const [portDetail, setPortDetail] = useState(null);
   const getDimensions = (fs) => ({

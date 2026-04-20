@@ -209,6 +209,13 @@ export default function LandGlobe({ trucks = [], ports = [], onTruckClick, focus
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, []);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof globeRef.current?.globeImageUrl === 'function')
+        globeRef.current.globeImageUrl(globeTexture);
+    }, 650);
+    return () => clearTimeout(t);
+  }, [globeTexture]);
   const threeRefs = useRef({
     frame: null, shouldAnimate: false,
     glowMesh: null, glowGeom: null, glowMat: null,
