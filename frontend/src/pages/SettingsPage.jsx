@@ -863,7 +863,8 @@ const KBD = ({ children }) => (
 function PanelsSection() {
   const [autostart,   setAutostart]   = useSetting('sdr_mic_autostart',    false);
   const [frequency,   setFrequency]   = useSetting('sdr_mic_frequency',    30);
-  const [qrAutoMic,   setQrAutoMic]   = useSetting('sdr_qr_mic_autostart', false);
+  const [qrAutoMic,   setQrAutoMic]   = useSetting('sdr_qr_mic_autostart',  false);
+  const [stale,       setStale]       = useSetting('sdr_pipeline_stale_days', 14);
   const [saved,       setSaved]       = useState(false);
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
@@ -943,11 +944,20 @@ function PanelsSection() {
           <KBD>Ctrl + Shift + P</KBD>
         </SettingRow>
         <SettingRow
-          label="Close & refresh shortcut"
-          description="Closing the Pipeline Kanban automatically refreshes the pipeline count badge in the top bar"
-          icon={RiKeyboardLine}
+          label="Stale deal threshold"
+          description="Number of days without activity before a pipeline deal is flagged as stale in velocity reports"
+          icon={RiTimeLine}
         >
-          <KBD>Escape</KBD>
+          <select
+            className="setting-input setting-select"
+            value={stale}
+            onChange={e => { setStale(Number(e.target.value)); flash(); }}
+          >
+            <option value={7}>7 days</option>
+            <option value={14}>14 days (default)</option>
+            <option value={21}>21 days</option>
+            <option value={30}>30 days</option>
+          </select>
         </SettingRow>
         <div className="setting-desc" style={{ lineHeight: 1.7, paddingTop: 4 }}>
           The Pipeline Kanban tracks prospects across stages: New, Researched, Contacted, Meeting, Proposal, and Won/Lost.
