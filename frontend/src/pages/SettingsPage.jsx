@@ -856,10 +856,15 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
   );
 }
 
+const KBD = ({ children }) => (
+  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>{children}</span>
+);
+
 function PanelsSection() {
-  const [autostart, setAutostart] = useSetting('sdr_mic_autostart', false);
-  const [frequency, setFrequency] = useSetting('sdr_mic_frequency', 30);
-  const [saved,     setSaved]     = useState(false);
+  const [autostart,   setAutostart]   = useSetting('sdr_mic_autostart',    false);
+  const [frequency,   setFrequency]   = useSetting('sdr_mic_frequency',    30);
+  const [qrAutoMic,   setQrAutoMic]   = useSetting('sdr_qr_mic_autostart', false);
+  const [saved,       setSaved]       = useState(false);
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
   return (
@@ -889,6 +894,13 @@ function PanelsSection() {
             <option value={120}>Every 2 minutes</option>
           </select>
         </SettingRow>
+        <SettingRow
+          label="Open shortcut"
+          description="Open the Live Call overlay from anywhere in the app"
+          icon={RiKeyboardLine}
+        >
+          <KBD>Ctrl + Shift + L</KBD>
+        </SettingRow>
         <div className="setting-desc" style={{ lineHeight: 1.7, paddingTop: 4 }}>
           When the mic listener is active, it transcribes your conversation using the browser's Web Speech API
           and periodically sends the transcript to the AI. The AI returns a suggested next response, predicted
@@ -899,7 +911,14 @@ function PanelsSection() {
       {/* ── Quick Research ── */}
       <SettingCard title="Quick Research">
         <SettingRow
-          label="Voice search shortcut"
+          label="Auto-start mic on open"
+          description="Immediately activate voice input when the Quick Research panel opens"
+          icon={RiMicLine}
+        >
+          <SettingToggle value={qrAutoMic} onChange={(v) => { setQrAutoMic(v); flash(); }} />
+        </SettingRow>
+        <SettingRow
+          label="Voice submit keyword"
           description='Say "submit" at the end of your spoken query to instantly run the search without pressing a button'
           icon={RiSearchEyeLine}
         >
@@ -910,7 +929,7 @@ function PanelsSection() {
           description="Open Quick Research from anywhere in the app"
           icon={RiKeyboardLine}
         >
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>Ctrl + Shift + Q</span>
+          <KBD>Ctrl + Shift + Q</KBD>
         </SettingRow>
       </SettingCard>
 
@@ -921,15 +940,19 @@ function PanelsSection() {
           description="Open the Pipeline Kanban from anywhere in the app"
           icon={RiKanbanView}
         >
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>Ctrl + Shift + P</span>
+          <KBD>Ctrl + Shift + P</KBD>
         </SettingRow>
         <SettingRow
-          label="Live Call shortcut"
-          description="Open the Live Call overlay from anywhere in the app"
-          icon={RiMicLine}
+          label="Close & refresh shortcut"
+          description="Closing the Pipeline Kanban automatically refreshes the pipeline count badge in the top bar"
+          icon={RiKeyboardLine}
         >
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>Ctrl + Shift + L</span>
+          <KBD>Escape</KBD>
         </SettingRow>
+        <div className="setting-desc" style={{ lineHeight: 1.7, paddingTop: 4 }}>
+          The Pipeline Kanban tracks prospects across stages: New, Researched, Contacted, Meeting, Proposal, and Won/Lost.
+          Drag cards between columns to update stage. The badge in the top bar reflects the total active count and refreshes on close.
+        </div>
       </SettingCard>
 
       <SavedFlash show={saved} />

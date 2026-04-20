@@ -110,8 +110,12 @@ export default function QuickResearchModal({ isOpen, onClose }) {
   const micActiveRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 80);
-    // Stop mic when modal closes
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 80);
+      if (localStorage.getItem('sdr_qr_mic_autostart') === 'true') {
+        setTimeout(() => toggleMic(), 300);
+      }
+    }
     if (!isOpen) stopMic();
   }, [isOpen]);
 
