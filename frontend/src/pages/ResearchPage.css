@@ -55,6 +55,34 @@
 .rp-scan-btn:hover { background: rgba(0,212,255,0.2); }
 .rp-scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.rp-search-box--listening {
+  border-color: rgba(239,68,68,0.5);
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.12);
+}
+
+.rp-mic-btn {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rp-mic-btn:hover { color: #94a3b8; border-color: rgba(255,255,255,0.16); }
+.rp-mic-btn--on {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.4);
+  color: #ef4444;
+  animation: rp-mic-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rp-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); }
+  50%       { box-shadow: 0 0 0 4px rgba(239,68,68,0); }
+}
+
 .rp-history-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;

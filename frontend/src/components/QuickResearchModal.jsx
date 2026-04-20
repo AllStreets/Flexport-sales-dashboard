@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { RiSearchEyeLine, RiRefreshLine, RiDeleteBinLine, RiFileCopyLine, RiCheckLine, RiCloseLine } from 'react-icons/ri';
+import { RiSearchEyeLine, RiRefreshLine, RiDeleteBinLine, RiFileCopyLine, RiCheckLine, RiCloseLine, RiMicLine, RiMicOffLine } from 'react-icons/ri';
 import '../pages/ResearchPage.css';
 import './QuickResearchModal.css';
 
@@ -103,11 +103,50 @@ export default function QuickResearchModal({ isOpen, onClose }) {
   const [history, setHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('research_history') || '[]'); } catch { return []; }
   });
+  const [micActive, setMicActive] = useState(false);
+  const [micSupported] = useState(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition));
   const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const micActiveRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 80);
+    // Stop mic when modal closes
+    if (!isOpen) stopMic();
   }, [isOpen]);
+
+  const stopMic = () => {
+    micActiveRef.current = false;
+    recognitionRef.current?.stop();
+    setMicActive(false);
+  };
+
+  const toggleMic = () => {
+    if (micActiveRef.current) { stopMic(); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+      setQuery(transcript);
+      if (e.results[e.results.length - 1].isFinal) {
+        stopMic();
+        // Auto-run after a short pause on final result
+        setTimeout(() => {
+          if (transcript.trim()) runResearch(transcript.trim());
+        }, 300);
+      }
+    };
+    recognition.onerror = (e) => { if (e.error !== 'no-speech') stopMic(); };
+    recognition.onend = () => { if (micActiveRef.current) stopMic(); };
+    recognition.start();
+    micActiveRef.current = true;
+    setMicActive(true);
+  };
 
   const saveHistory = (company, d) => {
     const entry = { company, data: d, ts: Date.now() };
@@ -179,16 +218,25 @@ export default function QuickResearchModal({ isOpen, onClose }) {
 
         <div className="rp-page" style={{ flex: 1, minHeight: 0 }}>
           <div className="rp-sidebar">
-            <div className="rp-search-box">
+            <div className={`rp-search-box${micActive ? ' rp-search-box--listening' : ''}`}>
               <RiSearchEyeLine size={15} className="rp-search-icon" />
               <input
                 ref={inputRef}
                 className="rp-input"
-                placeholder="Company name..."
+                placeholder={micActive ? 'Listening...' : 'Company name...'}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && runResearch()}
               />
+              {micSupported && (
+                <button
+                  className={`rp-mic-btn${micActive ? ' rp-mic-btn--on' : ''}`}
+                  onClick={toggleMic}
+                  title={micActive ? 'Stop listening' : 'Voice search'}
+                >
+                  {micActive ? <RiMicLine size={13} /> : <RiMicOffLine size={13} />}
+                </button>
+              )}
               <button className="rp-scan-btn" onClick={() => runResearch()} disabled={!query.trim() || loading}>
                 {loading ? <RiRefreshLine className="rp-spin" size={13} /> : 'SCAN'}
               </button>
