@@ -131,14 +131,15 @@ export default function QuickResearchModal({ isOpen, onClose }) {
     recognition.lang = 'en-US';
     recognitionRef.current = recognition;
     recognition.onresult = (e) => {
-      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-      setQuery(transcript);
-      if (e.results[e.results.length - 1].isFinal) {
+      const raw = Array.from(e.results).map(r => r[0].transcript).join('');
+      const submitTrigger = /\bsubmit\b/i.test(raw);
+      const cleaned = raw.replace(/\s*\bsubmit\b\s*$/i, '').trim();
+      setQuery(cleaned);
+      if (submitTrigger || e.results[e.results.length - 1].isFinal) {
         stopMic();
-        // Auto-run after a short pause on final result
         setTimeout(() => {
-          if (transcript.trim()) runResearch(transcript.trim());
-        }, 300);
+          if (cleaned) runResearch(cleaned);
+        }, 150);
       }
     };
     recognition.onerror = (e) => { if (e.error !== 'no-speech') stopMic(); };

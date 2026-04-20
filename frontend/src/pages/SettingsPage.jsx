@@ -13,6 +13,7 @@ import {
   RiTerminalLine, RiEyeLine, RiEyeOffLine, RiCheckLine, RiLayoutLine,
   RiShieldUserLine, RiContrastLine, RiFileCodeLine, RiSettings3Line,
   RiCodeLine, RiMicLine, RiBrainLine, RiGlobalLine,
+  RiAppsLine, RiSearchEyeLine, RiKanbanView,
 } from 'react-icons/ri';
 import './SettingsPage.css';
 
@@ -855,7 +856,7 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
   );
 }
 
-function LiveCallSection() {
+function PanelsSection() {
   const [autostart, setAutostart] = useSetting('sdr_mic_autostart', false);
   const [frequency, setFrequency] = useSetting('sdr_mic_frequency', 30);
   const [saved,     setSaved]     = useState(false);
@@ -863,7 +864,8 @@ function LiveCallSection() {
 
   return (
     <>
-      <SettingCard title="Microphone AI Listener">
+      {/* ── Live Call ── */}
+      <SettingCard title="Live Call">
         <SettingRow
           label="Auto-start mic on call open"
           description="Immediately begin AI listening when a Live Call modal opens"
@@ -887,15 +889,47 @@ function LiveCallSection() {
             <option value={120}>Every 2 minutes</option>
           </select>
         </SettingRow>
+        <div className="setting-desc" style={{ lineHeight: 1.7, paddingTop: 4 }}>
+          When the mic listener is active, it transcribes your conversation using the browser's Web Speech API
+          and periodically sends the transcript to the AI. The AI returns a suggested next response, predicted
+          objection, and recommended tone. No audio is stored or transmitted to external services.
+        </div>
       </SettingCard>
 
-      <SettingCard title="How It Works">
-        <div className="setting-desc" style={{ lineHeight: 1.7 }}>
-          When the mic listener is active during a live call, it transcribes your conversation using the
-          browser's Web Speech API and periodically sends the transcript to the AI. The AI returns a
-          suggested next response, predicted objection, and recommended tone — displayed as a card below
-          the objection handler. No audio is stored or transmitted to external services.
-        </div>
+      {/* ── Quick Research ── */}
+      <SettingCard title="Quick Research">
+        <SettingRow
+          label="Voice search shortcut"
+          description='Say "submit" at the end of your spoken query to instantly run the search without pressing a button'
+          icon={RiSearchEyeLine}
+        >
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#00d4ff', background: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 4, padding: '3px 8px', letterSpacing: '0.06em' }}>ALWAYS ON</span>
+        </SettingRow>
+        <SettingRow
+          label="Open shortcut"
+          description="Open Quick Research from anywhere in the app"
+          icon={RiKeyboardLine}
+        >
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>Ctrl + Shift + Q</span>
+        </SettingRow>
+      </SettingCard>
+
+      {/* ── Pipeline ── */}
+      <SettingCard title="Pipeline">
+        <SettingRow
+          label="Open shortcut"
+          description="Open the Pipeline Kanban from anywhere in the app"
+          icon={RiKanbanView}
+        >
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>Ctrl + Shift + P</span>
+        </SettingRow>
+        <SettingRow
+          label="Live Call shortcut"
+          description="Open the Live Call overlay from anywhere in the app"
+          icon={RiMicLine}
+        >
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 4, padding: '3px 8px' }}>Ctrl + Shift + L</span>
+        </SettingRow>
       </SettingCard>
 
       <SavedFlash show={saved} />
@@ -908,7 +942,7 @@ const SECTIONS = [
   { id: 'profile',      label: 'Profile',           Icon: RiUserSettingsLine, subtitle: 'Your SDR identity and contact info'           },
   { id: 'quota',        label: 'Quota Targets',     Icon: RiTrophyLine,       subtitle: 'Weekly activity and revenue goals'             },
   { id: 'notifications',label: 'Notifications',     Icon: RiBellLine,         subtitle: 'Alert and digest preferences'                  },
-  { id: 'livecall',     label: 'Live Call',         Icon: RiMicLine,          subtitle: 'Mic AI listener and prediction settings'       },
+  { id: 'panels',       label: 'Panels & Controls', Icon: RiAppsLine,         subtitle: 'Live Call, Quick Research, and Pipeline settings' },
   { id: 'appearance',   label: 'Appearance',        Icon: RiPaletteLine,      subtitle: 'Colors, fonts, and layout density'             },
   { id: 'integrations', label: 'AI & Integrations', Icon: RiCpuLine,          subtitle: 'API keys and backend connectivity'             },
   { id: 'data',         label: 'Data & Privacy',    Icon: RiDatabaseLine,     subtitle: 'Export, retention, and data reset'             },
@@ -942,7 +976,7 @@ export default function SettingsPage() {
       case 'profile':       return <ProfileSection />;
       case 'quota':         return <QuotaSection />;
       case 'notifications': return <NotificationsSection />;
-      case 'livecall':      return <LiveCallSection />;
+      case 'panels':        return <PanelsSection />;
       case 'appearance':    return <AppearanceSection />;
       case 'integrations':  return <IntegrationsSection health={health} onTestHealth={testHealth} healthLoading={healthLoading} />;
       case 'data':          return <DataSection />;
