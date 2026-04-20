@@ -15,7 +15,7 @@ import FlightsPage from './pages/FlightsPage';
 import LandFreightPage from './pages/LandFreightPage';
 import SettingsPage from './pages/SettingsPage';
 import OutreachSequenceModal from './components/OutreachSequenceModal';
-import BattleCardsModal from './components/BattleCardsModal';
+import QuickResearchModal from './components/QuickResearchModal';
 import PipelineKanban from './components/PipelineKanban';
 import LiveCallModal from './components/LiveCallModal';
 import EmailComposerModal from './components/EmailComposerModal';
@@ -53,7 +53,7 @@ export default function App() {
     () => (localStorage.getItem('sdr_ui_sidebar_default') || 'collapsed') === 'collapsed'
   );
   const [showPipeline, setShowPipeline] = useState(false);
-  const [showBattleCards, setShowBattleCards] = useState(false);
+  const [showQuickResearch, setShowQuickResearch] = useState(false);
   const [outreachState, setOutreachState] = useState({ open: false, prospect: null, analysis: null });
   const [pipelineRefresh, setPipelineRefresh] = useState(0);
   const [globeFullscreen, setGlobeFullscreen] = useState(false);
@@ -109,10 +109,10 @@ export default function App() {
         return;
       }
 
-      // Ctrl+Shift+B — Open Battle Cards
-      if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+      // Ctrl+Shift+Q — Open Quick Research
+      if (e.ctrlKey && e.shiftKey && e.key === 'Q') {
         e.preventDefault();
-        setShowBattleCards(true);
+        setShowQuickResearch(true);
         return;
       }
 
@@ -135,14 +135,14 @@ export default function App() {
         if (emailState.open) { setEmailState({ open: false, prospect: null, trigger: '' }); return; }
         if (liveCallState.open) { setLiveCallState({ open: false, prospect: null }); return; }
         if (outreachState.open) { setOutreachState({ open: false, prospect: null, analysis: null }); return; }
-        if (showBattleCards)   { setShowBattleCards(false); return; }
+        if (showQuickResearch) { setShowQuickResearch(false); return; }
         if (showPipeline)      { setShowPipeline(false); setPipelineRefresh(r => r + 1); return; }
         if (globeFullscreen)   { setGlobeFullscreen(false); return; }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [emailState.open, liveCallState.open, outreachState.open, showBattleCards, showPipeline, globeFullscreen]);
+  }, [emailState.open, liveCallState.open, outreachState.open, showQuickResearch, showPipeline, globeFullscreen]);
 
   return (
     <div className="app-root">
@@ -150,7 +150,7 @@ export default function App() {
 
       <PortStatusBar
         onPipelineClick={() => setShowPipeline(true)}
-        onBattleCardsClick={() => setShowBattleCards(true)}
+        onQuickResearchClick={() => setShowQuickResearch(true)}
         onMenuToggle={() => setSidebarCollapsed(c => !c)}
         onLiveCallClick={() => handleStartLiveCall(null)}
         pipelineRefresh={pipelineRefresh}
@@ -203,7 +203,7 @@ export default function App() {
         analysis={outreachState.analysis}
         onClose={() => setOutreachState({ open: false, prospect: null, analysis: null })}
       />
-      <BattleCardsModal isOpen={showBattleCards} onClose={() => setShowBattleCards(false)} />
+      <QuickResearchModal isOpen={showQuickResearch} onClose={() => setShowQuickResearch(false)} />
 
       <LiveCallModal
         isOpen={liveCallState.open}

@@ -721,7 +721,7 @@ const SHORTCUTS = [
   { keys: ['Ctrl', '/'],       action: 'Toggle sidebar'     },
   { keys: ['Escape'],          action: 'Close modal/overlay'},
   { keys: ['Ctrl', 'Shift', 'P'], action: 'Open Pipeline'  },
-  { keys: ['Ctrl', 'Shift', 'B'], action: 'Open Battle Cards'},
+  { keys: ['Ctrl', 'Shift', 'Q'], action: 'Open Quick Research'},
   { keys: ['Ctrl', 'Shift', 'L'], action: 'Open Live Call Mode'},
 ];
 
@@ -758,7 +758,7 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
           { page: 'Account 360',    path: '/account/:id',  desc: 'Full prospect profile — supply chain diagram, AI analysis, MAP, objection handler' },
           { page: 'Agentic Outreach', path: '/pilot',       desc: 'Pilot module — live freight market briefings (gpt-5.4), prospect dossier with 3-touch outreach sequence, customer update drafts, SDR playbook hooks' },
           { page: 'Sales CRM',      path: '/performance',  desc: 'SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart' },
-          { page: 'Research',       path: '/research',     desc: 'AI company intelligence briefs — trade profile, signals, why-now' },
+          { page: 'Quick Research',  path: 'Ctrl+Shift+Q',  desc: 'AI company intelligence briefs — trade profile, signals, urgency score, opening hook. Opens as popup from any page.' },
         ].map(({ page, path, desc }) => (
           <div key={page} className="setting-row" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>

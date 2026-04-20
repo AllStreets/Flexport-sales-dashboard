@@ -1,12 +1,12 @@
 // frontend/src/components/PortStatusBar.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { RiSwordLine, RiKanbanView, RiMenuLine, RiPhoneLine } from 'react-icons/ri';
+import { RiSearchEyeLine, RiKanbanView, RiMenuLine, RiPhoneLine } from 'react-icons/ri';
 import './PortStatusBar.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onMenuToggle, onLiveCallClick, pipelineRefresh }) {
+export default function PortStatusBar({ onPipelineClick, onQuickResearchClick, onMenuToggle, onLiveCallClick, pipelineRefresh }) {
   const [ports, setPorts] = useState([]);
   const [pipelineCount, setPipelineCount] = useState(null);
 
@@ -46,7 +46,7 @@ export default function PortStatusBar({ onPipelineClick, onBattleCardsClick, onM
 
       <div className="bar-right">
         <button className="bar-btn call" onClick={onLiveCallClick}><RiPhoneLine size={14} /> Live Call</button>
-        <button className="bar-btn" onClick={onBattleCardsClick}><RiSwordLine size={14} /> Battle Cards</button>
+        <button className="bar-btn" onClick={onQuickResearchClick}><RiSearchEyeLine size={14} /> Quick Research</button>
         <button className="bar-btn primary" onClick={onPipelineClick}>
           <RiKanbanView size={14} /> Pipeline
           {pipelineCount > 0 && <span className="pipeline-count-badge">{pipelineCount}</span>}

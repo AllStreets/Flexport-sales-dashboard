@@ -1,0 +1,50 @@
+/* QuickResearchModal.css */
+
+.qr-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(6,11,24,0.82); backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+.qr-panel {
+  background: #0d1626;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 16px;
+  width: 92vw; max-width: 1200px;
+  height: 86vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.06);
+}
+
+.qr-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.qr-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px; font-weight: 700;
+  color: #f1f5f9; flex: 1;
+}
+
+.qr-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.08em;
+  color: #334155;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px; padding: 2px 7px;
+}
+
+.qr-close {
+  background: transparent; border: none;
+  color: #475569; cursor: pointer;
+  padding: 4px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.15s;
+}
+.qr-close:hover { color: #f1f5f9; }
