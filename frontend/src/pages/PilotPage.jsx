@@ -34,7 +34,7 @@ Return STRUCTURED JSON (no markdown, no preamble):
 {
   "headline": "One sharp sentence on the single most important condition.",
   "date_context": "As-of date from search results (e.g., 'Week of April 14, 2026').",
-  "global_signal": {"fbx_level": "1842 or null if not found", "fbx_change_pct": "+4.2% or null if not found", "fbx_period": "week-over-week", "direction": "up|down|flat", "interpretation": "One sentence."},
+  "global_signal": {"direction": "up|down|flat", "interpretation": "One sentence on current rate direction and what's driving it."},
   "trade_lanes": [{"name": "China to US West Coast", "rate_context": "$2,840 per FEU", "movement": "+18% MoM", "driver": "One sentence.", "sdr_relevance": "high|medium|low"}],
   "disruptions": [{"type": "port congestion|labor|weather|geopolitical|tariff|capacity|other", "region": "...", "description": "1-2 sentences.", "severity": "high|medium|low"}],
   "forward_look": "2-3 sentences on next 2-8 weeks.",
@@ -400,15 +400,6 @@ function MarketBriefing({ data, onExport }) {
           <div style={{ fontSize:17, fontWeight:600, color:C.textStrong, lineHeight:1.4 }}>{data.headline}</div>
         </div>
       </Card>
-
-      {data.global_signal && (
-        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-          <Stat label="FBX GLOBAL" value={cleanVal(data.global_signal.fbx_level) ?? '—'} sub="index level" accent={C.text} />
-          <Stat label={`CHANGE · ${data.global_signal.fbx_period?.toUpperCase() || ''}`}
-            value={<span style={{ display:'inline-flex', alignItems:'center', gap:8 }}><DirectionArrow dir={data.global_signal.direction} />{cleanVal(data.global_signal.fbx_change_pct) ?? '—'}</span>}
-            accent={data.global_signal.direction === 'up' ? C.rose : data.global_signal.direction === 'down' ? C.green : C.textDim} />
-        </div>
-      )}
 
       {data.global_signal?.interpretation && (
         <div style={{ padding:'12px 16px', background:C.accentSoft, border:`1px solid ${C.accentGlow}`, borderRadius:8, fontSize:13, color:C.text, lineHeight:1.55, fontStyle:'italic' }}>
