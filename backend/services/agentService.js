@@ -152,18 +152,19 @@ If clearly not a fit (fit_score <= 4), set skip_reason to a brief phrase like "d
 
 // ── Draft generation ──────────────────────────────────────────────────────────
 
-async function generateDraft(companyName, analysis, linkedinUrl, model = 'gpt-4.1-mini') {
+async function generateDraft(companyName, analysis, linkedinUrl, model = 'gpt-4.1-mini', fromName = 'Connor Evans') {
   const valueProps = (analysis.flexport_value_props || []).slice(0, 2).join(', ');
   const angle = analysis.outreach_angle || '';
   const dm = analysis.decision_makers?.[0];
 
   const prompt = `Write a cold outreach email for an SDR at Flexport targeting ${companyName}.
 
+Sender (YOU): ${fromName}, SDR at Flexport
 Decision maker target: ${dm?.title || 'VP Supply Chain or Head of Logistics'}
 Company profile: ${analysis.profile || ''}
 Outreach angle: ${angle}
 Key value props: ${valueProps}
-${linkedinUrl ? `LinkedIn profile: ${linkedinUrl}` : ''}
+${linkedinUrl ? `Target contact LinkedIn (for research context only, do NOT include in email): ${linkedinUrl}` : ''}
 
 Rules:
 - Max 150 words
@@ -172,6 +173,7 @@ Rules:
 - End with a single low-friction CTA (15-min call)
 - Subject line must be specific, not generic
 - Use only plain ASCII characters — straight apostrophes ('), no curly/smart quotes or special punctuation
+- Sign off exactly as: "Best,\\n${fromName}\\nSDR, Flexport" — no LinkedIn URLs, no other info
 
 Return JSON only:
 {"subject": "...", "body": "...", "contact_title": "${dm?.title || 'VP Supply Chain'}", "to_placeholder": "firstname@${companyName.toLowerCase().replace(/\s+/g, '')}.com"}`;
@@ -344,7 +346,8 @@ async function runBatch({ triggeredBy = 'cron', onProgress = null } = {}) {
       const analysis = await analyzeForFlexport(item.company_name, null, newsHeadlines, searchResults, 'gpt-4.1-mini');
 
       const model = adjustedScore >= highFitMin ? 'gpt-4.1' : 'gpt-4.1-mini';
-      const draftData = await generateDraft(item.company_name, analysis, linkedinUrl, model);
+      const fromName = cfg.from_name || 'Connor Evans';
+      const draftData = await generateDraft(item.company_name, analysis, linkedinUrl, model, fromName);
 
       // Push to Gmail as draft
       const toEmail = draftData.to_placeholder || `contact@${item.company_name.toLowerCase().replace(/\s+/g, '')}.com`;
