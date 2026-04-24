@@ -152,7 +152,7 @@ If clearly not a fit (fit_score <= 4), set skip_reason to a brief phrase like "d
 
 // ── Draft generation ──────────────────────────────────────────────────────────
 
-async function generateDraft(companyName, analysis, linkedinUrl, model = 'gpt-4.1-mini', fromName = 'Connor Evans') {
+async function generateDraft(companyName, analysis, linkedinUrl, model = 'gpt-4.1-mini', fromName = 'Your SDR') {
   const valueProps = (analysis.flexport_value_props || []).slice(0, 2).join(', ');
   const angle = analysis.outreach_angle || '';
   const dm = analysis.decision_makers?.[0];
@@ -346,7 +346,7 @@ async function runBatch({ triggeredBy = 'cron', onProgress = null } = {}) {
       const analysis = await analyzeForFlexport(item.company_name, null, newsHeadlines, searchResults, 'gpt-4.1-mini');
 
       const model = adjustedScore >= highFitMin ? 'gpt-4.1' : 'gpt-4.1-mini';
-      const fromName = cfg.from_name || 'Connor Evans';
+      const fromName = cfg.from_name || 'Your SDR';
       const draftData = await generateDraft(item.company_name, analysis, linkedinUrl, model, fromName);
 
       // Push to Gmail as draft

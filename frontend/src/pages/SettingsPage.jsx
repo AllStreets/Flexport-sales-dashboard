@@ -143,11 +143,21 @@ function ProfileSection() {
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
   const field = (setter) => (e) => { setter(e.target.value); flash(); };
 
+  const nameField = (e) => {
+    setName(e.target.value);
+    flash();
+    fetch(`${API}/api/agent/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'from_name', value: e.target.value }),
+    }).catch(() => {});
+  };
+
   return (
     <>
       <SettingCard title="Identity">
-        <SettingRow label="Full Name" icon={RiUserLine}>
-          <input className="setting-input setting-input-wide" value={name} onChange={field(setName)} placeholder="Your name" />
+        <SettingRow label="Full Name" description="Used as the sender name in outreach emails" icon={RiUserLine}>
+          <input className="setting-input setting-input-wide" value={name} onChange={nameField} placeholder="Your name" />
         </SettingRow>
         <SettingRow label="Job Title" description="Shown on call prep sheets" icon={RiShieldUserLine}>
           <input className="setting-input setting-input-wide" value={title} onChange={field(setTitle)} placeholder="SDR" />
