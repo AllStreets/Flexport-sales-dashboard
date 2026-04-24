@@ -139,12 +139,19 @@ async function disconnect() {
 
 // ── Draft creation ─────────────────────────────────────────────────────────────
 
+function encodeHeader(str) {
+  if (/[^\x00-\x7F]/.test(str)) {
+    return `=?UTF-8?B?${Buffer.from(str, 'utf8').toString('base64')}?=`;
+  }
+  return str;
+}
+
 function buildRawMessage({ from, to, subject, body, inReplyTo, references }) {
   const fromName = from.name ? `"${from.name}" <${from.email}>` : from.email;
   const headers = [
     `From: ${fromName}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeHeader(subject)}`,
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=utf-8',
   ];

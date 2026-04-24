@@ -133,8 +133,8 @@ Scoring criteria:
 4-5: Some import activity but low volume or mostly domestic
 1-3: Domestic only, no import/export signals, poor fit
 
-Return JSON only:
-{"fit_score": 7, "reasoning": "...", "sector": "...", "skip_reason": null, "contact_title": "VP Supply Chain", "contact_email_guess": null}
+Return JSON only (fit_score must reflect the actual evidence above, not a default):
+{"fit_score": 5, "reasoning": "...", "sector": "...", "skip_reason": null, "contact_title": "VP Supply Chain", "contact_email_guess": null}
 
 If clearly not a fit (fit_score <= 4), set skip_reason to a brief phrase like "domestic-only" or "service-company".`;
 
@@ -171,6 +171,7 @@ Rules:
 - Specific to their lanes, pain points, or recent news
 - End with a single low-friction CTA (15-min call)
 - Subject line must be specific, not generic
+- Use only plain ASCII characters — straight apostrophes ('), no curly/smart quotes or special punctuation
 
 Return JSON only:
 {"subject": "...", "body": "...", "contact_title": "${dm?.title || 'VP Supply Chain'}", "to_placeholder": "firstname@${companyName.toLowerCase().replace(/\s+/g, '')}.com"}`;
