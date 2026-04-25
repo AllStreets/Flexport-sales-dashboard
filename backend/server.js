@@ -1221,6 +1221,11 @@ function connectAisStream() {
 // immediately after a restart instead of waiting for AIS to re-accumulate.
 function loadVesselCacheFromDb() {
   const db = getDb();
+  db.run(`CREATE TABLE IF NOT EXISTS vessel_cache (
+    mmsi TEXT PRIMARY KEY, lat REAL, lng REAL, sog REAL, cog REAL,
+    heading REAL, name TEXT, type INTEGER, destination TEXT,
+    callsign TEXT, draught REAL, status INTEGER, ts INTEGER
+  )`, () => {
   db.all('SELECT * FROM vessel_cache', [], (err, rows) => {
     db.close();
     if (err || !rows) return;
@@ -1233,6 +1238,7 @@ function loadVesselCacheFromDb() {
     }
     const count = Object.keys(_vesselCache).length;
     if (count > 0) console.log(`[vessels] Restored ${count} vessels from DB cache`);
+  });
   });
 }
 
