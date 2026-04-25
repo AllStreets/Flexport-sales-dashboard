@@ -1216,6 +1216,40 @@ function connectAisStream() {
   _aisWs.on('error', (e) => { console.error('aisstream error:', e.message); });
 }
 
+// ── Vessel cache persistence ──────────────────────────────────────────────────
+// Load last known positions from SQLite on startup so the page shows live data
+// immediately after a restart instead of waiting for AIS to re-accumulate.
+function loadVesselCacheFromDb() {
+  const db = getDb();
+  db.all('SELECT * FROM vessel_cache', [], (err, rows) => {
+    db.close();
+    if (err || !rows) return;
+    const now = Date.now();
+    const cutoff = now - 30 * 60 * 1000; // discard entries older than 30 min
+    for (const r of rows) {
+      if (r.ts && r.ts > cutoff && r.lat && r.lng) {
+        _vesselCache[r.mmsi] = { mmsi: r.mmsi, lat: r.lat, lng: r.lng, sog: r.sog, cog: r.cog, heading: r.heading, name: r.name, type: r.type, destination: r.destination, callsign: r.callsign, draught: r.draught, status: r.status, ts: r.ts };
+      }
+    }
+    const count = Object.keys(_vesselCache).length;
+    if (count > 0) console.log(`[vessels] Restored ${count} vessels from DB cache`);
+  });
+}
+
+function persistVesselCacheToDb() {
+  const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
+  if (vessels.length === 0) return;
+  const db = getDb();
+  const stmt = db.prepare(`INSERT OR REPLACE INTO vessel_cache (mmsi, lat, lng, sog, cog, heading, name, type, destination, callsign, draught, status, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const v of vessels) {
+    stmt.run(String(v.mmsi), v.lat, v.lng, v.sog ?? null, v.cog ?? null, v.heading ?? null, v.name ?? null, v.type ?? null, v.destination ?? null, v.callsign ?? null, v.draught ?? null, v.status ?? null, v.ts ?? Date.now());
+  }
+  stmt.finalize(() => db.close());
+}
+
+loadVesselCacheFromDb();
+setInterval(persistVesselCacheToDb, 30 * 1000); // persist every 30s
+
 connectAisStream();
 require('./cron/agentCron');
 

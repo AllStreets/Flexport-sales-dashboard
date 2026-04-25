@@ -146,6 +146,22 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS vessel_cache (
+    mmsi TEXT PRIMARY KEY,
+    lat REAL,
+    lng REAL,
+    sog REAL,
+    cog REAL,
+    heading REAL,
+    name TEXT,
+    type INTEGER,
+    destination TEXT,
+    callsign TEXT,
+    draught REAL,
+    status INTEGER,
+    ts INTEGER
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS agent_config (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,

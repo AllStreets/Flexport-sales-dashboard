@@ -20,9 +20,10 @@ export default async function handler(req, res) {
       client_secret: clientSecret,
     }).toString();
 
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 8000)
-    );
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('timeout')), 8000);
+    });
 
     const request = fetch(
       'https://opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
     );
 
     const r = await Promise.race([request, timeout]);
+    clearTimeout(timeoutId);
     const data = await r.json();
 
     if (!data.access_token) {
