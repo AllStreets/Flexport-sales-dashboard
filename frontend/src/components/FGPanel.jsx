@@ -172,8 +172,12 @@ function FGEventFeed({ flights, selectedFlight, onClear, onFeedFlightClick }) {
           <div className="fg-fd-row"><span>Altitude</span><span>FL{fl} ({Math.round((selectedFlight.altitude || 0) / 0.3048).toLocaleString()} ft)</span></div>
           <div className="fg-fd-row"><span>Speed</span><span>{selectedFlight.velocity || '\u2014'} kts</span></div>
           <div className="fg-fd-row"><span>Heading</span><span>{selectedFlight.heading?.toFixed(0) ?? '\u2014'}{selectedFlight.heading != null ? '\u00b0' : ''}</span></div>
-          <div className="fg-fd-row"><span>Origin</span><span>{selectedFlight.origin || '\u2014'}</span></div>
-          <div className="fg-fd-row"><span>Destination</span><span>{selectedFlight.destination || '\u2014'}</span></div>
+          {selectedFlight.id?.startsWith('SIM') && (
+            <div className="fg-fd-row"><span>Origin</span><span>{selectedFlight.origin || '\u2014'}</span></div>
+          )}
+          {selectedFlight.id?.startsWith('SIM') && (
+            <div className="fg-fd-row"><span>Destination</span><span>{selectedFlight.destination || '\u2014'}</span></div>
+          )}
           <div className="fg-fd-row"><span>Type</span><span>{selectedFlight.isCargo ? 'Cargo' : 'Passenger'}</span></div>
           {selectedFlight.id?.startsWith('SIM') && (
             <div className="fg-fd-sim">Simulated \u2014 set OPENSKY_CLIENT_ID + OPENSKY_CLIENT_SECRET for live data</div>
