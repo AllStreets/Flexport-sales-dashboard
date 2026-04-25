@@ -89,31 +89,17 @@ async function fetchFlightsWithFallback(API) {
   // fall back to fetching the token directly from the browser using VITE_ credentials.
   try {
     let token = null;
+    // Try Vercel serverless function first (same domain, Vercel IPs not blocked by OpenSky)
     try {
-      const tokenRes = await fetch(`${API}/api/opensky-token`);
-      if (tokenRes.ok) {
-        const d = await tokenRes.json();
-        token = d.token || null;
-      }
+      const tr = await fetch('/api/opensky-token');
+      if (tr.ok) { const d = await tr.json(); token = d.token || null; }
     } catch (_) {}
-
+    // Fall back to Railway proxy
     if (!token) {
-      const cid = import.meta.env.VITE_OPENSKY_CLIENT_ID;
-      const csec = import.meta.env.VITE_OPENSKY_CLIENT_SECRET;
-      if (cid && csec) {
-        const tr = await fetch(
-          'https://opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `grant_type=client_credentials&client_id=${encodeURIComponent(cid)}&client_secret=${encodeURIComponent(csec)}`,
-          }
-        );
-        if (tr.ok) {
-          const d = await tr.json();
-          token = d.access_token || null;
-        }
-      }
+      try {
+        const tr = await fetch(`${API}/api/opensky-token`);
+        if (tr.ok) { const d = await tr.json(); token = d.token || null; }
+      } catch (_) {}
     }
 
     if (!token) throw new Error('no token');
