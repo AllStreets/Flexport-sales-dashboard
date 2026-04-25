@@ -84,13 +84,39 @@ async function fetchFlightsWithFallback(API) {
     }
   } catch (_) {}
 
-  // Step 2b: Try browser-side authenticated call using token from backend.
-  // Falls back here if unauthenticated returned too few results.
+  // Step 2b: Try browser-side authenticated call.
+  // First try token from backend proxy; if that fails (Railway IP blocked from OAuth server),
+  // fall back to fetching the token directly from the browser using VITE_ credentials.
   try {
-    const tokenRes = await fetch(`${API}/api/opensky-token`);
-    if (!tokenRes.ok) throw new Error('no token');
-    const { token } = await tokenRes.json();
+    let token = null;
+    try {
+      const tokenRes = await fetch(`${API}/api/opensky-token`);
+      if (tokenRes.ok) {
+        const d = await tokenRes.json();
+        token = d.token || null;
+      }
+    } catch (_) {}
 
+    if (!token) {
+      const cid = import.meta.env.VITE_OPENSKY_CLIENT_ID;
+      const csec = import.meta.env.VITE_OPENSKY_CLIENT_SECRET;
+      if (cid && csec) {
+        const tr = await fetch(
+          'https://opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `grant_type=client_credentials&client_id=${encodeURIComponent(cid)}&client_secret=${encodeURIComponent(csec)}`,
+          }
+        );
+        if (tr.ok) {
+          const d = await tr.json();
+          token = d.access_token || null;
+        }
+      }
+    }
+
+    if (!token) throw new Error('no token');
     const osRes = await fetch('https://opensky-network.org/api/states/all', {
       headers: { Authorization: `Bearer ${token}` },
     });

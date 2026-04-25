@@ -1221,9 +1221,7 @@ require('./cron/agentCron');
 
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
-  if (vessels.length >= 20 && req.query.mode !== 'sim') {
-    // Serve live data once we have at least 20 vessels. Lower threshold helps localhost
-    // where AISstream free-tier concurrent-connection limits cause shorter accumulation windows.
+  if (vessels.length >= 1 && req.query.mode !== 'sim') {
     return res.json({ source: 'live', vessels: vessels.slice(0, 200) });
   }
   // Great-circle interpolation
