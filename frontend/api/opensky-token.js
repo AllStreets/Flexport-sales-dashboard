@@ -18,19 +18,24 @@ export default async function handler(req, res) {
       grant_type: 'client_credentials',
       client_id: clientId,
       client_secret: clientSecret,
-    });
+    }).toString();
 
-    const r = await fetch(
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 8000)
+    );
+
+    const request = fetch(
       'https://opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-        signal: AbortSignal.timeout(8000),
+        body,
       }
     );
 
+    const r = await Promise.race([request, timeout]);
     const data = await r.json();
+
     if (!data.access_token) {
       return res.status(503).json({ error: data.error_description || 'No token in response' });
     }
