@@ -1155,11 +1155,11 @@ setInterval(() => {
   for (const k of Object.keys(_vesselCache)) {
     if (!_vesselCache[k]?.ts || _vesselCache[k].ts < cutoff) delete _vesselCache[k];
   }
-  // Cap at 500 vessels — prevents memory growth on dense global feed
+  // Cap at 2000 vessels
   const keys = Object.keys(_vesselCache);
-  if (keys.length > 500) {
+  if (keys.length > 2000) {
     keys.sort((a, b) => (_vesselCache[a]?.ts || 0) - (_vesselCache[b]?.ts || 0));
-    keys.slice(0, keys.length - 500).forEach(k => delete _vesselCache[k]);
+    keys.slice(0, keys.length - 2000).forEach(k => delete _vesselCache[k]);
   }
 }, 5 * 60 * 1000); // every 5 minutes
 
@@ -1262,7 +1262,7 @@ require('./cron/agentCron');
 app.get('/api/vessels', (req, res) => {
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
   if (vessels.length >= 1 && req.query.mode !== 'sim') {
-    return res.json({ source: 'live', vessels: vessels.slice(0, 200) });
+    return res.json({ source: 'live', vessels: vessels.slice(0, 1500) });
   }
   // Great-circle interpolation
   function greatCirclePoint(lat1d, lng1d, lat2d, lng2d, t) {
@@ -1665,13 +1665,34 @@ app.get('/api/flights', async (req, res) => {
   if (!forceSim) {
     try {
       const axios = require('axios');
-      const r = await axios.get('https://api.adsb.lol/v2/aircraft', { timeout: 10000 });
-      const aircraft = (r.data?.ac || []).filter(a =>
-        a.lat != null && a.lon != null &&
-        typeof a.alt_baro === 'number' && a.alt_baro > 1000 &&
-        CARGO_PREFIXES_SET.has((a.flight || '').trim().toUpperCase().slice(0, 3))
+      // Query multiple freighter types in parallel — no global endpoint exists,
+      // so we fan out across all common cargo aircraft types for global coverage.
+      const FREIGHTER_TYPES = [
+        'B748','B77F','B744','B743','B742','B741',
+        'MD11','B763','B762','B752','B753',
+        'A332','A333','A342','A343','A306','A30B',
+        'B738','B737','B736','B733','B734','B735',
+        'DC10','IL76','AN12','B462','A124',
+        'C130','C17','C5','B190','BE99',
+      ];
+      const results = await Promise.allSettled(
+        FREIGHTER_TYPES.map(t =>
+          axios.get(`https://api.adsb.lol/v2/type/${t}`, { timeout: 10000 })
+            .then(r => r.data?.ac || [])
+        )
       );
-      if (aircraft.length >= 20) {
+      // Merge and deduplicate by hex, filter airborne with valid position
+      const seen = new Map();
+      for (const r of results) {
+        if (r.status !== 'fulfilled') continue;
+        for (const a of r.value) {
+          if (a.hex && a.lat != null && a.lon != null && typeof a.alt_baro === 'number' && a.alt_baro > 500) {
+            seen.set(a.hex, a);
+          }
+        }
+      }
+      const aircraft = Array.from(seen.values());
+      if (aircraft.length >= 5) {
         const flights = aircraft.map(a => ({
           id: a.hex,
           callsign: (a.flight || '').trim(),
