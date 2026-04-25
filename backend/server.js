@@ -1136,7 +1136,7 @@ app.get('/api/settings/health', (req, res) => {
       serper:       !!process.env.SERPER_API_KEY,
       aisstream:    !!process.env.AISSTREAM_API_KEY,
       terminal49:   !!process.env.TERMINAL49_API_KEY,
-      opensky:      !!(process.env.OPENSKY_CLIENT_ID && process.env.OPENSKY_CLIENT_SECRET),
+      adsbLol:      true, // no auth required
     },
   });
 });
@@ -1608,41 +1608,6 @@ const PASSENGER_ROUTES = [
   { from:'Sao Paulo',    fromLat:-23.43, fromLng:-46.48,  to:'London',      toLat:51.47,  toLng:-0.45   },
 ];
 let _flightCache = { flights: [], ts: 0, source: 'simulated' };
-let _openSkyToken = { access_token: null, expires_at: 0 };
-
-async function getOpenSkyToken() {
-  if (_openSkyToken.access_token && Date.now() < _openSkyToken.expires_at - 30000) {
-    return _openSkyToken.access_token;
-  }
-  const clientId = process.env.OPENSKY_CLIENT_ID;
-  const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  try {
-    const axios = require('axios');
-    const r = await axios.post(
-      'https://opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
-      `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 6000 }
-    );
-    const { access_token, expires_in } = r.data;
-    _openSkyToken = { access_token, expires_at: Date.now() + (expires_in || 300) * 1000 };
-    return access_token;
-  } catch (e) {
-    console.warn('[flights] OpenSky token fetch failed:', e.message);
-    return null;
-  }
-}
-
-// Token proxy: lets the browser call OpenSky directly using the user's IP (bypasses Railway IP blocks)
-app.get('/api/opensky-token', async (req, res) => {
-  try {
-    const token = await getOpenSkyToken();
-    if (!token) return res.status(503).json({ error: 'OpenSky credentials not configured' });
-    res.json({ token, expires_in: 300 });
-  } catch (e) {
-    res.status(503).json({ error: e.message });
-  }
-});
 
 function buildSimulatedFlights() {
   const now = Date.now();
@@ -1700,42 +1665,33 @@ app.get('/api/flights', async (req, res) => {
   if (!forceSim) {
     try {
       const axios = require('axios');
-      // Try authenticated first; if token fetch fails fall through to unauthenticated
-      let headers = {};
-      try {
-        const token = await getOpenSkyToken();
-        if (token) headers = { Authorization: `Bearer ${token}` };
-      } catch (_) {}
-      const r = await axios.get('https://opensky-network.org/api/states/all', {
-        headers,
-        timeout: 8000,
-      });
-      const states = (r.data?.states || []).filter(s =>
-        s[5] != null && s[6] != null && !s[8] &&
-        CARGO_PREFIXES_SET.has((s[1] || '').trim().toUpperCase().slice(0, 3))
+      const r = await axios.get('https://api.adsb.lol/v2/aircraft', { timeout: 10000 });
+      const aircraft = (r.data?.ac || []).filter(a =>
+        a.lat != null && a.lon != null &&
+        typeof a.alt_baro === 'number' && a.alt_baro > 1000 &&
+        CARGO_PREFIXES_SET.has((a.flight || '').trim().toUpperCase().slice(0, 3))
       );
-      if (states.length >= 20) {
-        const flights = states.map(s => ({
-          id: s[0],
-          callsign: (s[1] || '').trim(),
+      if (aircraft.length >= 20) {
+        const flights = aircraft.map(a => ({
+          id: a.hex,
+          callsign: (a.flight || '').trim(),
           isCargo: true,
           isGov: false,
-          lat: s[6], lng: s[5],
-          altitude: s[7] || 0,
-          velocity: s[9] ? Math.round(s[9] * 1.944) : 0,
-          heading: s[10] || 0,
-          origin: s[2] || 'Unknown',
+          lat: a.lat, lng: a.lon,
+          altitude: a.alt_baro || 0,
+          velocity: a.gs ? Math.round(a.gs) : 0,
+          heading: a.track || 0,
+          origin: 'Live',
           destination: null,
           srcLat: null, srcLng: null, dstLat: null, dstLng: null,
           progress: null,
-          aircraftType: null,
+          aircraftType: a.t || null,
         }));
         _flightCache = { flights, ts: now, source: 'live' };
         return res.json({ flights, source: 'live' });
       }
     } catch (liveErr) {
       console.error('[flights] Live ADS-B failed:', liveErr?.response?.status, liveErr?.message?.slice(0, 120));
-      // fall through to simulated data
     }
   }
   const simFlights = buildSimulatedFlights();

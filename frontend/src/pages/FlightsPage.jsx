@@ -38,90 +38,18 @@ import './FlightsPage.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-// Maps a raw OpenSky states array into our flight shape
-function parseOpenSkyStates(states) {
-  return states.slice(0, 300).map(s => ({
-    id: s[0],
-    callsign: (s[1] || '').trim(),
-    isCargo: true,
-    isGov: false,
-    lat: s[6],
-    lng: s[5],
-    altitude: s[13] || 10000,
-    velocity: s[9] ? Math.round(s[9] * 1.944) : 460,
-    heading: s[10] || 0,
-  }));
-}
-
-// Attempts live ADS-B via backend, then browser-side (unauthenticated then authenticated)
+// Attempts live ADS-B via backend (adsb.lol), falls back to simulated
 async function fetchFlightsWithFallback(API) {
-  // Step 1: Try backend (works on localhost where Railway IP blocks don't apply)
-  let backendData;
   try {
     const r = await fetch(`${API}/api/flights`);
-    backendData = await r.json();
-  } catch (_) {
-    backendData = { source: 'sim', flights: [] };
-  }
-
-  if (backendData.source === 'live' && backendData.flights?.length > 0) {
-    return backendData;
-  }
-
-  // Step 2a: Browser-side unauthenticated OpenSky call.
-  // Railway's IPs are blocked from OpenSky's OAuth server, but the user's browser
-  // is not — so call the data API directly without a token first.
-  try {
-    const osRes = await fetch('https://opensky-network.org/api/states/all');
-    if (osRes.ok) {
-      const data = await osRes.json();
-      const states = (data?.states || []).filter(s =>
-        s[5] != null && s[6] != null && !s[8]
-      );
-      if (states.length >= 20) {
-        return { source: 'live', flights: parseOpenSkyStates(states) };
-      }
-    }
+    const data = await r.json();
+    if (data.flights?.length > 0) return data;
   } catch (_) {}
-
-  // Step 2b: Try browser-side authenticated call.
-  // First try token from backend proxy; if that fails (Railway IP blocked from OAuth server),
-  // fall back to fetching the token directly from the browser using VITE_ credentials.
-  try {
-    let token = null;
-    // Try Vercel serverless function first (same domain, Vercel IPs not blocked by OpenSky)
-    try {
-      const tr = await fetch('/api/opensky-token');
-      if (tr.ok) { const d = await tr.json(); token = d.token || null; }
-    } catch (_) {}
-    // Fall back to Railway proxy
-    if (!token) {
-      try {
-        const tr = await fetch(`${API}/api/opensky-token`);
-        if (tr.ok) { const d = await tr.json(); token = d.token || null; }
-      } catch (_) {}
-    }
-
-    if (!token) throw new Error('no token');
-    const osRes = await fetch('https://opensky-network.org/api/states/all', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!osRes.ok) throw new Error(`OpenSky ${osRes.status}`);
-    const data = await osRes.json();
-    const states = (data?.states || []).filter(s =>
-      s[5] != null && s[6] != null && !s[8]
-    );
-    if (states.length >= 20) {
-      return { source: 'live', flights: parseOpenSkyStates(states) };
-    }
-  } catch (_) {}
-
-  // Step 3: Fallback — fetch sim explicitly
   try {
     const r = await fetch(`${API}/api/flights?mode=sim`);
     return r.json();
   } catch (_) {
-    return backendData;
+    return { source: 'simulated', flights: [] };
   }
 }
 
