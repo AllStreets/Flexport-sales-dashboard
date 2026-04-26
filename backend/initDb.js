@@ -171,7 +171,7 @@ db.serialize(() => {
     const defaults = [
       ['enabled', '0'],
       ['batch_size', '10'],
-      ['fit_score_min', '7'],
+      ['fit_score_min', '3'],
       ['high_fit_min', '9'],
       ['reply_poll_hours', '4'],
       ['gmail_user', ''],

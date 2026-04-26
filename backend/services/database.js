@@ -3,7 +3,10 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 function getDb() {
-  return new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db'));
+  const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db'));
+  db.run('PRAGMA busy_timeout = 5000');
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
 }
 
 function saveAnalysis(prospectId, companyName, analysisData) {

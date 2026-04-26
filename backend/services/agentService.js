@@ -10,7 +10,10 @@ const { createDraft, getConfig, setConfig } = require('./gmailService');
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 function getDb() {
-  return new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db'));
+  const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db'));
+  db.run('PRAGMA busy_timeout = 5000');
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
 }
 
 // ── Config helpers ─────────────────────────────────────────────────────────────
@@ -280,7 +283,7 @@ async function runBatch({ triggeredBy = 'cron', onProgress = null } = {}) {
   if (cfg.enabled !== '1') return { skipped_reason: 'agent_disabled' };
 
   const batchSize = parseInt(cfg.batch_size || '10');
-  const fitMin = parseInt(cfg.fit_score_min || '7');
+  const fitMin = parseInt(cfg.fit_score_min || '3');
   const highFitMin = parseInt(cfg.high_fit_min || '9');
   const sectorBoosts = cfg.sector_boosts;
 
@@ -506,7 +509,7 @@ async function getAgentStatus() {
     draft_counts: draftCounts,
     config: {
       batch_size: parseInt(cfg.batch_size || '10'),
-      fit_score_min: parseInt(cfg.fit_score_min || '7'),
+      fit_score_min: parseInt(cfg.fit_score_min || '3'),
       high_fit_min: parseInt(cfg.high_fit_min || '9'),
       from_name: cfg.from_name || '',
       reply_poll_hours: parseInt(cfg.reply_poll_hours || '4'),

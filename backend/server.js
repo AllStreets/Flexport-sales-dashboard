@@ -31,7 +31,11 @@ const { getPortCongestion } = require('./services/portCongestionService');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 function getDb() {
-  return new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'flexport.db'));
+  const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'flexport.db'));
+  // Wait up to 5s for locks instead of throwing SQLITE_BUSY immediately
+  db.run('PRAGMA busy_timeout = 5000');
+  db.run('PRAGMA journal_mode = WAL');
+  return db;
 }
 const { lookupHSCode } = require('./services/usitcService');
 const agentRoutes = require('./routes/agentRoutes');
@@ -1230,10 +1234,11 @@ function loadVesselCacheFromDb() {
     db.close();
     if (err || !rows) return;
     const now = Date.now();
-    const cutoff = now - 30 * 60 * 1000; // discard entries older than 30 min
     for (const r of rows) {
-      if (r.ts && r.ts > cutoff && r.lat && r.lng) {
-        _vesselCache[r.mmsi] = { mmsi: r.mmsi, lat: r.lat, lng: r.lng, sog: r.sog, cog: r.cog, heading: r.heading, name: r.name, type: r.type, destination: r.destination, callsign: r.callsign, draught: r.draught, status: r.status, ts: r.ts };
+      if (r.lat && r.lng) {
+        // Stamp restored vessels with current time so they survive the 30-min
+        // periodic cleanup until fresh AIS data replaces them.
+        _vesselCache[r.mmsi] = { mmsi: r.mmsi, lat: r.lat, lng: r.lng, sog: r.sog, cog: r.cog, heading: r.heading, name: r.name, type: r.type, destination: r.destination, callsign: r.callsign, draught: r.draught, status: r.status, ts: now };
       }
     }
     const count = Object.keys(_vesselCache).length;
@@ -1242,15 +1247,25 @@ function loadVesselCacheFromDb() {
   });
 }
 
+let _persistRunning = false;
 function persistVesselCacheToDb() {
+  if (_persistRunning) return; // skip if previous batch still writing
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
   if (vessels.length === 0) return;
+  _persistRunning = true;
   const db = getDb();
-  const stmt = db.prepare(`INSERT OR REPLACE INTO vessel_cache (mmsi, lat, lng, sog, cog, heading, name, type, destination, callsign, draught, status, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  for (const v of vessels) {
-    stmt.run(String(v.mmsi), v.lat, v.lng, v.sog ?? null, v.cog ?? null, v.heading ?? null, v.name ?? null, v.type ?? null, v.destination ?? null, v.callsign ?? null, v.draught ?? null, v.status ?? null, v.ts ?? Date.now());
-  }
-  stmt.finalize(() => db.close());
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    const stmt = db.prepare(`INSERT OR REPLACE INTO vessel_cache (mmsi, lat, lng, sog, cog, heading, name, type, destination, callsign, draught, status, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    for (const v of vessels) {
+      stmt.run(String(v.mmsi), v.lat, v.lng, v.sog ?? null, v.cog ?? null, v.heading ?? null, v.name ?? null, v.type ?? null, v.destination ?? null, v.callsign ?? null, v.draught ?? null, v.status ?? null, v.ts ?? Date.now());
+    }
+    stmt.finalize();
+    db.run('COMMIT', () => {
+      db.close();
+      _persistRunning = false;
+    });
+  });
 }
 
 loadVesselCacheFromDb();
@@ -1259,8 +1274,33 @@ setInterval(persistVesselCacheToDb, 30 * 1000); // persist every 30s
 connectAisStream();
 require('./cron/agentCron');
 
+// Simple land-exclusion filter — rejects positions deep inland.
+// Allows coastal/port zones (within ~1.5° of major coastlines) and all ocean.
+// Uses a blocklist of inland bounding boxes rather than full coastline geometry.
+const LAND_BLOCKS = [
+  // Interior Africa (excludes coasts & major rivers/ports)
+  { latMin: -30, latMax: 15, lngMin: 10, lngMax: 40 },
+  { latMin: 5, latMax: 35, lngMin: -10, lngMax: 30 },
+  // Interior South America
+  { latMin: -25, latMax: 5, lngMin: -65, lngMax: -40 },
+  // Interior North America
+  { latMin: 30, latMax: 50, lngMin: -110, lngMax: -80 },
+  // Interior Australia
+  { latMin: -35, latMax: -20, lngMin: 125, lngMax: 148 },
+  // Interior Asia (Central)
+  { latMin: 30, latMax: 55, lngMin: 55, lngMax: 110 },
+  // Interior Russia/Siberia
+  { latMin: 55, latMax: 72, lngMin: 60, lngMax: 140 },
+];
+function isInland(lat, lng) {
+  for (const b of LAND_BLOCKS) {
+    if (lat >= b.latMin && lat <= b.latMax && lng >= b.lngMin && lng <= b.lngMax) return true;
+  }
+  return false;
+}
+
 app.get('/api/vessels', (req, res) => {
-  const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng);
+  const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng && !isInland(v.lat, v.lng));
   if (vessels.length >= 1 && req.query.mode !== 'sim') {
     return res.json({ source: 'live', vessels: vessels.slice(0, 1500) });
   }
@@ -1736,6 +1776,8 @@ cron.schedule('0 0 * * *', async () => {
     const sqlite3 = require('sqlite3').verbose();
     const dbPath = process.env.DB_PATH || require('path').join(__dirname, 'flexport.db');
     const db = new sqlite3.Database(dbPath);
+    db.run('PRAGMA busy_timeout = 5000');
+    db.run('PRAGMA journal_mode = WAL');
     await new Promise(r => db.run('DELETE FROM news_signals', r));
     db.close();
     const signals = await fetchAndScoreSignals();
