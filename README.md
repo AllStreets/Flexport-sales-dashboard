@@ -14,7 +14,7 @@
 
 ## What this is
 
-An SDR working freight forwarding has to triangulate across a dozen surfaces every morning: who to call, what their supply chain looks like, what just shifted in their lane, what the macro picture says, where the boats are stuck, what HS code their cargo falls under, whose container is sitting in a port congestion event. The information exists. It lives in seven tabs and three Bloomberg-style terminals you don't have a license for.
+An SDR working freight forwarding has to triangulate across a dozen surfaces every morning: who to call, what their supply chain looks like, what just shifted in their lane, what the macro picture says, where the boats are stuck, what HS code their cargo falls under, whose container is sitting in a port congestion event. The information exists. It lives across a CRM, a half-dozen browser tabs, and a Bloomberg terminal you don't have a license for.
 
 **Flexport SDR consolidates the surface.** A single dark-mode operator console pulls 250 ICP-scored prospects, a Kanban pipeline, FRED macro data, live AIS vessel positions, live ADS-B aircraft, NewsAPI trigger events, FX rates, USITC tariff tables, and an AI co-pilot for call prep, objection handling, and outreach sequencing. The globes are real — vessel positions stream over a WebSocket to AISstream, aircraft positions come from adsb.lol, port disruption rings flip color when NewsAPI signals raise them. The AI features run on GPT-5.4 (Agentic Outreach), GPT-4.1-mini (platform), and gpt-5.4-mini (verdicts and signal matching). The whole thing deploys on Vercel + Railway and works on a $5/month Railway box.
 
@@ -242,72 +242,67 @@ composite = icp_score + stage_bonus
 ## Project layout
 
 ```
-frontend/
-  src/
-    components/
-      GlobeView.jsx           Home page globe — shipping lanes, port rings, prospect arcs
-      VesselsGlobe.jsx        Ocean Freight globe — live AIS, great-circle route arcs
-      VGPanel.jsx             Ocean Freight right panel — fleet, event feed, container tracker
-      FlightsGlobe.jsx        Air Freight globe — live ADS-B / simulated planes, arc trails
-      FGPanel.jsx             Air Freight right panel
-      LandGlobe.jsx           Land Freight globe — truck sprites on 145 highway corridors
-      LGPanel.jsx             Land Freight right panel — carrier watch, hot corridors
-      LiveCallModal.jsx       Live call assistant — timer, talk track, objection AI, mic AI, notes
-      PipelineKanban.jsx      Drag-and-drop deal board (@dnd-kit)
-      QuickResearchModal.jsx  Instant prospect lookup overlay
-      EmailComposerModal.jsx  AI-drafted outreach with trigger context
-      OutreachSequenceModal.jsx  AI multi-touch outreach sequence builder
-      PortStatusBar.jsx       Sticky header — port ticker + global action buttons
-      Sidebar.jsx             Collapsible nav (Home / Air / Land / Ocean / Market /
-                              Trade / Pilot / CRM)
-      SignalFeed.jsx          Live supply chain signals with AI outreach match
-      SignalTicker.jsx        Scrolling signal ticker (hourly refresh)
-      TariffCalculator.jsx    Inline tariff widget on Home
-      AnalysisPanel.jsx       Inline AI analysis on Home
-      ICPBadge.jsx            Color-coded ICP score badge
-      ProspectSearch.jsx      Filters + AI natural-language search
-      SaveAnalysisButton.jsx  Persist an Account 360 analysis to /research
-      TradeDataCharts.jsx     Trade Intelligence charts
-    pages/
-      HomePage  FlightsPage  LandFreightPage  VesselsPage  TradePage
-      Account360Page  PerformancePage  MarketMapPage  TariffCalculatorPage
-      ResearchPage  PilotPage  SettingsPage
-    App.jsx                   Route layout, global modals, keyboard shortcuts
-    main.jsx
-  vercel.json                 SPA rewrite for client-side routing
-  vite.config.js              Dev server on :5174 (strictPort)
-
-backend/
-  services/
-    prospectsService.js       Prospect CRUD + sector aggregation
-    pipelineService.js        Pipeline stage management
-    performanceService.js     SDR activity tracking + KPIs
-    agentService.js           Agentic Outreach orchestration
-    emailGenerator.js         Email + sequence generation
-    gmailService.js           Gmail outbox draft creation
-    flexportAnalyzer.js       Account 360 streaming AI analysis
-    claudeSynthesizer.js      Sequence + objection generation (gpt-4-turbo)
-    fredService.js            FRED macro data fetching + cache
-    tradeIntelligenceService.js   Trade data aggregation
-    signalsService.js         NewsAPI signal scoring + urgency
-    portCongestionService.js  Dynamic port status from signals + baseline
-    dataAggregator.js         NewsAPI + Serper prospect enrichment
-    usitcService.js           HS code tariff lookup (USITC HTS bundled)
-    database.js               Saved analyses CRUD
-  routes/
-    agentRoutes.js            /api/pilot-* endpoints
-  data/
-    seedProspects.js          250-prospect seed (15 sectors)
-    companies.json            Static company metadata
-    industryInsights.json     Per-sector talking points
-  initDb.js                   Schema + idempotent migrations
-  server.js                   All other API routes + AISstream WebSocket client
-
-cron/                         Scheduled jobs (currently: agent inbox poll, daily brief)
-docs/                         Architectural notes
-DEPLOYMENT.md                 Vercel (frontend) + Railway (backend) deploy guide
-README.md
+flexport-sales-dashboard/
+├── frontend/                React 19 + Vite 7 SPA          → Vercel
+│   ├── src/
+│   │   ├── components/      Globes, panels, modals, nav
+│   │   ├── pages/           One component per route (12)
+│   │   ├── App.jsx          Layout, global modals, shortcuts
+│   │   └── main.jsx
+│   ├── vercel.json          SPA rewrite for client-side routing
+│   └── vite.config.js       Dev server pinned to :5174
+│
+├── backend/                 Express 5 API + SQLite         → Railway
+│   ├── services/            Domain logic (15 services)
+│   ├── routes/              /api/pilot-* endpoints
+│   ├── data/                Seed data + static catalogs
+│   ├── initDb.js            Schema + idempotent migrations
+│   └── server.js            All other routes + AISstream WS client
+│
+├── cron/                    Scheduled jobs (inbox poll, daily brief)
+├── docs/                    Architectural notes
+├── DEPLOYMENT.md            Vercel + Railway deploy guide
+├── LICENSE                  MIT
+└── README.md
 ```
+
+### Frontend — components
+
+| Group | Files | Purpose |
+|---|---|---|
+| **Globes** | `GlobeView`, `VesselsGlobe`, `FlightsGlobe`, `LandGlobe` | Home / Ocean / Air / Land 3D scenes |
+| **Right panels** | `VGPanel`, `FGPanel`, `LGPanel` | Fleet · event feed · trackers per globe |
+| **Modals** | `LiveCallModal`, `QuickResearchModal`, `EmailComposerModal`, `OutreachSequenceModal` | Call assistant, prospect lookup, AI outreach |
+| **Pipeline** | `PipelineKanban` | Drag-and-drop deal board (`@dnd-kit`) |
+| **Signals** | `SignalFeed`, `SignalTicker` | Live supply chain signals + AI outreach matching |
+| **Chrome** | `PortStatusBar`, `Sidebar` | Sticky header ticker, collapsible nav |
+| **Inline widgets** | `TariffCalculator`, `AnalysisPanel`, `TradeDataCharts` | Home tariff widget, inline AI, Trade charts |
+| **Primitives** | `ICPBadge`, `ProspectSearch`, `SaveAnalysisButton` | Score chip, NL search, analysis persister |
+
+Pages (one file each, `src/pages/`):
+`HomePage`, `FlightsPage`, `LandFreightPage`, `VesselsPage`, `TradePage`, `Account360Page`, `PerformancePage`, `MarketMapPage`, `TariffCalculatorPage`, `ResearchPage`, `PilotPage`, `SettingsPage`.
+
+### Backend — services
+
+| Domain | Service | Purpose |
+|---|---|---|
+| **CRM** | `prospectsService` | Prospect CRUD + sector aggregation |
+| | `pipelineService` | Pipeline stage management |
+| | `performanceService` | SDR activity tracking + KPIs |
+| | `database` | Saved analyses CRUD |
+| **AI** | `agentService` | Agentic Outreach orchestration |
+| | `flexportAnalyzer` | Account 360 streaming analysis |
+| | `claudeSynthesizer` | Sequence + objection generation |
+| | `emailGenerator` | Email + sequence generation |
+| | `gmailService` | Gmail outbox draft creation |
+| **Market data** | `fredService` | FRED macro data + cache |
+| | `tradeIntelligenceService` | FBX / SCFI / WCI / Drewry aggregation |
+| | `signalsService` | NewsAPI signal scoring + urgency |
+| | `portCongestionService` | Dynamic port status from signals + baseline |
+| | `dataAggregator` | NewsAPI + Serper prospect enrichment |
+| | `usitcService` | HS code tariff lookup (USITC HTS bundled) |
+
+Live-stream clients (vessel WS, ADS-B fetcher, vessel cache persistence, signal scheduler) live directly in `server.js`. Data seeds live in `data/` — `seedProspects.js` (250 prospects · 15 sectors), `companies.json`, `industryInsights.json`.
 
 ---
 
