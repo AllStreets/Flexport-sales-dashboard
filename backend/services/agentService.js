@@ -11,8 +11,7 @@ const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 function getDb() {
   const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '..', 'flexport.db'));
-  db.run('PRAGMA busy_timeout = 5000');
-  db.run('PRAGMA journal_mode = WAL');
+  db.configure('busyTimeout', 5000);
   return db;
 }
 

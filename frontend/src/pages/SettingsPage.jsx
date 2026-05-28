@@ -510,7 +510,7 @@ function IntegrationsSection({ health, onTestHealth, healthLoading }) {
           { label: 'Serper',                key: 'serper',       icon: RiCodeLine,     desc: 'Company research enrichment'         },
           { label: 'AISstream',             key: 'aisstream',    icon: RiGlobalLine,   desc: 'Live vessel positions (Ocean Freight)'},
           { label: 'Terminal49',            key: 'terminal49',   icon: RiServerLine,   desc: 'Container tracking'                  },
-          { label: 'OpenSky (OAuth)',        key: 'opensky',      icon: RiPlugLine,     desc: 'Live cargo flight positions (Air Freight)'},
+          { label: 'adsb.lol',              key: 'adsbLol',      icon: RiPlugLine,     desc: 'Live cargo flight positions (Air Freight) — no API key required'},
         ].map(({ label, key, icon: Icon, desc }) => (
           <SettingRow key={key} label={label} description={desc} icon={Icon}>
             {envStatus(key) || <span className="health-label muted">Run health check</span>}
@@ -748,7 +748,7 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
           { key: 'Frontend',       val: 'React 19 + Vite 7'             },
           { key: 'Backend',        val: 'Express 5 + SQLite 3'          },
           { key: 'AI Engine',      val: 'OpenAI GPT-5.4 · GPT-5.4-mini · GPT-4.1-mini' },
-          { key: 'Data Sources',   val: 'NewsAPI · FRED · AISstream · OpenSky · ExchangeRate · Serper · Terminal49' },
+          { key: 'Data Sources',   val: 'NewsAPI · FRED · AISstream · adsb.lol · ExchangeRate · Serper · Terminal49' },
           { key: 'Design System',  val: '#060b18 · #00d4ff · Space Grotesk + JetBrains Mono' },
         ].map(({ key, val }) => (
           <div key={key} className="about-kv-row">
@@ -762,8 +762,8 @@ function AboutSection({ health, onTestHealth, healthLoading }) {
         {[
           { page: 'Home',           path: '/',             desc: 'Globe + prospect intelligence + supply chain signals + today\'s playbook' },
           { page: 'Ocean Freight',  path: '/vessels',      desc: 'Live vessel tracking globe with AISstream, port congestion overlays' },
-          { page: 'Air Freight',    path: '/flights',      desc: 'Live cargo flight positions via OpenSky OAuth, route arcs' },
-          { page: 'Land Freight',   path: '/land',         desc: '340 simulated trucks on 85 global highway corridors' },
+          { page: 'Air Freight',    path: '/flights',      desc: 'Live cargo flight positions via adsb.lol (500+ global cargo flights), route arcs' },
+          { page: 'Land Freight',   path: '/land',         desc: 'Simulated trucks on 145 global highway corridors' },
           { page: 'Trade Data',     path: '/trade',        desc: 'Bloomberg-style terminal — FRED macro data, FX rates, trigger events' },
           { page: 'Market Map',     path: '/market',       desc: '250-prospect radial node graph across 15 sectors — TAM, freight avg, live ICP signals' },
           { page: 'Account 360',    path: '/account/:id',  desc: 'Full prospect profile — supply chain diagram, AI analysis, MAP, objection handler' },

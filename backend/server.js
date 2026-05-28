@@ -31,12 +31,17 @@ const { getPortCongestion } = require('./services/portCongestionService');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 function getDb() {
-  const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'flexport.db'));
-  // Wait up to 5s for locks instead of throwing SQLITE_BUSY immediately
-  db.run('PRAGMA busy_timeout = 5000');
-  db.run('PRAGMA journal_mode = WAL');
+  const dbPath = process.env.DB_PATH || path.join(__dirname, 'flexport.db');
+  const db = new sqlite3.Database(dbPath);
+  db.configure('busyTimeout', 5000);
   return db;
 }
+
+// Enable WAL mode once at startup (persists across connections)
+(function enableWal() {
+  const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'flexport.db'));
+  db.run('PRAGMA journal_mode = WAL', () => db.close());
+})();
 const { lookupHSCode } = require('./services/usitcService');
 const agentRoutes = require('./routes/agentRoutes');
 
@@ -1128,6 +1133,8 @@ app.get('/api/rate-history', (req, res) => {
 
 // ── Settings Health ────────────────────────────────
 app.get('/api/settings/health', (req, res) => {
+  const wsState = _aisWs?.readyState;
+  const wsStateName = wsState === 0 ? 'connecting' : wsState === 1 ? 'open' : wsState === 2 ? 'closing' : wsState === 3 ? 'closed' : 'null';
   res.json({
     status: 'ok',
     version: '2.1.0',
@@ -1142,6 +1149,11 @@ app.get('/api/settings/health', (req, res) => {
       terminal49:   !!process.env.TERMINAL49_API_KEY,
       adsbLol:      true, // no auth required
     },
+    ais: {
+      ws: wsStateName,
+      cacheSize: Object.keys(_vesselCache).length,
+      lastMsgAgoSec: _aisLastMsgTs ? Math.round((Date.now() - _aisLastMsgTs) / 1000) : null,
+    },
   });
 });
 
@@ -1150,41 +1162,103 @@ app.get('/api/settings/health', (req, res) => {
 let _vesselCache = {};
 let _aisWs = null;
 let _aisReconnectDelay = 10000; // exponential backoff, resets to 10s on successful open
+let _aisLastMsgTs = 0;          // updated every inbound msg; powers watchdog + live-stale badge
+let _aisPongOk = true;          // false between ping and pong; reconnect if still false at next tick
+let _aisHeartbeatTimer = null;
+let _aisWatchdogTimer = null;
+let _aisConnectTimer = null;
 
-// Periodic cache maintenance — NOT per-message. Running cleanup on every WebSocket
-// message is O(n_cache) and at global AIS feed rates (1000s msg/min) it saturates
-// the Node.js event loop, making all HTTP endpoints unresponsive.
+const AIS_PING_INTERVAL_MS = 30_000;  // also implicit pong-timeout window
+const AIS_MSG_STALE_MS = 90_000;      // force reconnect if no msg this long
+const AIS_LIVE_FRESH_MS = 5 * 60_000; // > this old → 'live-stale' badge
+const AIS_CONNECT_TIMEOUT_MS = 30_000; // kill sockets stuck in CONNECTING this long
+const AIS_OUTAGE_MS = 10 * 60_000;     // skip stale-purge if last msg older than this
+
+function _stopAisTimers() {
+  if (_aisHeartbeatTimer) { clearInterval(_aisHeartbeatTimer); _aisHeartbeatTimer = null; }
+  if (_aisWatchdogTimer) { clearInterval(_aisWatchdogTimer); _aisWatchdogTimer = null; }
+  if (_aisConnectTimer) { clearTimeout(_aisConnectTimer); _aisConnectTimer = null; }
+}
+
+function _forceAisReconnect(reason) {
+  console.warn(`[ais] forcing reconnect: ${reason}`);
+  _stopAisTimers();
+  try { _aisWs?.terminate?.(); } catch {}
+  _aisWs = null;
+  setTimeout(connectAisStream, 1000);
+}
+
+// Periodic cache maintenance — purge stale entries, cap memory usage.
 setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
-  for (const k of Object.keys(_vesselCache)) {
-    if (!_vesselCache[k]?.ts || _vesselCache[k].ts < cutoff) delete _vesselCache[k];
+  // Skip the stale-purge entirely during an AIS outage. Otherwise a stuck WS would
+  // let the 6h sweep wipe the DB-restored fleet, dropping the route to simulated.
+  const aisDown = !_aisLastMsgTs || (Date.now() - _aisLastMsgTs) > AIS_OUTAGE_MS;
+  if (!aisDown) {
+    const cutoff = Date.now() - 6 * 60 * 60 * 1000;
+    for (const k of Object.keys(_vesselCache)) {
+      if (!_vesselCache[k]?.ts || _vesselCache[k].ts < cutoff) delete _vesselCache[k];
+    }
   }
-  // Cap at 2000 vessels
   const keys = Object.keys(_vesselCache);
-  if (keys.length > 2000) {
+  if (keys.length > 25000) {
     keys.sort((a, b) => (_vesselCache[a]?.ts || 0) - (_vesselCache[b]?.ts || 0));
-    keys.slice(0, keys.length - 2000).forEach(k => delete _vesselCache[k]);
+    keys.slice(0, keys.length - 25000).forEach(k => delete _vesselCache[k]);
   }
-}, 5 * 60 * 1000); // every 5 minutes
+}, 10 * 60 * 1000); // every 10 minutes
 
 function connectAisStream() {
   const key = process.env.AISSTREAM_API_KEY;
   if (!key) return;
-  if (_aisWs && (_aisWs.readyState === WebSocket.OPEN || _aisWs.readyState === WebSocket.CONNECTING)) return;
+  if (_aisWs && _aisWs.readyState === WebSocket.OPEN) return;
+  if (_aisWs && _aisWs.readyState === WebSocket.CONNECTING && _aisConnectTimer) return;
 
   _aisWs = new WebSocket('wss://stream.aisstream.io/v0/stream');
+  _aisPongOk = true;
+
+  // Connect-timeout: if the TLS/WS handshake never completes, the socket can sit
+  // in CONNECTING forever — no 'open', no 'error', no 'close' — and the heartbeat
+  // and message watchdogs (which only arm on 'open') never fire. Force a reconnect.
+  if (_aisConnectTimer) clearTimeout(_aisConnectTimer);
+  _aisConnectTimer = setTimeout(() => {
+    _aisConnectTimer = null;
+    if (_aisWs && _aisWs.readyState !== WebSocket.OPEN) {
+      _forceAisReconnect('connect timeout (stuck CONNECTING)');
+    }
+  }, AIS_CONNECT_TIMEOUT_MS);
 
   _aisWs.on('open', () => {
+    if (_aisConnectTimer) { clearTimeout(_aisConnectTimer); _aisConnectTimer = null; }
     _aisReconnectDelay = 10000; // reset backoff on success
+    _aisLastMsgTs = Date.now();
     console.log('aisstream connected');
     _aisWs.send(JSON.stringify({
       APIKey: key,
       BoundingBoxes: [[[-90, -180], [90, 180]]],
       FilterMessageTypes: ['PositionReport', 'ShipStaticData'],
     }));
+
+    // Heartbeat: send WS ping every 30s. If pong from previous ping never came,
+    // the TCP connection is a zombie — force reconnect. Catches silent NAT/firewall drops.
+    _stopAisTimers();
+    _aisHeartbeatTimer = setInterval(() => {
+      if (!_aisWs || _aisWs.readyState !== WebSocket.OPEN) return;
+      if (!_aisPongOk) { _forceAisReconnect('pong timeout'); return; }
+      _aisPongOk = false;
+      try { _aisWs.ping(); } catch (e) { _forceAisReconnect('ping failed: ' + e.message); }
+    }, AIS_PING_INTERVAL_MS);
+
+    // Message-flow watchdog: pong can succeed while data flow stalls. If no message
+    // for 90s, reconnect anyway. Real AIS feed is ~100+ msg/sec globally.
+    _aisWatchdogTimer = setInterval(() => {
+      const age = Date.now() - _aisLastMsgTs;
+      if (age > AIS_MSG_STALE_MS) _forceAisReconnect(`no msg for ${Math.round(age / 1000)}s`);
+    }, 15_000);
   });
 
+  _aisWs.on('pong', () => { _aisPongOk = true; });
+
   _aisWs.on('message', (raw) => {
+    _aisLastMsgTs = Date.now();
     try {
       const msg = JSON.parse(raw);
       const pos = msg.Message?.PositionReport;
@@ -1207,11 +1281,11 @@ function connectAisStream() {
           callsign: stat.CallSign?.trim(),
         };
       }
-      // (cache cleanup moved to 5-min setInterval — not per-message)
     } catch {}
   });
 
   _aisWs.on('close', () => {
+    _stopAisTimers();
     _aisReconnectDelay = Math.min(_aisReconnectDelay * 2, 120000); // backoff up to 2 min
     console.log(`aisstream disconnected — reconnecting in ${Math.round(_aisReconnectDelay / 1000)}s`);
     setTimeout(connectAisStream, _aisReconnectDelay);
@@ -1269,7 +1343,15 @@ function persistVesselCacheToDb() {
 }
 
 loadVesselCacheFromDb();
-setInterval(persistVesselCacheToDb, 30 * 1000); // persist every 30s
+setInterval(persistVesselCacheToDb, 5 * 60 * 1000); // persist every 5 minutes
+
+// Save vessel cache on shutdown (Railway sends SIGTERM before restart)
+process.on('SIGTERM', () => {
+  console.log('[vessels] SIGTERM — persisting cache before exit');
+  _persistRunning = false; // force allow
+  persistVesselCacheToDb();
+  setTimeout(() => process.exit(0), 3000); // give DB 3s to flush
+});
 
 connectAisStream();
 require('./cron/agentCron');
@@ -1300,9 +1382,16 @@ function isInland(lat, lng) {
 }
 
 app.get('/api/vessels', (req, res) => {
+  const forceSim = req.query.mode === 'sim';
   const vessels = Object.values(_vesselCache).filter(v => v.lat && v.lng && !isInland(v.lat, v.lng));
-  if (vessels.length >= 1 && req.query.mode !== 'sim') {
-    return res.json({ source: 'live', vessels: vessels.slice(0, 1500) });
+  if (vessels.length >= 1 && !forceSim) {
+    const wsOpen = _aisWs?.readyState === WebSocket.OPEN;
+    const age = Date.now() - _aisLastMsgTs;
+    let source;
+    if (!wsOpen) source = 'ais-down';
+    else if (_aisLastMsgTs > 0 && age < AIS_LIVE_FRESH_MS) source = 'live';
+    else source = 'live-stale';
+    return res.json({ source, vessels: vessels.slice(0, 2500) });
   }
   // Great-circle interpolation
   function greatCirclePoint(lat1d, lng1d, lat2d, lng2d, t) {
@@ -1776,8 +1865,7 @@ cron.schedule('0 0 * * *', async () => {
     const sqlite3 = require('sqlite3').verbose();
     const dbPath = process.env.DB_PATH || require('path').join(__dirname, 'flexport.db');
     const db = new sqlite3.Database(dbPath);
-    db.run('PRAGMA busy_timeout = 5000');
-    db.run('PRAGMA journal_mode = WAL');
+    db.configure('busyTimeout', 5000);
     await new Promise(r => db.run('DELETE FROM news_signals', r));
     db.close();
     const signals = await fetchAndScoreSignals();

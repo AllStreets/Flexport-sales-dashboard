@@ -108,7 +108,7 @@ export default function VesselsPage() {
         <span className="vg-header-title">OCEAN FREIGHT</span>
         {source && (
           <button className={`vg-source-badge ${source}`} onClick={toggleMode} title={forcedSim ? 'Switch to live data' : 'Switch to simulated data'}>
-            <RiWifiLine size={9} /> {source === 'live' ? 'LIVE AIS' : 'SIMULATED'}
+            <RiWifiLine size={9} /> {source === 'live' ? 'LIVE AIS' : source === 'live-stale' ? 'LIVE (CACHED)' : source === 'ais-down' ? 'AIS DOWN' : 'SIMULATED'}
           </button>
         )}
         <span className="vg-vessel-count">{vessels.length} vessels tracked</span>
