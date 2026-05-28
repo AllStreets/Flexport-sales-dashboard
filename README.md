@@ -51,8 +51,8 @@ The product is the consolidation. The globes are how you see it move.
 |                      FLEXPORT SDR FRONTEND                      |
 |                                                                 |
 |   Home  Air  Land  Ocean  Market  Trade  Pilot  CRM  Settings   |
-|     |    |    |     |       |      |      |     |       |      |
-|     +----+----+-----+-------+------+------+-----+-------+      |
+|     |    |     |      |       |      |      |     |       |     |
+|     +----+-----+------+-------+------+------+-----+-------+     |
 |                                |                                |
 |                  React 19 + Vite 7 + Router v7                  |
 |         (Three.js / react-globe.gl  ·  @dnd-kit  ·  Recharts)   |
@@ -77,12 +77,12 @@ The product is the consolidation. The globes are how you see it move.
 |              +----------+      +----+-----+                     |
 |                                     |                           |
 |   +---------------------------------+--------------------+      |
-|   |              Live data adapters (graceful fallback)  |      |
-|   +-----+-------+--------+--------+--------+--------+---+      |
-|         |       |        |        |        |        |          |
-|     AISstream  ADS-B   NewsAPI   FRED   Serper  Terminal49     |
-|       (WS)    (adsb     (RSS    (macro) (web    (container     |
-|               .lol)    signals)         enrich)  tracking)     |
+|   |     Live data adapters (graceful fallback)           |      |
+|   +-----+------+--------+-------+--------+----------+----+      |
+|         |      |        |       |        |          |           |
+|     AISstream  ADS-B   NewsAPI  FRED    Serper   Terminal49     |
+|       (WS)    (adsb     (RSS   (macro)  (web    (container      |
+|               .lol)    signals)         enrich)   tracking)     |
 +=================================================================+
 ```
 
