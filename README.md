@@ -1,256 +1,354 @@
-# Flexport SDR Intelligence Hub
+<p align="center">
+  <img src="https://img.shields.io/badge/Flexport_SDR-v2.1.0-00D4FF?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white" alt="React"/>&nbsp;<img src="https://img.shields.io/badge/Vite-7-646cff?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"/>&nbsp;<img src="https://img.shields.io/badge/Express-5-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express"/>&nbsp;<img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite"/>&nbsp;<img src="https://img.shields.io/badge/OpenAI-GPT--5.4-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/>&nbsp;<img src="https://img.shields.io/badge/License-ISC-22C55E?style=for-the-badge" alt="License"/>
+</p>
 
-A full-stack sales intelligence platform built for Flexport SDRs. Combines live prospect data, AI-generated insights, global trade intelligence, live AIS vessel tracking, port disruption monitoring, tariff analysis, pipeline management, and live call assistance into a single dark-mode terminal interface.
+<p align="center">
+  <a href="https://github.com/AllStreets/Flexport-sales-dashboard">
+    <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=64&duration=1&pause=99999&color=00D4FF&center=true&vCenter=true&width=900&height=100&lines=F+L+E+X+P+O+R+T++S+D+R" alt="FLEXPORT SDR"/>
+  </a>
+</p>
+<p align="center"><strong>Sales Intelligence Hub for Freight Forwarding</strong></p>
+<p align="center"><em>One terminal for prospects, pipeline, live vessel and aircraft telemetry, macro data, port congestion, tariffs, and call assistance.</em></p>
 
-![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=white) ![Express](https://img.shields.io/badge/Express-5-black?logo=express) ![SQLite](https://img.shields.io/badge/SQLite-3-003b57?logo=sqlite) ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--5.4-412991?logo=openai)
+---
+
+## What this is
+
+An SDR working freight forwarding has to triangulate across a dozen surfaces every morning: who to call, what their supply chain looks like, what just shifted in their lane, what the macro picture says, where the boats are stuck, what HS code their cargo falls under, whose container is sitting in a port congestion event. The information exists. It lives in seven tabs and three Bloomberg-style terminals you don't have a license for.
+
+**Flexport SDR consolidates the surface.** A single dark-mode operator console pulls 250 ICP-scored prospects, a Kanban pipeline, FRED macro data, live AIS vessel positions, live ADS-B aircraft, NewsAPI trigger events, FX rates, USITC tariff tables, and an AI co-pilot for call prep, objection handling, and outreach sequencing. The globes are real — vessel positions stream over a WebSocket to AISstream, aircraft positions come from adsb.lol, port disruption rings flip color when NewsAPI signals raise them. The AI features run on GPT-5.4 (Agentic Outreach), GPT-4.1-mini (platform), and gpt-5.4-mini (verdicts and signal matching). The whole thing deploys on Vercel + Railway and works on a $5/month Railway box.
+
+The product is the consolidation. The globes are how you see it move.
+
+### At a glance
+
+| Surface | Count |
+|---|---|
+| Prospect database (15 sectors, ICP-scored) | **250** |
+| Pipeline stages (New → Researched → Called → Demo → Won/Lost) | **6** |
+| Backend API endpoints | **59** |
+| Live AIS vessels (with AISstream key) | up to **2,500** |
+| Simulated vessels on great-circle routes (Ocean Freight) | **250** on **62** lanes |
+| Live ADS-B cargo aircraft (with adsb.lol fallback to sim) | up to **500+** |
+| Simulated aircraft on cargo + passenger routes (Air Freight) | **~200** on **67** routes |
+| Simulated trucks on highway corridors (Land Freight) | **~520** on **145** corridors |
+| FRED macro series (trade balance, imports, capital goods, fuel) | live |
+| FX pairs with 1-day % change | **16** |
+| Container tracking carriers via Terminal49 | **35+** |
+| Trade route spot rates (FBX / SCFI / WCI / Drewry) | **20** |
+| Frontend routes | **12** |
+
+---
+
+## Architecture
+
+```
+                          +-----------+
+                          |    SDR    |
+                          +-----+-----+
+                                |
++===============================|=================================+
+|                      FLEXPORT SDR FRONTEND                      |
+|                                                                 |
+|   Home  Air  Land  Ocean  Market  Trade  Pilot  CRM  Settings   |
+|     |    |    |     |       |      |      |     |       |      |
+|     +----+----+-----+-------+------+------+-----+-------+      |
+|                                |                                |
+|                  React 19 + Vite 7 + Router v7                  |
+|         (Three.js / react-globe.gl  ·  @dnd-kit  ·  Recharts)   |
++================================|================================+
+                                 |  HTTP + SSE (pilot stream)
+                                 v
++================================|================================+
+|                       EXPRESS 5 BACKEND                         |
+|                                                                 |
+|   +-------------+   +-------------+   +-------------+           |
+|   |  Prospects  |   |  Pipeline   |   | Performance |           |
+|   |  Service    |   |  Service    |   |  Service    |           |
+|   +------+------+   +------+------+   +------+------+           |
+|          |                 |                 |                  |
+|          +--------+--------+--------+--------+                  |
+|                   |                 |                           |
+|              +----+-----+      +----+-----+                     |
+|              |  SQLite  |      | OpenAI   |                     |
+|              | flexport |      | router   |                     |
+|              |   .db    |      | (5.4 /   |                     |
+|              | (WAL OFF)|      |  4.1mini)|                     |
+|              +----------+      +----+-----+                     |
+|                                     |                           |
+|   +---------------------------------+--------------------+      |
+|   |              Live data adapters (graceful fallback)  |      |
+|   +-----+-------+--------+--------+--------+--------+---+      |
+|         |       |        |        |        |        |          |
+|     AISstream  ADS-B   NewsAPI   FRED   Serper  Terminal49     |
+|       (WS)    (adsb     (RSS    (macro) (web    (container     |
+|               .lol)    signals)         enrich)  tracking)     |
++=================================================================+
+```
+
+Two services, deployed independently. Frontend on Vercel, backend on Railway. SQLite database (`flexport.db`) is seeded on every cold start — Railway redeploys do not break the catalog, they regenerate it.
 
 ---
 
 ## Pages
 
-| Route | Page | Description |
+| Route | Page | What's on it |
 |---|---|---|
-| `/` | Home | Interactive 3D globe with live shipping lanes and port disruption rings, signal ticker, Today's Playbook (priority follow-up list), Hot Prospects panel, Signal Feed with AI outreach matching |
-| `/flights` | Air Freight | Live ADS-B globe — real aircraft via OpenSky Network OAuth2 (falls back to 200+ simulated planes on 40 global routes). Animated plane sprites with rose/violet coloring, great-circle arc trails, per-plane random cycle speeds (45–240s). Dark atmosphere, night texture. Right panel: Fleet Overview, departure/destination feed, route stats. |
-| `/land` | Land Freight | Simulated land freight globe — 340 trucks on 85 global highway corridors. Truck sprites (side-profile canvas, silver for regular / orange for tank) with Y-flip for westward heading so wheels are always viewer-facing. Right panel: Fleet Overview, Carrier Watch, Hot Corridors, Live Event Feed. |
-| `/vessels` | Ocean Freight | Live AIS vessel tracking globe — 200 real vessels (AISstream) or 250 simulated vessels on 62 great-circle trade routes. Animated route arcs, vessel type coloring (Container/Tanker/Bulk), port disruption rings. Right panel: Fleet Overview, live event feed, container tracker (Terminal49), vessel detail. Live/simulated badge. |
-| `/trade` | Trade Intelligence Terminal | Bloomberg-style macro terminal — FRED live data, 20-route container spot rates, port congestion table, live FX rates, tariff tables, route optimizer, §301 actions, trade policy calendar, earnings trigger event monitor |
-| `/account/:id` | Account 360 | Full prospect deep-dive — animated supply chain diagram with correct US port routing, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan modal, call intelligence parser (always visible; auto-populates from Live Call notes) |
-| `/performance` | SDR Performance | 365-day activity heatmap, quota attainment rings (calls, emails, demos, LinkedIn, pipeline), activity funnel, win/loss chart and logger, follow-up radar, pipeline velocity, recent activity feed |
-| `/market` | Market Map | Zoomable radial SVG node graph of 250 prospects across 15 sectors (apparel, beauty, electronics, CPG, outdoor, accessories, home-goods, furniture, health, footwear, activewear, jewelry, home-textiles, pet, baby) with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations, signal timeline per company |
-| `/pilot` | Agentic Outreach | Pilot module — live freight market briefings (gpt-5.4, pulls FBX/SCFI/WCI/Drewry), prospect dossier builder with freight fit scoring, 3-touch outreach sequence, LinkedIn note, cold call opener, customer update drafts, SDR playbook hooks. History persists in localStorage. |
-| `/tariff` | Tariff Calculator | Landed cost modeling — origin country, product HS code, cargo value, weight, Ocean FCL vs Air mode; §301 + reciprocal tariff breakdown, SDR angle generator, HS code lookup |
-| `/performance` | Sales CRM | SDR KPIs, activity heatmap, quota ring, pipeline funnel, win/loss chart |
-| `/settings` | Settings | Profile, quota targets, notifications, Live Call, appearance, AI model selection (incl. gpt-5.4 free tier), API key status, data export, keyboard shortcuts, platform pages reference, server health |
+| `/` | **Home** | Interactive 3D globe with shipping lanes and port disruption rings (color-flips from signal feed), prospect arcs, signal ticker, Today's Playbook (priority follow-ups), Hot Prospects panel, Signal Feed with AI outreach matching, inline tariff widget |
+| `/flights` | **Air Freight** | Live ADS-B globe — animated aircraft sprites with great-circle arc trails, dark atmosphere, night texture. Right panel: fleet overview, departure/destination feed, route stats. `?mode=sim` forces simulated. |
+| `/land` | **Land Freight** | 145 global highway corridors with side-profile truck sprites (silver / orange-for-tank). Y-flip on westward heading so wheels face the viewer. Right panel: fleet overview, carrier watch, hot corridors, live event feed. |
+| `/vessels` | **Ocean Freight** | Live AIS globe — animated route arcs, vessel-type coloring (Container / Tanker / Bulk), port disruption rings. Right panel: fleet overview, live event feed, container tracker (Terminal49), vessel detail. Header badge: `LIVE AIS` / `LIVE (CACHED)` / `AIS DOWN` / `SIMULATED`. |
+| `/trade` | **Trade Intelligence** | Bloomberg-style macro terminal — FRED live tiles, 20-route container spot rates, port congestion table, live FX rates with 1-day delta, USITC tariff tables, route optimizer, §301 actions, trade policy calendar, earnings trigger monitor. |
+| `/account/:id` | **Account 360** | Full prospect deep-dive — animated supply chain diagram with US port routing, streaming AI analysis, signal timeline, decision makers, call prep sheet, objection handler, outreach sequence builder, mutual action plan, call intelligence parser (auto-populates from Live Call notes). |
+| `/market` | **Market Map** | Zoomable radial SVG graph of 250 prospects across 15 sectors with live pipeline stage colors, sector intelligence panel, TAM estimates, Flexport product recommendations, signal timeline per company. |
+| `/research` | **Research** | Saved AI analyses — list view, search, favorites, delete. Persists every Account 360 analysis run. |
+| `/pilot` | **Agentic Outreach** | Pilot module — daily market briefings (gpt-5.4 over FBX/SCFI/WCI/Drewry), prospect dossier builder with freight-fit scoring, 3-touch outreach sequence (email + LinkedIn + cold call opener), customer-update drafts, SDR playbook hooks. History persists in `localStorage`. |
+| `/tariff` | **Tariff Calculator** | Landed-cost modeling — origin country, HS code lookup, cargo value, weight, Ocean FCL vs Air mode. §301 + reciprocal tariff breakdown, SDR angle generator. |
+| `/performance` | **Sales CRM** | 365-day activity heatmap, quota rings (calls / emails / demos / LinkedIn / pipeline), activity funnel, win-loss chart and logger, follow-up radar, pipeline velocity, recent activity feed. |
+| `/settings` | **Settings** | Profile, quota targets, notifications, Live Call config, appearance (user-configurable accent color), AI model picker, API key status, data export, keyboard shortcuts, server health (pings backend `/api/settings/health`). |
 
 ---
 
-## Global Modals & Keyboard Shortcuts
+## Data sources
 
-| Shortcut | Feature | Description |
+Every live source falls back to static data when the API key is missing. The app is fully functional with only `OPENAI_API_KEY` set — every other key upgrades a surface.
+
+| Source | Surface | Without key | With key |
+|---|---|---|---|
+| **AISstream** (WebSocket) | Ocean Freight globe | 250 simulated vessels on 62 lanes (`source: simulated`) | Up to 2,500 live AIS positions; DB cache restores on reboot; `LIVE AIS` / `LIVE (CACHED)` / `AIS DOWN` badge reflects WS state |
+| **adsb.lol** (multi-type query) | Air Freight globe | ~200 simulated planes on 67 routes | Live cargo aircraft positions with multi-type fallback |
+| **OpenAI** GPT-5.4 / 4.1-mini / 5.4-mini | All AI features | App boots; AI features 500 | Account analysis, call prep, objection handler, signal-prospect matcher, outreach sequence, call-intelligence parser, mic listener prediction, mutual action plan, market briefings |
+| **FRED** | Trade Intelligence tiles | Cached values, `—` if stale | Live trade balance, imports, capital goods, diesel, Brent |
+| **NewsAPI** | Signal feed, trigger events, port congestion | Static signal set | Hourly signal refresh; port rings flip on real-time disruption news |
+| **Serper** | Prospect web enrichment | Static company data | Live web search on prospect lookups |
+| **exchangerate-api.com + frankfurter.app** | FX Rates panel | Static values, `REF` badge | Live rates + 1-day % change for 16 pairs |
+| **Terminal49** | Container Tracker (Ocean Freight) | 503 on tracker submit | Live container/B-L tracking across 35+ carriers |
+| **USITC HTS** (local) | Tariff Calculator | Bundled HS code table | (same — no key required) |
+
+---
+
+## Tech stack
+
+**Frontend** — React 19 · Vite 7 · React Router v7 · Recharts · Three.js / react-globe.gl · @dnd-kit (Kanban) · react-icons/ri
+
+**Backend** — Express 5 · SQLite 3 (busy-timeout configured; no WAL — ephemeral on Railway) · `ws` (AISstream client) · axios · OpenAI SDK
+
+**AI models** —
+- `gpt-5.4` — Agentic Outreach (market briefings, prospect dossiers, customer updates) via SSE
+- `gpt-4.1-mini` — Account analysis, call prep, objection handler, sequence generator, signal matching
+- `gpt-5.4-mini` — Lightweight tasks: semantic search, signal scoring
+
+**Live data feeds** — AISstream WebSocket · adsb.lol REST · FRED REST · NewsAPI REST · Serper REST · exchangerate-api.com + frankfurter.app · Terminal49 REST
+
+---
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Shift+L` | Live Call — prospect search, call timer, talk track, real-time objection AI, notes that auto-populate Account 360 call intelligence |
+| `Ctrl+Shift+P` | Pipeline Kanban — drag-and-drop deal board across 6 stages with inline deal value |
+| `Ctrl+Shift+Q` | Quick Research — instant prospect lookup overlay |
+| `Ctrl+Shift+E` | Email Composer — AI-drafted outreach with trigger context |
+| `Ctrl+/` | Toggle sidebar |
+| `Escape` | Close topmost modal |
+
+---
+
+## API surface
+
+59 endpoints across the backend. Grouped:
+
+| Group | Endpoints | Highlights |
 |---|---|---|
-| `Ctrl+Shift+L` | Live Call Mode | Prospect search, call timer, AI talk track, real-time objection handler, call notes that auto-populate Account 360's Call Intelligence Parser |
-| `Ctrl+Shift+P` | Pipeline Kanban | Drag-and-drop deal board across 6 stages (New → Researched → Called → Demo Booked → Closed Won/Lost) with inline deal value |
-| `Ctrl+Shift+B` | Battle Cards | Competitive intelligence for C.H. Robinson, Forto, DHL Global Forwarding, Expeditors International |
-| `Ctrl+/` | Sidebar | Toggle collapsed/expanded |
-| `Escape` | — | Close topmost open modal |
+| **Prospects & Market** | 6 | `/api/prospects` (filter by sector, ICP min, lane, search, limit) · `/api/prospects/:id` · `/api/prospects/sectors` · `/api/market-map` · `/api/hot-prospects` (top 8 by composite score) · `/api/followup-radar` |
+| **Pipeline** | 5 | `GET/POST/PUT/DELETE /api/pipeline` · `/api/pipeline/velocity` · `/api/pipeline/count` |
+| **Performance** | 3 | `/api/performance` (KPIs, retention-windowed) · `/api/performance/activity` · `/api/win-loss` |
+| **Live Globes** | 4 | `/api/vessels?mode=sim` · `/api/flights?mode=sim` · `/api/trucks` · `/api/globe-data` (lanes + dynamic port congestion) |
+| **Trade Intelligence** | 6 | `/api/trade-intelligence` (FRED) · `/api/signals` · `/api/trigger-events` · `/api/fx-rates` · `/api/rate-history` · `/api/route-optimize` |
+| **AI** | 12 | `/api/analyze` (streaming) · `/api/call-prep` · `/api/call-intelligence` · `/api/call-predict` (mic listener) · `/api/objection` · `/api/map-plan` · `/api/generate-sequence` · `/api/semantic-search` · `/api/signal-match` · `/api/first-line` · `/api/compose-email` |
+| **Pilot (Agentic Outreach)** | 7 | `/api/pilot-stream` (SSE) · `/api/pilot-agent` · `/api/pilot-daily-brief` · `/api/pilot-signal-prospects` · `/api/pilot-qualify` · `/api/pilot-variants` · `/api/pilot-reply` |
+| **Account 360** | 2 | `/api/account360/:id` (prospect + signal timeline) · `/api/team` |
+| **Persistence** | 4 | `/api/analyses` (CRUD) · `/api/analyses/:id/favorite` |
+| **Containers** | 2 | `/api/containers/track` (Terminal49 submit) · `/api/containers/:requestId` (poll) |
+| **Tariffs** | 2 | `/api/hs-lookup` · `/api/trade-data/:commodity` |
+| **Misc** | 6 | `/api/battle-cards` · `/api/settings/health` (env + AIS WS state + cache size) · others |
 
 ---
 
-## Tech Stack
-
-**Frontend** — React 19, Vite 7, React Router v7, Recharts, Three.js / react-globe.gl, @dnd-kit (Kanban drag-and-drop), react-icons/ri
-
-**Backend** — Express 5, SQLite3, OpenAI GPT-5.4 + GPT-5.4-mini (Agentic Outreach), GPT-4.1-mini (platform AI features), FRED API (Federal Reserve macro data), NewsAPI (signal feed + trigger events), exchangerate-api.com + frankfurter.app (live FX rates with 1-day % change), Serper API (prospect enrichment), AISstream WebSocket (live AIS vessel positions), Terminal49 API (container tracking)
-
----
-
-## Project Structure
-
-```
-.
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── GlobeView.jsx               # Home page globe — shipping lanes, port rings, prospect arcs
-│   │   │   ├── VesselsGlobe.jsx            # Ocean Freight globe — live AIS, animated great-circle routes
-│   │   │   ├── VGPanel.jsx                 # Ocean Freight right panel — fleet stats, event feed, container tracker
-│   │   │   ├── FlightsGlobe.jsx            # Air Freight globe — live ADS-B / simulated planes, arc trails
-│   │   │   ├── FGPanel.jsx                 # Air Freight right panel
-│   │   │   ├── LandGlobe.jsx               # Land Freight globe — 340 truck sprites on 85 highway corridors
-│   │   │   ├── LGPanel.jsx                 # Land Freight right panel — carrier watch, hot corridors, event feed
-│   │   │   ├── LiveCallModal.jsx           # Live call assistant — timer, talk track, objection AI, mic AI listener, notes
-│   │   │   ├── PipelineKanban.jsx          # Drag-and-drop deal board (@dnd-kit)
-│   │   │   ├── BattleCardsModal.jsx        # Competitive intelligence overlay
-│   │   │   ├── OutreachSequenceModal.jsx   # AI multi-touch outreach sequence builder
-│   │   │   ├── PortStatusBar.jsx           # Sticky header with port ticker + global action buttons
-│   │   │   ├── Sidebar.jsx                 # Collapsible nav sidebar (Home/Air/Land/Ocean/Market/Trade/Research/Pilot/Sales CRM)
-│   │   │   ├── AnalysisPanel.jsx           # Inline AI analysis on Home
-│   │   │   ├── SignalFeed.jsx              # Live supply chain signals with AI outreach match
-│   │   │   ├── SignalTicker.jsx            # Scrolling signal ticker (hourly refresh)
-│   │   │   ├── TariffCalculator.jsx        # Inline tariff widget on Home
-│   │   │   ├── ICPBadge.jsx               # Color-coded ICP score badge
-│   │   │   └── ProspectSearch.jsx          # Filters + AI natural language search
-│   │   ├── pages/
-│   │   │   ├── HomePage.jsx / .css
-│   │   │   ├── FlightsPage.jsx / .css      # Air Freight page
-│   │   │   ├── LandFreightPage.jsx / .css  # Land Freight page
-│   │   │   ├── VesselsPage.jsx / .css      # Ocean Freight page
-│   │   │   ├── TradePage.jsx / .css
-│   │   │   ├── Account360Page.jsx / .css
-│   │   │   ├── PerformancePage.jsx / .css
-│   │   │   ├── MarketMapPage.jsx / .css
-│   │   │   ├── TariffCalculatorPage.jsx / .css
-│   │   │   ├── PilotPage.jsx               # Agentic Outreach — market intel + prospect dossier (gpt-5.4)
-│   │   │   └── SettingsPage.jsx / .css
-│   │   ├── App.jsx                         # Route layout, global modals, keyboard shortcuts
-│   │   └── main.jsx
-│   ├── vercel.json                         # SPA rewrite rules for client-side routing
-│   └── vite.config.js
-│
-├── backend/
-│   ├── services/
-│   │   ├── prospectsService.js             # Prospect CRUD + sector aggregation
-│   │   ├── pipelineService.js              # Pipeline stage management
-│   │   ├── performanceService.js           # SDR activity tracking + KPIs
-│   │   ├── flexportAnalyzer.js             # OpenAI analysis generation
-│   │   ├── claudeSynthesizer.js            # Sequence + objection AI
-│   │   ├── fredService.js                  # FRED macro data fetching + cache
-│   │   ├── tradeIntelligenceService.js     # Trade data aggregation
-│   │   ├── signalsService.js               # NewsAPI signal scoring + urgency rating
-│   │   ├── portCongestionService.js        # Dynamic port congestion (signals-driven + baseline)
-│   │   ├── dataAggregator.js               # NewsAPI + Serper prospect enrichment
-│   │   ├── usitcService.js                 # HS code tariff lookup
-│   │   └── database.js                     # Saved analyses CRUD
-│   ├── data/
-│   │   └── seedProspects.js                # 250-prospect database seed script (15 sectors)
-│   ├── initDb.js                           # Schema creation + safe ALTER TABLE migrations
-│   └── server.js                           # All API routes, AISstream WebSocket client, static data
-│
-└── DEPLOYMENT.md
-```
-
----
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 20+
-- OpenAI API key (required — powers all AI features)
-- FRED API key (optional — macro charts fall back to cached data)
-- NewsAPI key (optional — signal feed falls back to static signals)
-- ExchangeRate API key (optional — FX rates fall back to static values)
-- AISstream API key (optional — Ocean Command shows 250 simulated vessels without it)
-- Terminal49 API key (optional — container tracker on Ocean Command requires it)
-
-### 1. Clone and install
+## Quickstart
 
 ```bash
 git clone https://github.com/AllStreets/Flexport-sales-dashboard.git
 cd Flexport-sales-dashboard
-```
 
-```bash
-# Backend
-cd backend && npm install && cp .env.example .env
-# Edit .env — add OPENAI_API_KEY at minimum
-```
-
-```bash
-# Frontend
-cd ../frontend && npm install
-```
-
-### 2. Initialize and seed the database
-
-```bash
+# Backend — http://localhost:5001
 cd backend
-node initDb.js
-node data/seedProspects.js
+npm install
+cp .env.example .env          # add OPENAI_API_KEY at minimum
+node initDb.js                # create schema (idempotent ALTER TABLE migrations)
+node data/seedProspects.js    # seed 250 prospects across 15 sectors
+npm run dev
+
+# Frontend — http://localhost:5174
+cd ../frontend
+npm install
+npm run dev
 ```
 
-### 3. Start both servers
-
-```bash
-# Terminal 1 — backend on http://localhost:5001
-cd backend && npm run dev
+`backend/.env`:
 ```
-
-```bash
-# Terminal 2 — frontend on http://localhost:3001
-cd frontend && npm run dev
-```
-
----
-
-## API Routes
-
-| Method | Route | Description |
-|---|---|---|
-| GET | `/api/prospects` | List prospects — `sector`, `icp_min`, `lane`, `search`, `limit` filters |
-| GET | `/api/prospects/:id` | Single prospect |
-| GET | `/api/prospects/sectors` | Sector summary with counts and avg ICP |
-| GET | `/api/market-map` | Prospects grouped by sector with pipeline stage |
-| GET | `/api/globe-data` | Shipping lanes + dynamic port congestion for Home globe |
-| GET | `/api/vessels` | Live AIS vessels (AISstream, ≥100 vessels) or 250 simulated vessels on 62 trade routes. `?mode=sim` forces simulated. |
-| GET | `/api/flights` | Live ADS-B aircraft (OpenSky Network OAuth2) or 200+ simulated planes on 40 routes. `?mode=sim` forces simulated. |
-| GET | `/api/opensky-token` | Proxies an OpenSky OAuth2 bearer token to the browser (bypasses datacenter IP restrictions) |
-| GET | `/api/trucks` | 340 simulated trucks on 85 global highway corridors (4 trucks/lane) |
-| GET | `/api/account360/:id` | Full account — prospect + NewsAPI signal timeline |
-| GET | `/api/hot-prospects` | Top 8 by opportunity score (ICP + pipeline stage bonus) |
-| GET | `/api/followup-radar` | Overdue contacts sorted by ICP score (`?days=N`) |
-| GET | `/api/pipeline-velocity` | Avg days per stage + stuck deal count (`?stale_days=N`) |
-| GET | `/api/pipeline` | Full pipeline across all stages |
-| GET | `/api/pipeline/count` | Deal count for header badge |
-| POST | `/api/pipeline` | Add deal |
-| PUT | `/api/pipeline/:id` | Update stage, value, or notes |
-| DELETE | `/api/pipeline/:id` | Remove deal |
-| POST | `/api/pilot-stream` | Agentic Outreach stream (SSE) — market intel briefings + prospect dossiers via gpt-5.4 |
-| POST | `/api/analyze` | AI prospect analysis — profile, pain points, outreach angle, value props, decision makers |
-| POST | `/api/call-prep` | AI call prep — opening hook, discovery questions, objection responses, CTA |
-| POST | `/api/call-intelligence` | AI call notes parser — pain points, signals, objections, next steps, sentiment, deal probability |
-| POST | `/api/call-predict` | AI mic listener prediction — suggested next response, predicted objection, tone recommendation |
-| POST | `/api/objection` | AI objection handler — counter + follow-up question |
-| POST | `/api/map-plan` | AI mutual action plan — milestone timeline + 90-day success criteria |
-| POST | `/api/generate-sequence` | AI 4-touch outreach sequence (email + LinkedIn + call) |
-| POST | `/api/semantic-search` | AI natural language prospect search |
-| POST | `/api/signal-match` | AI maps a signal to affected sectors and Flexport talking points |
-| POST | `/api/analyses` | Persist an AI analysis |
-| GET | `/api/analyses` | List saved analyses |
-| DELETE | `/api/analyses/:id` | Delete a saved analysis |
-| PUT | `/api/analyses/:id/favorite` | Toggle favorite |
-| GET | `/api/battle-cards` | Competitive intelligence cards |
-| GET | `/api/trade-intelligence` | FRED macro data — trade balance, imports, capital goods, diesel, Brent crude |
-| GET | `/api/signals` | Scored trade signals from NewsAPI |
-| GET | `/api/trigger-events` | Supply chain trigger events from NewsAPI (30-min cache) |
-| GET | `/api/fx-rates` | Live FX rates + 1-day % change (15 currency pairs) |
-| GET | `/api/performance` | SDR KPIs — calls, emails, demos, pipeline value, quota % (`?retention_days=N`) |
-| POST | `/api/performance/activity` | Log an SDR activity |
-| GET | `/api/win-loss` | Win/loss log |
-| POST | `/api/win-loss` | Add win/loss record |
-| POST | `/api/route-optimize` | Transit benchmark — Flexport vs industry time + cost |
-| GET | `/api/hs-lookup` | HS code tariff data (`?q=HS_CODE`) |
-| POST | `/api/containers/track` | Container or B/L tracking via Terminal49 (35+ carriers) |
-
----
-
-## Environment Variables
-
-### Backend (`backend/.env`)
-
-```
-OPENAI_API_KEY=sk-...                      # Required — all AI features (GPT-5.4 for Agentic Outreach, GPT-4.1-mini for platform)
-FRED_API_KEY=your_fred_key                 # Optional — FRED macro data charts
-NEWS_API_KEY=your_newsapi_key              # Optional — live signal feed + trigger events
-SERPER_API_KEY=your_serper_key             # Optional — prospect web enrichment
-EXCHANGE_RATE_API_KEY=your_key             # Optional — live FX rates
-AISSTREAM_API_KEY=your_key                 # Optional — live AIS vessel positions (Ocean Freight)
-TERMINAL49_API_KEY=your_key                # Optional — container tracking (Ocean Freight)
-OPENSKY_CLIENT_ID=your_client_id           # Optional — live ADS-B flights (Air Freight)
-OPENSKY_CLIENT_SECRET=your_client_secret   # Optional — live ADS-B flights (Air Freight)
-FRONTEND_URL=https://your-app.vercel.app   # Required for production CORS
+OPENAI_API_KEY=sk-...                    # Required — all AI features
+FRED_API_KEY=...                         # Optional — Trade Intelligence macro tiles
+NEWSAPI_KEY=...                          # Optional — signals + trigger events + port congestion
+SERPER_API_KEY=...                       # Optional — prospect web enrichment
+EXCHANGE_RATE_API_KEY=...                # Optional — live FX rates
+AISSTREAM_API_KEY=...                    # Optional — Ocean Freight live vessels
+TERMINAL49_API_KEY=...                   # Optional — container tracking
+FRONTEND_URL=https://<your>.vercel.app   # Production CORS allowlist
 PORT=5001
 ```
 
-### Frontend (`frontend/.env`)
-
+`frontend/.env`:
 ```
 VITE_API_URL=http://localhost:5001
 ```
 
 ---
 
-## Design System
+## Design system
 
 | Token | Value |
 |---|---|
-| Background | `#060b18` |
+| Background | `#060b18` (navy, not black) |
 | Accent | `#00d4ff` (user-configurable in Settings → Appearance) |
 | Heading / UI font | Space Grotesk |
 | Numbers / code font | JetBrains Mono |
 | Icon library | Remix Icons (`react-icons/ri`) |
 
-**Pipeline stage colors** — `new` #2563eb · `researched` #6366f1 · `called` #8b5cf6 · `demo_booked` #10b981 · `closed_won` #f59e0b · `closed_lost` #475569
+**Pipeline stage colors**
 
-**Opportunity score** = `icp_score` + stage bonus (demo_booked +20, called +15, researched +10, new +5)
+`new` `#2563eb` · `researched` `#6366f1` · `called` `#8b5cf6` · `demo_booked` `#10b981` · `closed_won` `#f59e0b` · `closed_lost` `#475569`
+
+**Opportunity score**
+
+```
+composite = icp_score + stage_bonus
+            (demo_booked +20 · called +15 · researched +10 · new +5)
+```
+
+---
+
+## Project layout
+
+```
+frontend/
+  src/
+    components/
+      GlobeView.jsx           Home page globe — shipping lanes, port rings, prospect arcs
+      VesselsGlobe.jsx        Ocean Freight globe — live AIS, great-circle route arcs
+      VGPanel.jsx             Ocean Freight right panel — fleet, event feed, container tracker
+      FlightsGlobe.jsx        Air Freight globe — live ADS-B / simulated planes, arc trails
+      FGPanel.jsx             Air Freight right panel
+      LandGlobe.jsx           Land Freight globe — truck sprites on 145 highway corridors
+      LGPanel.jsx             Land Freight right panel — carrier watch, hot corridors
+      LiveCallModal.jsx       Live call assistant — timer, talk track, objection AI, mic AI, notes
+      PipelineKanban.jsx      Drag-and-drop deal board (@dnd-kit)
+      QuickResearchModal.jsx  Instant prospect lookup overlay
+      EmailComposerModal.jsx  AI-drafted outreach with trigger context
+      OutreachSequenceModal.jsx  AI multi-touch outreach sequence builder
+      PortStatusBar.jsx       Sticky header — port ticker + global action buttons
+      Sidebar.jsx             Collapsible nav (Home / Air / Land / Ocean / Market /
+                              Trade / Pilot / CRM)
+      SignalFeed.jsx          Live supply chain signals with AI outreach match
+      SignalTicker.jsx        Scrolling signal ticker (hourly refresh)
+      TariffCalculator.jsx    Inline tariff widget on Home
+      AnalysisPanel.jsx       Inline AI analysis on Home
+      ICPBadge.jsx            Color-coded ICP score badge
+      ProspectSearch.jsx      Filters + AI natural-language search
+      SaveAnalysisButton.jsx  Persist an Account 360 analysis to /research
+      TradeDataCharts.jsx     Trade Intelligence charts
+    pages/
+      HomePage  FlightsPage  LandFreightPage  VesselsPage  TradePage
+      Account360Page  PerformancePage  MarketMapPage  TariffCalculatorPage
+      ResearchPage  PilotPage  SettingsPage
+    App.jsx                   Route layout, global modals, keyboard shortcuts
+    main.jsx
+  vercel.json                 SPA rewrite for client-side routing
+  vite.config.js              Dev server on :5174 (strictPort)
+
+backend/
+  services/
+    prospectsService.js       Prospect CRUD + sector aggregation
+    pipelineService.js        Pipeline stage management
+    performanceService.js     SDR activity tracking + KPIs
+    agentService.js           Agentic Outreach orchestration
+    emailGenerator.js         Email + sequence generation
+    gmailService.js           Gmail outbox draft creation
+    flexportAnalyzer.js       Account 360 streaming AI analysis
+    claudeSynthesizer.js      Sequence + objection generation (gpt-4-turbo)
+    fredService.js            FRED macro data fetching + cache
+    tradeIntelligenceService.js   Trade data aggregation
+    signalsService.js         NewsAPI signal scoring + urgency
+    portCongestionService.js  Dynamic port status from signals + baseline
+    dataAggregator.js         NewsAPI + Serper prospect enrichment
+    usitcService.js           HS code tariff lookup (USITC HTS bundled)
+    database.js               Saved analyses CRUD
+  routes/
+    agentRoutes.js            /api/pilot-* endpoints
+  data/
+    seedProspects.js          250-prospect seed (15 sectors)
+    companies.json            Static company metadata
+    industryInsights.json     Per-sector talking points
+  initDb.js                   Schema + idempotent migrations
+  server.js                   All other API routes + AISstream WebSocket client
+
+cron/                         Scheduled jobs (currently: agent inbox poll, daily brief)
+docs/                         Architectural notes
+DEPLOYMENT.md                 Vercel (frontend) + Railway (backend) deploy guide
+README.md
+```
+
+---
+
+## Engineering notes
+
+A few non-obvious decisions worth knowing before you change them.
+
+**AIS WebSocket resilience.** The `wss://stream.aisstream.io` connection has three layered failure modes: TCP-level zombie (NAT drops mid-flight), application-level pong timeout (server stops responding), and CONNECTING limbo (TLS handshake stalls with no `open`, no `error`, no `close`). All three are handled. A 30-second connect-timeout fires `_forceAisReconnect` if the socket can't transition to `OPEN`. A 30-second WS-ping heartbeat catches zombies. A 90-second message watchdog catches data stalls. Backoff goes 10s → 120s exponential, resets on every successful `open`. State is observable at `GET /api/settings/health`.
+
+**Vessel cache survives reboots.** AIS positions are written to `vessel_cache` in SQLite every 5 minutes and on `SIGTERM`. On startup, `loadVesselCacheFromDb()` restores them all and stamps each with `ts: Date.now()` so they survive the 6-hour stale-purge until fresh AIS data replaces them. The vessels endpoint reports `LIVE (CACHED)` during the gap so the SDR knows the dashboard isn't fabricating positions.
+
+**Stale-purge skips during AIS outages.** If `_aisLastMsgTs` is older than 10 minutes, the periodic cache cleanup is suspended. Otherwise a wedged WebSocket would let the 6-hour sweep wipe the DB-restored fleet 6 hours after restart and the page would silently flip to `SIMULATED`. The badge surfaces this as `AIS DOWN` (red) instead of pretending nothing happened.
+
+**Port congestion is event-driven, not static.** `portCongestionService.js` cross-references the most recent NewsAPI signals against the port baseline. Hormuz / Red Sea / Suez badges flip color when real-world disruption news lands, not on a hardcoded schedule. The Home globe's port disruption rings render the same status.
+
+**SQLite without WAL.** Railway's filesystem is ephemeral. WAL files outlive the main DB across redeploys and cause corrupted-header crashes on cold start. The backend explicitly does **not** set `journal_mode = WAL`. Instead it uses `db.configure('busyTimeout', 5000)` to handle write contention.
+
+**OpenAI streaming via SSE.** Account 360 analysis, Pilot briefings, and Pilot dossiers all stream over `text/event-stream`. The frontend renders tokens as they arrive — there is no spinner-then-wall-of-text moment. Connection cleanup is wired through `AbortController` so navigating away mid-stream cancels the upstream request.
+
+**Frontend ports.** Vite is pinned to `:5174` with `strictPort: true`. The backend default is `:5001`. Both are configurable via env, but pinning prevents the Vercel-vs-Railway URL confusion that broke deploys before.
+
+---
+
+## Design principles
+
+**Live or honest.** Every data surface shows its source. `LIVE` / `LIVE (CACHED)` / `AIS DOWN` / `SIMULATED`. `LIVE` / `REF` on FX. A live-source badge on every globe. No silent fallback to fake data — the SDR knows when they're looking at sim and when they're not.
+
+**Graceful with no keys.** The app boots and is usable with only `OPENAI_API_KEY`. Every other optional key upgrades a specific surface. Missing keys never crash a page — they downgrade a badge.
+
+**Streaming everywhere it matters.** AI surfaces stream over SSE so the SDR can read while the model thinks. Globes refresh in place, not via page reload.
+
+**Catalog as source of truth.** Prospects, sectors, and stages live in SQLite, seeded from a single file (`seedProspects.js`). Re-seeding is idempotent. The dashboard is a view over the catalog, not the other way around.
+
+**Boring deploys.** Two services, two URLs, two env files. `npm run start` re-seeds on every cold start so Railway redeploys can't poison the database. The catalog is the deploy artifact.
+
+---
+
+## License
+
+ISC. The codebase, the catalog, and the seeded prospect data are publicly redistributable. AI-generated outputs (Account 360 analyses, sequences, briefings) remain the property of the user account that generated them.
+
+---
+
+<p align="center"><sub>Built by <a href="https://github.com/AllStreets">Connor Evans</a></sub></p>
