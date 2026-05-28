@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Flexport_SDR-v2.1.0-00D4FF?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white" alt="React"/>&nbsp;<img src="https://img.shields.io/badge/Vite-7-646cff?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"/>&nbsp;<img src="https://img.shields.io/badge/Express-5-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express"/>&nbsp;<img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite"/>&nbsp;<img src="https://img.shields.io/badge/OpenAI-GPT--5.4-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/>&nbsp;<img src="https://img.shields.io/badge/License-ISC-22C55E?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/Flexport_SDR-v2.1.0-00D4FF?style=for-the-badge" alt="Version"/>&nbsp;<img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white" alt="React"/>&nbsp;<img src="https://img.shields.io/badge/Vite-7-646cff?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"/>&nbsp;<img src="https://img.shields.io/badge/Express-5-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express"/>&nbsp;<img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite"/>&nbsp;<img src="https://img.shields.io/badge/OpenAI-GPT--5.4-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"/>&nbsp;<img src="https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge" alt="License"/>
 </p>
 
 <p align="center">
@@ -347,7 +347,7 @@ A few non-obvious decisions worth knowing before you change them.
 
 ## License
 
-ISC. The codebase, the catalog, and the seeded prospect data are publicly redistributable. AI-generated outputs (Account 360 analyses, sequences, briefings) remain the property of the user account that generated them.
+MIT. See [`LICENSE`](LICENSE). The codebase, the catalog, and the seeded prospect data are publicly redistributable. AI-generated outputs (Account 360 analyses, sequences, briefings) remain the property of the user account that generated them.
 
 ---
 
